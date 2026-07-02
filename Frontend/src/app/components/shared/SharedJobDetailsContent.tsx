@@ -18,7 +18,11 @@ import {
   Download,
 } from "lucide-react";
 import { ClientInformationCard } from "./ClientInformationCard";
-import { JOB_CATEGORY_LABELS, JOB_DURATION_LABELS, JOB_SKILL_COLORS } from "../../../constants/job.constants";
+import {
+  JOB_CATEGORY_LABELS,
+  JOB_DURATION_LABELS,
+  JOB_SKILL_COLORS,
+} from "../../../constants/job.constants";
 
 // ── Category config ───────────────────────────────────────────────────────────
 
@@ -113,9 +117,11 @@ export interface JobDetailData {
   clientAvatar?: string;
   clientLocation?: string;
   clientAbout?: string;
+  clientVerified?: boolean;
   clientJobsPosted?: number;
   clientProjectsCompleted?: number;
   clientJoinedDate?: string;
+  clientRating?: number;
 }
 
 // ── Category badge ────────────────────────────────────────────────────────────
@@ -381,9 +387,11 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
               avatar: job.clientAvatar,
               location: job.clientLocation,
               about: job.clientAbout,
+              verified: job.clientVerified,
               jobsPosted: job.clientJobsPosted,
               projectsCompleted: job.clientProjectsCompleted,
               joinedDate: job.clientJoinedDate,
+              rating: job.clientRating,
             }}
           />
         )}

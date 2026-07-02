@@ -97,6 +97,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "dashboard/student/browse-jobs/:jobId",
+        element: (
+          <AuthenticationGuard allowedRole="student">
+            <BrowseJobsPage />
+          </AuthenticationGuard>
+        ),
+      },
+      {
         path: "dashboard/student/applications",
         element: (
           <AuthenticationGuard allowedRole="student">

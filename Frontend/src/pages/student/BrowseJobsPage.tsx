@@ -1,5 +1,5 @@
 ﻿import { useState, useMemo, useEffect, type ElementType } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
@@ -23,11 +23,26 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { ApplyModal } from "../../app/components/ApplyModal";
-import { ClientInformationCard } from "../../app/components/shared/ClientInformationCard";
+import {
+  ClientInformationCard,
+  type ClientCardData,
+} from "../../app/components/shared/ClientInformationCard";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
-import { JOB_CATEGORIES, JOB_DURATION_OPTIONS, JOB_SKILL_COLORS } from "../../constants/job.constants";
-import { getAllOpenJobs, type JobData } from "../../services/jobService";
+import {
+  JOB_CATEGORIES,
+  JOB_DURATION_OPTIONS,
+  JOB_SKILL_COLORS,
+} from "../../constants/job.constants";
+import { getAllOpenJobs, getJobById, type JobData } from "../../services/jobService";
 import type { BrowseJob, JobCategoryId } from "../../types";
+
+type JobDetailData = BrowseJob & {
+  client?: ClientCardData;
+  attachedFiles?: {
+    name: string;
+    type: string;
+  }[];
+};
 
 function formatJobDate(date?: string) {
   if (!date) return "";
@@ -53,6 +68,19 @@ function formatDeadline(date?: string) {
   return parsedDate.toISOString().split("T")[0];
 }
 
+function formatMemberSince(date?: string) {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function formatBudget(budget: string | number) {
   const numericBudget = Number(budget);
 
@@ -75,6 +103,38 @@ function mapJobFromApi(job: JobData): BrowseJob {
     complexity: (job.complexity ?? "small") as BrowseJob["complexity"],
     postedAt: formatJobDate(job.createdAt),
     requirements: job.requirements,
+  };
+}
+
+function mapJobDetailsFromApi(job: JobData): JobDetailData {
+  const client = typeof job.client === "object" && job.client ? job.client : undefined;
+  const clientName = client?.fullName?.trim();
+  const clientCard =
+    client && clientName
+      ? {
+          name: clientName,
+          avatar: client.avatar || undefined,
+          location: client.location,
+          about: client.bio,
+          verified: client.verified ?? client.isVerified,
+          jobsPosted: client.jobsPosted,
+          projectsCompleted: client.projectsCompleted ?? client.completedProjects,
+          joinedDate: formatMemberSince(client.createdAt),
+          rating: client.rating,
+        }
+      : undefined;
+
+  return {
+    ...mapJobFromApi(job),
+    client: clientCard,
+    attachedFiles: job.attachments?.map((fileName) => {
+      const fileType = fileName.includes(".") ? fileName.split(".").pop() || "file" : "file";
+
+      return {
+        name: fileName,
+        type: fileType,
+      };
+    }),
   };
 }
 // Config
@@ -382,7 +442,7 @@ function JobDetailPanel({
   onClose,
   onApply,
 }: {
-  job: BrowseJob;
+  job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
 }) {
@@ -432,6 +492,18 @@ function JobDetailPanel({
         >
           {job.title}
         </h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          {job.postedAt && (
+            <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+              Posted {job.postedAt}
+            </p>
+          )}
+          {job.status && (
+            <p className="text-slate-400 capitalize" style={{ fontSize: "0.68rem" }}>
+              Status: {job.status}
+            </p>
+          )}
+        </div>
 
         {/* Key details grid */}
         <div className="grid grid-cols-2 gap-3">
@@ -521,29 +593,50 @@ function JobDetailPanel({
           </div>
         )}
 
-        {/* Attached files placeholder */}
+        {/* Attached files */}
         <div>
           <p className="text-slate-900 font-bold mb-2" style={{ fontSize: "0.82rem" }}>
             Attached Files
           </p>
-          <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
-            <FileText className="w-5 h-5 text-slate-300" />
-            <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-              No files attached
-            </p>
-          </div>
+          {job.attachedFiles && job.attachedFiles.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {job.attachedFiles.map((file) => (
+                <div
+                  key={file.name}
+                  className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3"
+                >
+                  <div
+                    className="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 font-bold"
+                    style={{ fontSize: "0.52rem" }}
+                  >
+                    {file.type.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-slate-900 font-semibold truncate"
+                      style={{ fontSize: "0.75rem" }}
+                    >
+                      {file.name}
+                    </p>
+                    <p className="text-slate-400" style={{ fontSize: "0.62rem" }}>
+                      {file.type.toUpperCase()} file
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
+              <FileText className="w-5 h-5 text-slate-300" />
+              <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
+                No files attached
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Client Information Card */}
-        <ClientInformationCard
-          client={{
-            name: "Dikshya Khanal",
-            initials: "DK",
-            jobsPosted: 8,
-            projectsCompleted: 5,
-            joinedDate: "Jun 2026",
-          }}
-        />
+        {job.client && <ClientInformationCard client={job.client} />}
       </div>
 
       {/* Sticky footer */}
@@ -572,7 +665,15 @@ function JobDetailPanel({
 
 // Mobile detail modal
 
-function MobileDetailModal({ job, onClose }: { job: BrowseJob; onClose: () => void }) {
+function MobileDetailModal({
+  job,
+  onClose,
+  onApply,
+}: {
+  job: JobDetailData;
+  onClose: () => void;
+  onApply: () => void;
+}) {
   const durLabel = DURATIONS.find((d) => d.value === job.duration)?.label;
   return (
     <AnimatePresence>
@@ -604,6 +705,18 @@ function MobileDetailModal({ job, onClose }: { job: BrowseJob; onClose: () => vo
             <h2 className="text-slate-900" style={{ fontSize: "1.05rem", fontWeight: 800 }}>
               {job.title}
             </h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              {job.postedAt && (
+                <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                  Posted {job.postedAt}
+                </p>
+              )}
+              {job.status && (
+                <p className="text-slate-400 capitalize" style={{ fontSize: "0.68rem" }}>
+                  Status: {job.status}
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-blue-50 rounded-xl p-3">
                 <p className="text-slate-400" style={{ fontSize: "0.6rem", fontWeight: 600 }}>
@@ -621,6 +734,16 @@ function MobileDetailModal({ job, onClose }: { job: BrowseJob; onClose: () => vo
                   {durLabel}
                 </p>
               </div>
+              {job.deadline && (
+                <div className="bg-amber-50 rounded-xl p-3">
+                  <p className="text-slate-400" style={{ fontSize: "0.6rem", fontWeight: 600 }}>
+                    Deadline
+                  </p>
+                  <p className="text-amber-600 font-bold" style={{ fontSize: "0.82rem" }}>
+                    {job.deadline}
+                  </p>
+                </div>
+              )}
             </div>
             <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
               {job.description}
@@ -640,9 +763,11 @@ function MobileDetailModal({ job, onClose }: { job: BrowseJob; onClose: () => vo
                 </p>
               </div>
             )}
+            {job.client && <ClientInformationCard client={job.client} />}
           </div>
           <div className="p-4 border-t border-black/[0.05]">
             <button
+              onClick={onApply}
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 rounded-xl"
               style={{ fontSize: "0.875rem" }}
             >
@@ -652,6 +777,103 @@ function MobileDetailModal({ job, onClose }: { job: BrowseJob; onClose: () => vo
         </motion.div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function JobDetailStatusPanel({
+  loading,
+  message,
+  onClose,
+}: {
+  loading: boolean;
+  message: string;
+  onClose: () => void;
+}) {
+  const content = (
+    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+      {loading ? (
+        <motion.span
+          className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+        />
+      ) : (
+        <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
+          <Search className="w-9 h-9 text-slate-300" />
+        </div>
+      )}
+      <div>
+        <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
+          {message}
+        </p>
+        {!loading && (
+          <p className="text-slate-500 mt-1" style={{ fontSize: "0.85rem" }}>
+            Please try again later.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, x: 32 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 32 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="hidden lg:flex flex-col bg-white rounded-2xl border border-black/[0.06] shadow-xl overflow-hidden shrink-0"
+        style={{
+          width: 400,
+          maxHeight: "calc(100vh - 8rem)",
+          position: "sticky",
+          top: "1.5rem",
+        }}
+      >
+        <div className="flex items-center justify-between gap-3 p-5 border-b border-black/[0.05]">
+          <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+            Job Details
+          </p>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-50 shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">{content}</div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 lg:hidden flex items-end"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-t-3xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+        >
+          <div className="flex items-center justify-between p-5 border-b border-black/[0.05]">
+            <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+              Job Details
+            </p>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5">{content}</div>
+        </motion.div>
+      </motion.div>
+    </>
   );
 }
 
@@ -794,9 +1016,15 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [pendingJobId, setPendingJobId] = useState<string | undefined>(undefined);
   const navigate = useNavigate();
+  const { jobId: routeJobId } = useParams<{ jobId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedJobId = routeJobId ?? searchParams.get("jobId");
   const [jobs, setJobs] = useState<BrowseJob[]>([]);
   const [loading, setLoading] = useState(!isGuest);
   const [error, setError] = useState("");
+  const [detailsJob, setDetailsJob] = useState<JobDetailData | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState("");
 
   useEffect(() => {
     if (isGuest) {
@@ -836,8 +1064,58 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     };
   }, [isGuest]);
 
+  useEffect(() => {
+    if (!selectedJobId || isGuest) {
+      setDetailsJob(null);
+      setDetailsError("");
+      setDetailsLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    const loadJobDetails = async () => {
+      setDetailsLoading(true);
+      setDetailsError("");
+      setDetailsJob(null);
+
+      try {
+        const response = await getJobById(selectedJobId);
+
+        if (mounted) {
+          setDetailsJob(mapJobDetailsFromApi(response.data));
+        }
+      } catch (error) {
+        if (mounted) {
+          setDetailsError(error instanceof Error ? error.message : "Failed to load job details.");
+        }
+      } finally {
+        if (mounted) {
+          setDetailsLoading(false);
+        }
+      }
+    };
+
+    loadJobDetails();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedJobId, isGuest]);
+
   const handleViewDetails = (jobId: string) => {
-    navigate(isGuest ? `/browse?jobId=${jobId}` : `/dashboard/student/browse-jobs?jobId=${jobId}`);
+    navigate(isGuest ? `/browse?jobId=${jobId}` : `/dashboard/student/browse-jobs/${jobId}`);
+  };
+
+  const handleCloseDetails = () => {
+    if (routeJobId && !isGuest) {
+      navigate("/dashboard/student/browse-jobs");
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("jobId");
+    setSearchParams(nextParams);
   };
 
   const handleApply = (jobId: string) => {
@@ -1062,14 +1340,14 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
                         key={job.id}
                         job={job}
                         onView={() => handleViewDetails(job.id)}
-                        selected={false}
+                        selected={selectedJobId === job.id}
                       />
                     ) : (
                       <JobCardList
                         key={job.id}
                         job={job}
                         onView={() => handleViewDetails(job.id)}
-                        selected={false}
+                        selected={selectedJobId === job.id}
                       />
                     )
                   )}
@@ -1079,17 +1357,51 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
           )}
         </div>
 
+        <AnimatePresence mode="wait">
+          {selectedJobId && detailsLoading && (
+            <JobDetailStatusPanel
+              key="job-details-loading"
+              loading={true}
+              message="Loading job details..."
+              onClose={handleCloseDetails}
+            />
+          )}
+          {selectedJobId && !detailsLoading && detailsError && (
+            <JobDetailStatusPanel
+              key="job-details-error"
+              loading={false}
+              message={detailsError}
+              onClose={handleCloseDetails}
+            />
+          )}
+          {selectedJobId && !detailsLoading && !detailsError && detailsJob && (
+            <JobDetailPanel
+              key={detailsJob.id}
+              job={detailsJob}
+              onClose={handleCloseDetails}
+              onApply={() => handleApply(detailsJob.id)}
+            />
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Modals */}
       <AnimatePresence>
         {applyingJobId &&
           (() => {
-            const job = openJobs.find((j) => j.id === applyingJobId);
+            const job = openJobs.find((j) => j.id === applyingJobId) ?? detailsJob;
             return job ? (
               <ApplyModal key={applyingJobId} job={job} onClose={() => setApplyingJobId(null)} />
             ) : null;
           })()}
+        {selectedJobId && !detailsLoading && !detailsError && detailsJob && (
+          <MobileDetailModal
+            key={`mobile-${detailsJob.id}`}
+            job={detailsJob}
+            onClose={handleCloseDetails}
+            onApply={() => handleApply(detailsJob.id)}
+          />
+        )}
         {showGuestModal && (
           <GuestApplyModal
             jobId={pendingJobId}

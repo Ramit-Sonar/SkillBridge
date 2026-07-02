@@ -5,12 +5,22 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
 
 export type JobData = {
   _id?: string;
-  client?: {
-    _id?: string;
-    fullName?: string;
-    avatar?: string;
-    createdAt?: string;
-  } | string;
+  client?:
+    | {
+        _id?: string;
+        fullName?: string;
+        avatar?: string;
+        createdAt?: string;
+        location?: string;
+        bio?: string;
+        isVerified?: boolean;
+        verified?: boolean;
+        jobsPosted?: number;
+        projectsCompleted?: number;
+        completedProjects?: number;
+        rating?: number;
+      }
+    | string;
   title: string;
   category: string;
   description?: string;
