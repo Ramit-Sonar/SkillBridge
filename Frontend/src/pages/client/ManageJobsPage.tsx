@@ -13,7 +13,7 @@ import { StudentProfileView } from "../../app/components/shared/StudentProfileVi
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
 import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
-import { getClientJobs, type JobData } from "../../services/jobService";
+import { cancelJob, getClientJobs, type JobData } from "../../services/jobService";
 import { type FileAttachment } from "../../utils/fileUtils";
 import {
   PlusCircle,
@@ -193,11 +193,15 @@ function CardMenu({
   onCancel,
   editDisabled,
   editDisabledReason,
+  cancelDisabled,
+  cancelDisabledReason,
 }: {
   onEdit: () => void;
   onCancel: () => void;
   editDisabled?: boolean;
   editDisabledReason?: string;
+  cancelDisabled?: boolean;
+  cancelDisabledReason?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -242,8 +246,8 @@ function CardMenu({
                 label: "Cancel Job",
                 onClick: onCancel,
                 danger: true,
-                disabled: false,
-                title: undefined,
+                disabled: cancelDisabled,
+                title: cancelDisabledReason,
               },
             ].map(({ icon: Icon, label, onClick, danger, disabled, title }) => (
               <button
@@ -279,6 +283,7 @@ function ConfirmModal({
   confirmColor,
   onConfirm,
   onClose,
+  loading,
 }: {
   title: string;
   message: string;
@@ -286,8 +291,12 @@ function ConfirmModal({
   confirmColor: string;
   onConfirm: () => void;
   onClose: () => void;
+  loading?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
+  const isExternalLoading = loading !== undefined;
+  const isBusy = busy || Boolean(loading);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -295,7 +304,7 @@ function ConfirmModal({
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !isBusy) onClose();
       }}
     >
       <motion.div
@@ -318,6 +327,7 @@ function ConfirmModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
+            disabled={isBusy}
             className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
             style={{ fontSize: "0.875rem" }}
           >
@@ -327,14 +337,19 @@ function ConfirmModal({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => {
+              if (isBusy) return;
+              if (isExternalLoading) {
+                onConfirm();
+                return;
+              }
               setBusy(true);
               setTimeout(onConfirm, 700);
             }}
-            disabled={busy}
+            disabled={isBusy}
             className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
             style={{ background: confirmColor, fontSize: "0.875rem" }}
           >
-            {busy ? (
+            {isBusy ? (
               <motion.span
                 className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                 animate={{ rotate: 360 }}
@@ -356,10 +371,12 @@ function DeleteModal({
   jobTitle,
   onConfirm,
   onClose,
+  loading,
 }: {
   jobTitle: string;
   onConfirm: () => void;
   onClose: () => void;
+  loading?: boolean;
 }) {
   return (
     <ConfirmModal
@@ -369,6 +386,7 @@ function DeleteModal({
       confirmColor="#DC2626"
       onConfirm={onConfirm}
       onClose={onClose}
+      loading={loading}
     />
   );
 }
@@ -828,6 +846,15 @@ function JobCard({
         : job.applicants.length > 0
           ? "This job has already received applications and can no longer be edited."
           : "";
+  const hasAcceptedApplication = job.applicants.some((applicant) => applicant.status === "hired");
+  const cancelDisabledReason =
+    job.status === "closed"
+      ? "Closed jobs cannot be cancelled."
+      : job.status === "cancelled"
+        ? "Job is already cancelled."
+        : hasAcceptedApplication
+          ? "Jobs with accepted applications cannot be cancelled."
+          : "";
   const editState = {
     editJob: {
       id: job.id,
@@ -866,6 +893,8 @@ function JobCard({
             onCancel={onCancel}
             editDisabled={Boolean(editDisabledReason)}
             editDisabledReason={editDisabledReason}
+            cancelDisabled={Boolean(cancelDisabledReason)}
+            cancelDisabledReason={cancelDisabledReason}
           />
         </div>
       </div>
@@ -920,6 +949,8 @@ export default function ManageJobsPage() {
   const [detailsJob, setDetailsJob] = useState<Job | null>(null);
   const [applicationsJob, setApplicationsJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const cancellingRef = useRef(false);
   const [error, setError] = useState("");
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
@@ -974,8 +1005,26 @@ export default function ManageJobsPage() {
     }
   };
 
-  const refreshJobs = () => {
-    loadClientJobs();
+  const handleCancelJob = async () => {
+    if (!cancelTarget || cancellingRef.current) return;
+
+    cancellingRef.current = true;
+    setCancelling(true);
+
+    try {
+      await cancelJob(cancelTarget.id);
+      setNotification({ type: "success", text: "Job cancelled successfully." });
+      setCancelTarget(null);
+      loadClientJobs();
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to cancel job.",
+      });
+    } finally {
+      cancellingRef.current = false;
+      setCancelling(false);
+    }
   };
 
   const filtered = jobs.filter((j) => {
@@ -1110,11 +1159,11 @@ export default function ManageJobsPage() {
         {cancelTarget && (
           <DeleteModal
             jobTitle={cancelTarget.title}
-            onConfirm={() => {
-              refreshJobs();
-              setCancelTarget(null);
+            onConfirm={handleCancelJob}
+            onClose={() => {
+              if (!cancelling) setCancelTarget(null);
             }}
-            onClose={() => setCancelTarget(null)}
+            loading={cancelling}
           />
         )}
         {detailsJob && (
