@@ -304,6 +304,7 @@ function SkillSelector({
 // File upload
 
 interface UploadedFile {
+  file: File;
   name: string;
   size: number;
   type: string;
@@ -329,7 +330,7 @@ function FileUploadArea({
   const handleRaw = useCallback(
     (raw: File) => {
       if (files.length >= 3 || files.find((f) => f.name === raw.name)) return;
-      onAdd({ name: raw.name, size: raw.size, type: raw.type });
+      onAdd({ file: raw, name: raw.name, size: raw.size, type: raw.type });
     },
     [files, onAdd]
   );
@@ -410,7 +411,7 @@ function FileUploadArea({
         ref={inputRef}
         type="file"
         multiple
-        accept=".pdf,.docx,.png,.jpg,.jpeg,.zip"
+        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.svg,.zip,.rar,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.fig,.psd,.ai,.apk,.exe"
         className="hidden"
         onChange={(e) => {
           Array.from(e.target.files ?? []).forEach(handleRaw);
@@ -560,7 +561,7 @@ export default function PostJobPage() {
       await createJob({
         ...form,
         skills,
-        files,
+        files: files.map((file) => file.file),
       });
 
       setPublished(true);

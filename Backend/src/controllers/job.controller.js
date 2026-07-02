@@ -5,6 +5,7 @@ import { Project } from "../models/project.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const VALID_JOB_CATEGORIES = [
   "web-dev",
@@ -16,6 +17,86 @@ const VALID_JOB_CATEGORIES = [
 ];
 
 const VALID_JOB_DURATIONS = ["1d", "3d", "5d", "7d", "14d"];
+
+const parseSkills = (skills) => {
+  if (skills === undefined) return undefined;
+  if (Array.isArray(skills)) return skills;
+
+  if (typeof skills === "string") {
+    try {
+      const parsedSkills = JSON.parse(skills);
+      return Array.isArray(parsedSkills) ? parsedSkills : undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  return undefined;
+};
+
+const normalizeSubmittedAttachments = (files) => {
+  if (!Array.isArray(files)) return [];
+
+  return files
+    .map((file) => {
+      if (typeof file === "string") {
+        const fileName = file.trim();
+
+        return fileName
+          ? {
+              url: fileName,
+              publicId: "",
+              originalName: fileName,
+              mimeType: "application/octet-stream",
+              size: 0,
+            }
+          : null;
+      }
+
+      const originalName =
+        file?.originalName?.trim() || file?.name?.trim() || "";
+
+      if (!originalName) return null;
+
+      return {
+        url: file?.url?.trim() || originalName,
+        publicId: file?.publicId?.trim() || "",
+        originalName,
+        mimeType:
+          file?.mimeType?.trim() ||
+          file?.type?.trim() ||
+          "application/octet-stream",
+        size: Number(file?.size) || 0,
+      };
+    })
+    .filter(Boolean);
+};
+
+const uploadJobAttachments = async (uploadedFiles, submittedFiles) => {
+  if (!Array.isArray(uploadedFiles) || uploadedFiles.length === 0) {
+    return normalizeSubmittedAttachments(submittedFiles);
+  }
+
+  const attachments = [];
+
+  for (const file of uploadedFiles) {
+    const uploadedAttachment = await uploadOnCloudinary(file.path);
+
+    if (!uploadedAttachment?.url) {
+      throw new ApiError(500, "Attachment upload failed");
+    }
+
+    attachments.push({
+      url: uploadedAttachment.secure_url || uploadedAttachment.url,
+      publicId: uploadedAttachment.public_id || "",
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    });
+  }
+
+  return attachments;
+};
 
 const createJob = asyncHandler(async (req, res) => {
   const {
@@ -102,7 +183,9 @@ const createJob = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Complexity must be small or medium");
   }
 
-  if (skills !== undefined && !Array.isArray(skills)) {
+  const submittedSkills = parseSkills(skills);
+
+  if (skills !== undefined && !Array.isArray(submittedSkills)) {
     throw new ApiError(400, "Skills must be an array");
   }
 
@@ -110,14 +193,7 @@ const createJob = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Files must be an array");
   }
 
-  const attachments = Array.isArray(files)
-    ? files
-        .map((file) => {
-          if (typeof file === "string") return file.trim();
-          return file?.name?.trim() || "";
-        })
-        .filter(Boolean)
-    : [];
+  const attachments = await uploadJobAttachments(req.files, files);
 
   const job = await Job.create({
     client: req.user._id,
@@ -125,7 +201,7 @@ const createJob = asyncHandler(async (req, res) => {
     category: category.trim(),
     description: description.trim(),
     requirements: requirements.trim(),
-    skills: Array.isArray(skills) ? skills : [],
+    skills: submittedSkills ?? [],
     budget: numericBudget,
     duration: duration.trim(),
     deadline: deadlineDate,
@@ -169,7 +245,9 @@ const getAllOpenJobs = asyncHandler(async (req, res) => {
   const jobs = await Job.find({
     status: "open",
   })
-    .select("title category description budget duration deadline skills status createdAt")
+    .select(
+      "title category description budget duration deadline skills status createdAt"
+    )
     .sort({ createdAt: -1 });
 
   return res
@@ -188,7 +266,10 @@ const getJobById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid job id");
   }
 
-  const job = await Job.findById(jobId).populate("client", "fullName avatar createdAt");
+  const job = await Job.findById(jobId).populate(
+    "client",
+    "fullName avatar createdAt"
+  );
 
   // TODO: Add verified status, client bio, rating, completed project count,
   // and review stats after Verification, ClientProfile, Project, and Review modules expose them.
@@ -216,6 +297,7 @@ const updateJob = asyncHandler(async (req, res) => {
     complexity,
     files,
   } = req.body || {};
+  const submittedSkills = parseSkills(skills);
 
   if (!req.user) {
     throw new ApiError(401, "User not authenticated");
@@ -323,11 +405,11 @@ const updateJob = asyncHandler(async (req, res) => {
     }
 
     if (skills !== undefined) {
-      if (!Array.isArray(skills)) {
+      if (!Array.isArray(submittedSkills)) {
         throw new ApiError(400, "Skills must be an array");
       }
 
-      job.skills = skills;
+      job.skills = submittedSkills;
     }
 
     if (budget !== undefined) {
@@ -368,17 +450,15 @@ const updateJob = asyncHandler(async (req, res) => {
       job.complexity = complexity;
     }
 
-    if (files !== undefined) {
-      if (!Array.isArray(files)) {
+    if (
+      files !== undefined ||
+      (Array.isArray(req.files) && req.files.length > 0)
+    ) {
+      if (files !== undefined && !Array.isArray(files)) {
         throw new ApiError(400, "Files must be an array");
       }
 
-      job.attachments = files
-        .map((file) => {
-          if (typeof file === "string") return file.trim();
-          return file?.name?.trim() || "";
-        })
-        .filter(Boolean);
+      job.attachments = await uploadJobAttachments(req.files, files);
     }
   } else {
     if (
@@ -388,9 +468,10 @@ const updateJob = asyncHandler(async (req, res) => {
       budget !== undefined ||
       duration !== undefined ||
       complexity !== undefined ||
-      files !== undefined
+      files !== undefined ||
+      (Array.isArray(req.files) && req.files.length > 0)
     ) {
-      if (skills !== undefined && !Array.isArray(skills)) {
+      if (skills !== undefined && !Array.isArray(submittedSkills)) {
         throw new ApiError(400, "Skills must be an array");
       }
 
@@ -398,19 +479,18 @@ const updateJob = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Files must be an array");
       }
 
-      const submittedSkills = Array.isArray(skills) ? skills : job.skills;
+      const nextSkills = Array.isArray(submittedSkills)
+        ? submittedSkills
+        : job.skills;
       const skillsChanged =
-        JSON.stringify(submittedSkills) !== JSON.stringify(job.skills);
+        JSON.stringify(nextSkills) !== JSON.stringify(job.skills);
       const submittedAttachments = Array.isArray(files)
-        ? files
-            .map((file) => {
-              if (typeof file === "string") return file.trim();
-              return file?.name?.trim() || "";
-            })
-            .filter(Boolean)
+        ? normalizeSubmittedAttachments(files)
         : job.attachments;
       const filesChanged =
-        JSON.stringify(submittedAttachments) !== JSON.stringify(job.attachments);
+        (Array.isArray(req.files) && req.files.length > 0) ||
+        JSON.stringify(submittedAttachments) !==
+          JSON.stringify(job.attachments);
 
       if (
         (category !== undefined && category !== job.category) ||

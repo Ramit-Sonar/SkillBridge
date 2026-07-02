@@ -27,6 +27,7 @@ import {
   ClientInformationCard,
   type ClientCardData,
 } from "../../app/components/shared/ClientInformationCard";
+import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
 import {
   JOB_CATEGORIES,
@@ -35,13 +36,11 @@ import {
 } from "../../constants/job.constants";
 import { getAllOpenJobs, getJobById, type JobData } from "../../services/jobService";
 import type { BrowseJob, JobCategoryId } from "../../types";
+import { type FileAttachment } from "../../utils/fileUtils";
 
 type JobDetailData = BrowseJob & {
   client?: ClientCardData;
-  attachedFiles?: {
-    name: string;
-    type: string;
-  }[];
+  attachedFiles?: FileAttachment[];
 };
 
 function formatJobDate(date?: string) {
@@ -124,17 +123,25 @@ function mapJobDetailsFromApi(job: JobData): JobDetailData {
         }
       : undefined;
 
+  const attachments = job.attachments as (FileAttachment | string)[] | undefined;
+
   return {
     ...mapJobFromApi(job),
     client: clientCard,
-    attachedFiles: job.attachments?.map((fileName) => {
-      const fileType = fileName.includes(".") ? fileName.split(".").pop() || "file" : "file";
+    attachedFiles: attachments
+      ?.map((attachment) => {
+        if (typeof attachment === "string") {
+          return {
+            url: attachment,
+            originalName: attachment,
+            mimeType: "application/octet-stream",
+            size: 0,
+          };
+        }
 
-      return {
-        name: fileName,
-        type: fileType,
-      };
-    }),
+        return attachment;
+      })
+      .filter((attachment) => Boolean(attachment.originalName)),
   };
 }
 // Config
@@ -601,35 +608,14 @@ function JobDetailPanel({
           {job.attachedFiles && job.attachedFiles.length > 0 ? (
             <div className="flex flex-col gap-2">
               {job.attachedFiles.map((file) => (
-                <div
-                  key={file.name}
-                  className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3"
-                >
-                  <div
-                    className="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 font-bold"
-                    style={{ fontSize: "0.52rem" }}
-                  >
-                    {file.type.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-slate-900 font-semibold truncate"
-                      style={{ fontSize: "0.75rem" }}
-                    >
-                      {file.name}
-                    </p>
-                    <p className="text-slate-400" style={{ fontSize: "0.62rem" }}>
-                      {file.type.toUpperCase()} file
-                    </p>
-                  </div>
-                </div>
+                <FileAttachmentCard key={`${file.originalName}-${file.url}`} attachment={file} />
               ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
               <FileText className="w-5 h-5 text-slate-300" />
               <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-                No files attached
+                No attachment available.
               </p>
             </div>
           )}
@@ -763,6 +749,28 @@ function MobileDetailModal({
                 </p>
               </div>
             )}
+            <div>
+              <p className="text-slate-900 font-bold mb-2" style={{ fontSize: "0.82rem" }}>
+                Attached Files
+              </p>
+              {job.attachedFiles && job.attachedFiles.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {job.attachedFiles.map((file) => (
+                    <FileAttachmentCard
+                      key={`${file.originalName}-${file.url}`}
+                      attachment={file}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
+                  <FileText className="w-5 h-5 text-slate-300" />
+                  <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
+                    No attachment available.
+                  </p>
+                </div>
+              )}
+            </div>
             {job.client && <ClientInformationCard client={job.client} />}
           </div>
           <div className="p-4 border-t border-black/[0.05]">

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+ï»¿import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
@@ -8,6 +8,7 @@ import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCa
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
 import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 import { getClientJobs, type JobData } from "../../services/jobService";
+import { type FileAttachment } from "../../utils/fileUtils";
 import {
   PlusCircle,
   MoreVertical,
@@ -68,6 +69,7 @@ interface Job {
   duration: string;
   deadline: string;
   skills: string[];
+  attachedFiles?: FileAttachment[];
   applicants: Applicant[];
 }
 
@@ -97,6 +99,7 @@ function formatDeadline(date?: string) {
 
 function mapJobFromApi(job: JobData): Job {
   const categoryKey = job.category;
+  const attachments = job.attachments as (FileAttachment | string)[] | undefined;
   const budgetRaw = String(job.budget ?? "");
   const numericBudget = Number(job.budget);
   const budget = Number.isNaN(numericBudget)
@@ -107,8 +110,7 @@ function mapJobFromApi(job: JobData): Job {
   return {
     id: job._id ?? "",
     title: job.title,
-    category:
-      JOB_CATEGORY_LABELS[categoryKey as keyof typeof JOB_CATEGORY_LABELS] ?? categoryKey,
+    category: JOB_CATEGORY_LABELS[categoryKey as keyof typeof JOB_CATEGORY_LABELS] ?? categoryKey,
     categoryKey,
     status,
     budget,
@@ -120,6 +122,21 @@ function mapJobFromApi(job: JobData): Job {
     duration: job.duration,
     deadline: formatDeadline(job.deadline),
     skills: job.skills ?? [],
+    attachedFiles: attachments
+      ?.map((attachment) => {
+        if (typeof attachment === "string") {
+          return {
+            url: attachment,
+            publicId: "",
+            originalName: attachment,
+            mimeType: "application/octet-stream",
+            size: 0,
+          };
+        }
+
+        return attachment;
+      })
+      .filter((attachment) => Boolean(attachment.originalName)),
     applicants: [],
   };
 }
@@ -333,7 +350,7 @@ function DeleteModal({
   );
 }
 
-// Student Profile panel — uses shared StudentProfileView
+// Student Profile panel â€” uses shared StudentProfileView
 
 function StudentProfilePanel({
   applicant,
@@ -408,7 +425,7 @@ function StudentProfilePanel({
                     style={{ fontSize: "0.58rem" }}
                   />
                   <span className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-                    · Applied {applicant.appliedAt} for{" "}
+                    Â· Applied {applicant.appliedAt} for{" "}
                     <span className="text-slate-500 font-medium">{jobTitle}</span>
                   </span>
                 </div>
@@ -416,7 +433,7 @@ function StudentProfilePanel({
             </div>
           </div>
 
-          {/* Full profile — shared component */}
+          {/* Full profile â€” shared component */}
           <div className="flex-1 overflow-y-auto p-5">
             <StudentProfileView profile={profileData} />
           </div>
@@ -693,6 +710,7 @@ function JobDetailsPanel({
           deadline: job.deadline,
           complexity: job.complexity,
           postedAt: job.postedAt,
+          attachedFiles: job.attachedFiles,
         }}
         actions={
           <motion.button

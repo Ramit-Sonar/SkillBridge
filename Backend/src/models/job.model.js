@@ -1,5 +1,36 @@
 import mongoose from "mongoose";
 
+const attachmentSchema = new mongoose.Schema(
+  {
+    url: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    publicId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    originalName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    mimeType: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    size: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+  { _id: false }
+);
+
 const jobSchema = new mongoose.Schema(
   {
     client: {
@@ -62,12 +93,10 @@ const jobSchema = new mongoose.Schema(
       required: true,
     },
 
-    attachments: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
+    attachments: {
+      type: [attachmentSchema],
+      default: [],
+    },
 
     status: {
       type: String,
@@ -79,5 +108,23 @@ const jobSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+jobSchema.pre("init", function (data) {
+  if (!Array.isArray(data.attachments)) return;
+
+  data.attachments = data.attachments
+    .map((attachment) => {
+      if (typeof attachment !== "string") return attachment;
+
+      return {
+        url: attachment,
+        publicId: "",
+        originalName: attachment,
+        mimeType: "application/octet-stream",
+        size: 0,
+      };
+    })
+    .filter(Boolean);
+});
 
 export const Job = mongoose.model("Job", jobSchema);

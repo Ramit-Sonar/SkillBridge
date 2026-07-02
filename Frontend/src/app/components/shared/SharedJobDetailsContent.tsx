@@ -15,9 +15,10 @@ import {
   Cpu,
   Globe,
   Search,
-  Download,
 } from "lucide-react";
 import { ClientInformationCard } from "./ClientInformationCard";
+import { type FileAttachment } from "../../../utils/fileUtils";
+import { FileAttachmentCard } from "./FileAttachmentCard";
 import {
   JOB_CATEGORY_LABELS,
   JOB_DURATION_LABELS,
@@ -80,23 +81,9 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
-const FILE_TYPE_CFG: Record<string, { bg: string; color: string; label: string }> = {
-  pdf: { bg: "#FEF2F2", color: "#DC2626", label: "PDF" },
-  png: { bg: "#F0FDFA", color: "#0D9488", label: "PNG" },
-  jpg: { bg: "#F0FDFA", color: "#0D9488", label: "JPG" },
-  jpeg: { bg: "#F0FDFA", color: "#0D9488", label: "JPEG" },
-  doc: { bg: "#EFF6FF", color: "#2563EB", label: "DOC" },
-  docx: { bg: "#EFF6FF", color: "#2563EB", label: "DOCX" },
-  fig: { bg: "#F5F3FF", color: "#7C3AED", label: "FIG" },
-  zip: { bg: "#FFFBEB", color: "#D97706", label: "ZIP" },
-};
-
 // ── Data interface ────────────────────────────────────────────────────────────
 
-export interface AttachedFile {
-  name: string;
-  type: string; // e.g. "pdf", "png", "fig"
-}
+export type AttachedFile = FileAttachment;
 
 export interface JobDetailData {
   title: string;
@@ -158,40 +145,6 @@ function CategoryBadge({ category }: { category: string }) {
 }
 
 // ── Attached file card ────────────────────────────────────────────────────────
-
-function FileCard({ file }: { file: AttachedFile }) {
-  const fileType = file.type.toLowerCase();
-  const fileTypeConfig = FILE_TYPE_CFG[fileType] ?? {
-    bg: "#F8FAFC",
-    color: "#64748B",
-    label: fileType.toUpperCase(),
-  };
-  return (
-    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold"
-        style={{
-          background: fileTypeConfig.bg,
-          color: fileTypeConfig.color,
-          fontSize: "0.52rem",
-        }}
-      >
-        {fileTypeConfig.label}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-slate-900 font-semibold truncate" style={{ fontSize: "0.75rem" }}>
-          {file.name}
-        </p>
-        <p className="text-slate-400" style={{ fontSize: "0.62rem" }}>
-          {fileTypeConfig.label} file
-        </p>
-      </div>
-      <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0">
-        <Download className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -365,14 +318,14 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
           {hasFiles ? (
             <div className="flex flex-col gap-2">
               {job.attachedFiles!.map((f) => (
-                <FileCard key={f.name} file={f} />
+                <FileAttachmentCard key={`${f.originalName}-${f.url}`} attachment={f} />
               ))}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
               <FileText className="w-5 h-5 text-slate-300" />
               <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-                No files attached
+                No attachment available.
               </p>
             </div>
           )}
