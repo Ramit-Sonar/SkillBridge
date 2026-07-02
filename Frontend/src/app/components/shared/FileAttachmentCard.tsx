@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { AlertCircle, Download, Eye, FileText } from "lucide-react";
 import {
+  downloadAttachment,
   formatFileSize,
-  getAttachmentDownloadUrl,
   getFileIcon,
   isPreviewSupported,
   isValidAttachmentUrl,
@@ -16,6 +17,9 @@ type Props = {
 };
 
 export function FileAttachmentCard({ attachment, canPreview = true, canDownload = true }: Props) {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
+
   if (!attachment) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
@@ -38,17 +42,21 @@ export function FileAttachmentCard({ attachment, canPreview = true, canDownload 
     window.open(attachment.url, "_blank", "noopener,noreferrer");
   };
 
-  const handleDownload = () => {
-    const downloadUrl = getAttachmentDownloadUrl(attachment);
+  const handleDownload = async () => {
+    if (isDownloading) return;
 
-    if (!downloadUrl) return;
+    setIsDownloading(true);
+    setDownloadError("");
 
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = attachment.originalName || "attachment";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+      await downloadAttachment(attachment);
+    } catch (error) {
+      setDownloadError(
+        error instanceof Error ? error.message : "Attachment could not be downloaded."
+      );
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -71,13 +79,13 @@ export function FileAttachmentCard({ attachment, canPreview = true, canDownload 
         <p className="text-slate-400" style={{ fontSize: "0.62rem" }}>
           {fileDisplay.label} file - {formatFileSize(attachment.size)}
         </p>
-        {!hasValidUrl && (
+        {(!hasValidUrl || downloadError) && (
           <p
             className="inline-flex items-center gap-1 text-red-400 mt-1"
             style={{ fontSize: "0.62rem" }}
           >
             <AlertCircle className="w-3 h-3" />
-            Attachment link is unavailable.
+            {downloadError || "Attachment link is unavailable."}
           </p>
         )}
       </div>
@@ -97,7 +105,7 @@ export function FileAttachmentCard({ attachment, canPreview = true, canDownload 
           <button
             type="button"
             onClick={handleDownload}
-            disabled={!hasValidUrl}
+            disabled={!hasValidUrl || isDownloading}
             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
             title="Download attachment"
           >

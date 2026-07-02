@@ -103,15 +103,29 @@ export function getFileIcon(mimeType?: string): {
   return { label: "File", icon: File, bg: "#F8FAFC", color: "#64748B" };
 }
 
-export function getAttachmentDownloadUrl(attachment: FileAttachment) {
-  if (!isValidAttachmentUrl(attachment.url)) return "";
+export async function downloadAttachment(attachment: FileAttachment) {
+  const attachmentUrl = attachment.url;
 
-  const originalName = attachment.originalName || "attachment";
-  const encodedFileName = encodeURIComponent(originalName);
-
-  if (attachment.url?.includes("/upload/")) {
-    return attachment.url.replace("/upload/", `/upload/fl_attachment:${encodedFileName}/`);
+  if (!attachmentUrl || !isValidAttachmentUrl(attachmentUrl)) {
+    throw new Error("Attachment link is unavailable.");
   }
 
-  return attachment.url || "";
+  const response = await fetch(attachmentUrl);
+
+  if (!response.ok) {
+    throw new Error("Attachment could not be downloaded.");
+  }
+
+  const blob = await response.blob();
+  const downloadUrl = URL.createObjectURL(blob);
+  const fileName = attachment.originalName?.replace(/[\\/:*?"<>|]/g, "_").trim() || "attachment";
+  const link = document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
 }
