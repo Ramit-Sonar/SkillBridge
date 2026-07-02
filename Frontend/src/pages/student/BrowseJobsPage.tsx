@@ -392,7 +392,7 @@ function JobCardList({
         >
           {job.title}
         </h3>
-        <p className="text-slate-500 leading-relaxed line-clamp-1" style={{ fontSize: "0.78rem" }}>
+        <p className="text-slate-500 leading-relaxed line-clamp-2" style={{ fontSize: "0.78rem" }}>
           {job.description}
         </p>
         <div className="flex flex-wrap gap-1.5">

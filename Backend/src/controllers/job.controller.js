@@ -169,7 +169,7 @@ const getAllOpenJobs = asyncHandler(async (req, res) => {
   const jobs = await Job.find({
     status: "open",
   })
-    .select("title category budget duration deadline skills status createdAt")
+    .select("title category description budget duration deadline skills status createdAt")
     .sort({ createdAt: -1 });
 
   return res
