@@ -1,8 +1,14 @@
 ﻿import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { SearchInput, SidePanel, StatusBadge } from "../../app/components/shared/ui";
+import {
+  Notification,
+  SearchInput,
+  SidePanel,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
@@ -182,7 +188,17 @@ const APP_STATUS_CFG: Record<
 
 // Three-dot menu
 
-function CardMenu({ onEdit, onCancel }: { onEdit: () => void; onCancel: () => void }) {
+function CardMenu({
+  onEdit,
+  onCancel,
+  editDisabled,
+  editDisabledReason,
+}: {
+  onEdit: () => void;
+  onCancel: () => void;
+  editDisabled?: boolean;
+  editDisabledReason?: string;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -218,22 +234,29 @@ function CardMenu({ onEdit, onCancel }: { onEdit: () => void; onCancel: () => vo
                 label: "Edit Job",
                 onClick: onEdit,
                 danger: false,
+                disabled: editDisabled,
+                title: editDisabledReason,
               },
               {
                 icon: XCircle,
                 label: "Cancel Job",
                 onClick: onCancel,
                 danger: true,
+                disabled: false,
+                title: undefined,
               },
-            ].map(({ icon: Icon, label, onClick, danger }) => (
+            ].map(({ icon: Icon, label, onClick, danger, disabled, title }) => (
               <button
                 key={label}
+                disabled={disabled}
+                title={title}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (disabled) return;
                   setOpen(false);
                   onClick();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors ${danger ? "text-red-600 hover:bg-red-50" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "text-red-600 hover:bg-red-50" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
                 style={{ fontSize: "0.8rem" }}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -797,6 +820,14 @@ function JobCard({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const cfg = JOB_STATUS_CFG[job.status];
+  const editDisabledReason =
+    job.status === "closed"
+      ? "Closed jobs cannot be edited."
+      : job.status === "cancelled"
+        ? "Cancelled jobs cannot be edited."
+        : job.applicants.length > 0
+          ? "This job has already received applications and can no longer be edited."
+          : "";
   const editState = {
     editJob: {
       id: job.id,
@@ -809,6 +840,7 @@ function JobCard({
       budget: job.budgetRaw,
       deadline: job.deadline,
       skills: job.skills,
+      attachedFiles: job.attachedFiles,
     },
   };
   return (
@@ -832,6 +864,8 @@ function JobCard({
           <CardMenu
             onEdit={() => navigate("/dashboard/client/post-job", { state: editState })}
             onCancel={onCancel}
+            editDisabled={Boolean(editDisabledReason)}
+            editDisabledReason={editDisabledReason}
           />
         </div>
       </div>
@@ -878,6 +912,7 @@ function JobCard({
 
 export default function ManageJobsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -886,6 +921,7 @@ export default function ManageJobsPage() {
   const [applicationsJob, setApplicationsJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notification, setNotification] = useState<NotificationMessage>(null);
 
   const loadClientJobs = useCallback(async () => {
     setLoading(true);
@@ -905,6 +941,15 @@ export default function ManageJobsPage() {
   useEffect(() => {
     loadClientJobs();
   }, [loadClientJobs]);
+
+  useEffect(() => {
+    const routeState = location.state as { notification?: NotificationMessage } | null;
+
+    if (!routeState?.notification) return;
+
+    setNotification(routeState.notification);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const updateAppStatus = (jobId: string, appId: string, status: AppStatus) => {
     setJobs((prev) =>
@@ -1087,6 +1132,7 @@ export default function ManageJobsPage() {
           />
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }

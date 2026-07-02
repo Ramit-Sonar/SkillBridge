@@ -2,10 +2,13 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation } from "react-router";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
+import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
+import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import { SettingsLayout } from "../../app/components/layout/SettingsLayout";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
 import { JOB_CATEGORIES } from "../../constants/job.constants";
-import { createJob } from "../../services/jobService";
+import { createJob, updateJob } from "../../services/jobService";
+import { type FileAttachment } from "../../utils/fileUtils";
 import {
   Briefcase,
   X,
@@ -484,6 +487,7 @@ export default function PostJobPage() {
         budget: string;
         deadline: string;
         skills: string[];
+        attachedFiles?: FileAttachment[];
       }
     | undefined;
 
@@ -505,6 +509,7 @@ export default function PostJobPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
+  const [notification, setNotification] = useState<NotificationMessage>(null);
 
   const set = (key: string) => (value: string) => {
     setForm((p) => ({ ...p, [key]: value }));
@@ -549,15 +554,25 @@ export default function PostJobPage() {
     if (!validateProjectSettings()) return;
     setPublishing(true);
 
-    if (isEditing) {
-      setTimeout(() => {
-        setPublishing(false);
-        setPublished(true);
-      }, 1400);
-      return;
-    }
-
     try {
+      if (isEditing) {
+        await updateJob(editJob.id, {
+          ...form,
+          skills,
+          files: files.length > 0 ? files.map((file) => file.file) : undefined,
+        });
+
+        navigate("/dashboard/client/manage-jobs", {
+          state: {
+            notification: {
+              type: "success",
+              text: "Job updated successfully.",
+            },
+          },
+        });
+        return;
+      }
+
       await createJob({
         ...form,
         skills,
@@ -566,9 +581,15 @@ export default function PostJobPage() {
 
       setPublished(true);
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save job.";
+
       setErrors({
-        submit: error instanceof Error ? error.message : "Failed to post job.",
+        submit: message,
       });
+
+      if (isEditing) {
+        setNotification({ type: "error", text: message });
+      }
     } finally {
       setPublishing(false);
     }
@@ -936,6 +957,16 @@ export default function PostJobPage() {
                 onAdd={(f) => setFiles((p) => [...p, f])}
                 onRemove={(name) => setFiles((p) => p.filter((f) => f.name !== name))}
               />
+              {isEditing && editJob?.attachedFiles && editJob.attachedFiles.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {editJob.attachedFiles.map((attachment) => (
+                    <FileAttachmentCard
+                      key={`${attachment.originalName}-${attachment.url}`}
+                      attachment={attachment}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Validation hint */}
@@ -1005,6 +1036,7 @@ export default function PostJobPage() {
           </div>
         )}
       </SettingsLayout>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }
