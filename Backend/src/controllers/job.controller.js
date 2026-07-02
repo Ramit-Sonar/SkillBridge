@@ -4,6 +4,7 @@ import { Job } from "../models/job.model.js";
 import { Project } from "../models/project.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { buildClientSummary } from "../utils/buildClientSummary.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
@@ -266,21 +267,18 @@ const getJobById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid job id");
   }
 
-  const job = await Job.findById(jobId).populate(
-    "client",
-    "fullName avatar createdAt"
-  );
-
-  // TODO: Add verified status, client bio, rating, completed project count,
-  // and review stats after Verification, ClientProfile, Project, and Review modules expose them.
+  const job = await Job.findById(jobId);
 
   if (!job) {
     throw new ApiError(404, "Job not found");
   }
 
+  const jobResponse = job.toObject();
+  jobResponse.client = await buildClientSummary(job.client);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, job, "Job fetched successfully"));
+    .json(new ApiResponse(200, jobResponse, "Job fetched successfully"));
 });
 
 const updateJob = asyncHandler(async (req, res) => {

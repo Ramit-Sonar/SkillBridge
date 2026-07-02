@@ -1,25 +1,71 @@
-import { CheckCircle, MapPin, Briefcase, FolderCheck, CalendarDays, Star } from "lucide-react";
+import {
+  Building2,
+  CheckCircle,
+  ExternalLink,
+  MapPin,
+  Briefcase,
+  FolderCheck,
+  CalendarDays,
+  Star,
+} from "lucide-react";
 
 export interface ClientCardData {
-  name: string;
-  initials?: string;
+  id?: string;
+  fullName: string;
   location?: string;
-  about?: string;
   avatar?: string;
-  verified?: boolean;
-  jobsPosted?: number;
-  projectsCompleted?: number;
-  joinedDate?: string;
-  rating?: number;
+  joined?: string;
+  companyName?: string;
+  website?: string;
+  bio?: string;
+  verification?: {
+    status: string | null;
+    verifiedAt?: string | null;
+  };
+  statistics?: {
+    jobsPosted?: number | null;
+    projectsCompleted?: number | null;
+    activeProjects?: number | null;
+    totalReviews?: number | null;
+    averageRating?: number | null;
+  };
+}
+
+function formatJoinedDate(date?: string) {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getWebsiteUrl(website?: string) {
+  const trimmedWebsite = website?.trim();
+
+  if (!trimmedWebsite) return "";
+
+  if (trimmedWebsite.startsWith("http://") || trimmedWebsite.startsWith("https://")) {
+    return trimmedWebsite;
+  }
+
+  return `https://${trimmedWebsite}`;
 }
 
 export function ClientInformationCard({ client }: { client: ClientCardData }) {
-  const initials = client.initials ?? client.name.slice(0, 2).toUpperCase();
+  const initials = client.fullName.slice(0, 2).toUpperCase();
+  const joinedDate = formatJoinedDate(client.joined);
+  const websiteUrl = getWebsiteUrl(client.website);
+  const jobsPosted = client.statistics?.jobsPosted;
+  const projectsCompleted = client.statistics?.projectsCompleted;
+  const averageRating = client.statistics?.averageRating;
+  const isVerified = client.verification?.status === "approved";
   const hasStats =
-    client.jobsPosted != null ||
-    client.projectsCompleted != null ||
-    client.joinedDate ||
-    client.rating != null;
+    jobsPosted != null || projectsCompleted != null || joinedDate || averageRating != null;
 
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-4">
@@ -34,16 +80,16 @@ export function ClientInformationCard({ client }: { client: ClientCardData }) {
           style={{ fontSize: "0.65rem" }}
         >
           {client.avatar ? (
-            <img src={client.avatar} alt={client.name} className="w-full h-full object-cover" />
+            <img src={client.avatar} alt={client.fullName} className="w-full h-full object-cover" />
           ) : (
             initials
           )}
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
           <p className="text-slate-900 font-bold leading-tight" style={{ fontSize: "0.88rem" }}>
-            {client.name}
+            {client.fullName}
           </p>
-          {client.verified && (
+          {isVerified && (
             <div className="flex items-center gap-1 mt-1">
               <CheckCircle className="w-3 h-3 text-emerald-600" />
               <span className="text-emerald-600 font-semibold" style={{ fontSize: "0.62rem" }}>
@@ -59,13 +105,36 @@ export function ClientInformationCard({ client }: { client: ClientCardData }) {
               </span>
             </div>
           )}
+          {(client.companyName || websiteUrl) && (
+            <div className="flex items-center gap-2 mt-1">
+              {client.companyName && (
+                <div className="flex items-center gap-1 min-w-0">
+                  <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                  <span className="text-slate-500 truncate" style={{ fontSize: "0.72rem" }}>
+                    {client.companyName}
+                  </span>
+                </div>
+              )}
+              {websiteUrl && (
+                <a
+                  href={websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors shrink-0"
+                  title="Open client website"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* About */}
-      {client.about && (
+      {client.bio && (
         <p className="text-slate-500 leading-relaxed" style={{ fontSize: "0.75rem" }}>
-          {client.about}
+          {client.bio}
         </p>
       )}
 
@@ -74,43 +143,43 @@ export function ClientInformationCard({ client }: { client: ClientCardData }) {
         <>
           <div className="h-px bg-slate-200" />
           <div className="flex flex-wrap gap-3">
-            {client.jobsPosted != null && (
+            {jobsPosted != null && (
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center">
                   <Briefcase className="w-3 h-3 text-blue-600" />
                 </div>
                 <span className="text-slate-900 font-semibold" style={{ fontSize: "0.72rem" }}>
-                  {client.jobsPosted} Jobs Posted
+                  {jobsPosted} Jobs Posted
                 </span>
               </div>
             )}
-            {client.projectsCompleted != null && (
+            {projectsCompleted != null && (
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center">
                   <FolderCheck className="w-3 h-3 text-emerald-600" />
                 </div>
                 <span className="text-slate-900 font-semibold" style={{ fontSize: "0.72rem" }}>
-                  {client.projectsCompleted} Projects Completed
+                  {projectsCompleted} Projects Completed
                 </span>
               </div>
             )}
-            {client.rating != null && (
+            {averageRating != null && (
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center">
                   <Star className="w-3 h-3 text-amber-600" />
                 </div>
                 <span className="text-slate-900 font-semibold" style={{ fontSize: "0.72rem" }}>
-                  {client.rating} Rating
+                  {averageRating} Rating
                 </span>
               </div>
             )}
-            {client.joinedDate && (
+            {joinedDate && (
               <div className="flex items-center gap-1.5">
                 <div className="w-6 h-6 rounded-lg bg-violet-50 flex items-center justify-center">
                   <CalendarDays className="w-3 h-3 text-violet-600" />
                 </div>
                 <span className="text-slate-900 font-semibold" style={{ fontSize: "0.72rem" }}>
-                  Joined {client.joinedDate}
+                  Joined {joinedDate}
                 </span>
               </div>
             )}

@@ -11,24 +11,31 @@ export type JobAttachment = {
   size: number;
 };
 
+export type ClientSummary = {
+  id: string;
+  fullName: string;
+  avatar?: string;
+  joined?: string;
+  location?: string;
+  companyName?: string;
+  website?: string;
+  bio?: string;
+  verification: {
+    status: string | null;
+    verifiedAt?: string | null;
+  };
+  statistics: {
+    jobsPosted: number;
+    projectsCompleted: number | null;
+    activeProjects?: number | null;
+    totalReviews?: number | null;
+    averageRating?: number | null;
+  };
+};
+
 export type JobData = {
   _id?: string;
-  client?:
-    | {
-        _id?: string;
-        fullName?: string;
-        avatar?: string;
-        createdAt?: string;
-        location?: string;
-        bio?: string;
-        isVerified?: boolean;
-        verified?: boolean;
-        jobsPosted?: number;
-        projectsCompleted?: number;
-        completedProjects?: number;
-        rating?: number;
-      }
-    | string;
+  client?: ClientSummary | string | null;
   title: string;
   category: string;
   description?: string;

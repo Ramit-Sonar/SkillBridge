@@ -67,19 +67,6 @@ function formatDeadline(date?: string) {
   return parsedDate.toISOString().split("T")[0];
 }
 
-function formatMemberSince(date?: string) {
-  if (!date) return "";
-
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) return "";
-
-  return parsedDate.toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function formatBudget(budget: string | number) {
   const numericBudget = Number(budget);
 
@@ -111,15 +98,9 @@ function mapJobDetailsFromApi(job: JobData): JobDetailData {
   const clientCard =
     client && clientName
       ? {
-          name: clientName,
+          ...client,
+          fullName: clientName,
           avatar: client.avatar || undefined,
-          location: client.location,
-          about: client.bio,
-          verified: client.verified ?? client.isVerified,
-          jobsPosted: client.jobsPosted,
-          projectsCompleted: client.projectsCompleted ?? client.completedProjects,
-          joinedDate: formatMemberSince(client.createdAt),
-          rating: client.rating,
         }
       : undefined;
 

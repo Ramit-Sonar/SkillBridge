@@ -335,16 +335,20 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
         {showClientCard && job.clientName && (
           <ClientInformationCard
             client={{
-              name: job.clientName,
-              initials: job.clientInitials,
+              id: undefined,
+              fullName: job.clientName,
               avatar: job.clientAvatar,
               location: job.clientLocation,
-              about: job.clientAbout,
-              verified: job.clientVerified,
-              jobsPosted: job.clientJobsPosted,
-              projectsCompleted: job.clientProjectsCompleted,
-              joinedDate: job.clientJoinedDate,
-              rating: job.clientRating,
+              joined: job.clientJoinedDate,
+              bio: job.clientAbout,
+              verification: {
+                status: job.clientVerified ? "approved" : null,
+              },
+              statistics: {
+                jobsPosted: job.clientJobsPosted,
+                projectsCompleted: job.clientProjectsCompleted,
+                averageRating: job.clientRating,
+              },
             }}
           />
         )}
