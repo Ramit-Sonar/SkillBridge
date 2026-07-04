@@ -65,7 +65,7 @@ function getApplicationTimeline(app: ApplicationDetailsData): TimelineItem[] {
   const isAccepted = app.status === "accepted";
   const isRejected = app.status === "rejected";
   const isWithdrawn = app.status === "withdrawn";
-  const isReviewed = app.status === "pending" || isAccepted || isRejected;
+  const isPending = app.status === "pending" || isAccepted || isRejected;
 
   return [
     {
@@ -76,10 +76,10 @@ function getApplicationTimeline(app: ApplicationDetailsData): TimelineItem[] {
       tone: "success",
     },
     {
-      key: "review",
-      label: "Under Review",
-      date: isReviewed ? (app.updatedAt ?? app.appliedAt) : undefined,
-      occurred: isReviewed,
+      key: "pending",
+      label: "Pending",
+      date: isPending ? (app.updatedAt ?? app.appliedAt) : undefined,
+      occurred: isPending,
       tone: "neutral",
     },
     {
