@@ -14,6 +14,7 @@ interface ApplyModalProps {
   job: BrowseJob;
   onClose: () => void;
   onSubmitted?: (jobId: string) => void;
+  onError?: (message: string) => void;
 }
 
 const TIME_OPTIONS = [
@@ -123,7 +124,7 @@ function getSubmitErrorMessage(error: unknown) {
   return message || "Network error. Please try again.";
 }
 
-export function ApplyModal({ job, onClose, onSubmitted }: ApplyModalProps) {
+export function ApplyModal({ job, onClose, onSubmitted, onError }: ApplyModalProps) {
   const [coverLetter, setCoverLetter] = useState("");
   const [whySuitable, setWhySuitable] = useState("");
   const [estimatedTime, setEstimatedTime] = useState("");
@@ -215,7 +216,9 @@ export function ApplyModal({ job, onClose, onSubmitted }: ApplyModalProps) {
       onSubmitted?.(job.id);
       onClose();
     } catch (error) {
-      setErrors({ submit: getSubmitErrorMessage(error) });
+      const message = getSubmitErrorMessage(error);
+      setErrors({ submit: message });
+      onError?.(message);
     } finally {
       setSubmitting(false);
     }

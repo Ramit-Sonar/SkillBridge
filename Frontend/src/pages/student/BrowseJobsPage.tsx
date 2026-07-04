@@ -1155,6 +1155,13 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     });
   };
 
+  const handleApplicationError = (message: string) => {
+    setNotification({
+      type: "error",
+      text: message,
+    });
+  };
+
   const toggleArr = (arr: string[], setArr: (a: string[]) => void, v: string) =>
     setArr(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
@@ -1425,6 +1432,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
                 job={job}
                 onClose={() => setApplyingJobId(null)}
                 onSubmitted={handleApplicationSubmitted}
+                onError={handleApplicationError}
               />
             ) : null;
           })()}
