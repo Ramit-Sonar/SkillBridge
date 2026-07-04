@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { type ElementType } from "react";
+import { useEffect, useRef, type ElementType } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
@@ -13,33 +13,34 @@ import {
   AlertTriangle,
   Search,
   FolderOpen,
-  Calendar,
-  MessageSquare,
-  Timer,
-  User,
+  Ban,
+  ShieldCheck,
 } from "lucide-react";
 import {
   SharedJobDetailsContent,
   type JobDetailData,
 } from "../../app/components/shared/SharedJobDetailsContent";
+import {
+  ApplicationDetailsContent,
+  APPLICATION_STATUS_CFG as APP_STATUS_CFG,
+  type ApplicationDetailsData,
+} from "../../app/components/shared/ApplicationDetailsContent";
 
 // Types
 
-type AppStatus = "pending" | "accepted" | "rejected";
+type AppStatus = ApplicationDetailsData["status"];
 
-interface Application {
+interface Application extends ApplicationDetailsData {
   id: string;
   jobTitle: string;
   category: string;
-  status: AppStatus;
-  appliedAt: string;
-  estimatedTime: string;
   budget: string;
   coverSnippet: string;
-  coverMessage: string;
-  whySuitable: string;
   job: JobDetailData;
 }
+
+const SAMPLE_ATTACHMENT_URL =
+  "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 
 // Dummy data
 
@@ -50,6 +51,7 @@ const DUMMY_APPS: Application[] = [
     category: "UI/UX Design",
     status: "pending",
     appliedAt: "10 Jun 2026",
+    updatedAt: "10 Jun 2026",
     estimatedTime: "7 Days",
     budget: "8,000",
     coverSnippet:
@@ -58,6 +60,29 @@ const DUMMY_APPS: Application[] = [
       "I have designed multiple landing pages for SaaS and EdTech clients using Figma and TailwindCSS. I understand user psychology and conversion-focused design principles, which I will apply to make this landing page both visually impressive and highly effective.",
     whySuitable:
       "I have 2+ years of UI/UX experience with a focus on EdTech products. My portfolio includes 5 similar landing page projects with measurable conversion improvements. I am also proficient in Figma, Adobe XD, and front-end implementation.",
+    attachments: [
+      {
+        url: SAMPLE_ATTACHMENT_URL,
+        publicId: "student-applications/a1/resume",
+        originalName: "Resume.pdf",
+        mimeType: "application/pdf",
+        size: 245760,
+      },
+      {
+        url: SAMPLE_ATTACHMENT_URL,
+        publicId: "student-applications/a1/proposal",
+        originalName: "Proposal.pdf",
+        mimeType: "application/pdf",
+        size: 331776,
+      },
+      {
+        url: SAMPLE_ATTACHMENT_URL,
+        publicId: "student-applications/a1/portfolio",
+        originalName: "Portfolio.pdf",
+        mimeType: "application/pdf",
+        size: 524288,
+      },
+    ],
     job: {
       title: "Design a Landing Page for EdTech Startup",
       category: "ui-ux",
@@ -87,6 +112,8 @@ const DUMMY_APPS: Application[] = [
     category: "Web Development",
     status: "accepted",
     appliedAt: "8 Jun 2026",
+    updatedAt: "9 Jun 2026",
+    acceptedAt: "9 Jun 2026",
     estimatedTime: "5 Days",
     budget: "6,500",
     coverSnippet:
@@ -95,6 +122,15 @@ const DUMMY_APPS: Application[] = [
       "I specialize in React and TailwindCSS and have built several portfolio websites for designers, photographers, and developers. I focus on clean code, fast performance, and pixel-perfect implementation from Figma designs.",
     whySuitable:
       "I have built 10+ portfolio websites using React and TailwindCSS. I am comfortable with animations using Framer Motion, responsive layouts, and SEO best practices. I can deliver within 5 days with full source code.",
+    attachments: [
+      {
+        url: SAMPLE_ATTACHMENT_URL,
+        publicId: "student-applications/a2/resume",
+        originalName: "Resume.pdf",
+        mimeType: "application/pdf",
+        size: 245760,
+      },
+    ],
     job: {
       title: "Build a React Portfolio Website",
       category: "web-dev",
@@ -124,6 +160,8 @@ const DUMMY_APPS: Application[] = [
     category: "Graphic Design",
     status: "rejected",
     appliedAt: "4 Jun 2026",
+    updatedAt: "6 Jun 2026",
+    rejectedAt: "6 Jun 2026",
     estimatedTime: "3 Days",
     budget: "3,500",
     coverSnippet:
@@ -157,40 +195,12 @@ const DUMMY_APPS: Application[] = [
   },
 ];
 
-// Status configs
-
-const APP_STATUS_CFG: Record<
-  AppStatus,
-  { label: string; color: string; bg: string; border: string; dot: string }
-> = {
-  pending: {
-    label: "Pending",
-    color: "#D97706",
-    bg: "#FFFBEB",
-    border: "#FDE68A",
-    dot: "#F59E0B",
-  },
-  accepted: {
-    label: "Accepted",
-    color: "#059669",
-    bg: "#ECFDF5",
-    border: "#6EE7B7",
-    dot: "#10B981",
-  },
-  rejected: {
-    label: "Rejected",
-    color: "#DC2626",
-    bg: "#FEF2F2",
-    border: "#FECACA",
-    dot: "#EF4444",
-  },
-};
-
 const APP_FILTERS: { label: string; value: AppStatus | "all" }[] = [
   { label: "All", value: "all" },
   { label: "Pending", value: "pending" },
   { label: "Accepted", value: "accepted" },
   { label: "Rejected", value: "rejected" },
+  { label: "Withdrawn", value: "withdrawn" },
 ];
 
 // Confirm modal
@@ -281,9 +291,56 @@ function ConfirmModal({
   );
 }
 
-// View Details slide panel
+// Application Workspace
 
 type DetailTab = "job" | "application";
+
+function ApplicationAction({ app, onWithdraw }: { app: Application; onWithdraw: () => void }) {
+  const navigate = useNavigate();
+
+  if (app.status === "pending") {
+    return (
+      <button
+        type="button"
+        onClick={onWithdraw}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-500 font-semibold hover:bg-red-100 transition-colors"
+        style={{ fontSize: "0.85rem" }}
+      >
+        <X className="w-4 h-4" /> Withdraw Application
+      </button>
+    );
+  }
+
+  if (app.status === "accepted") {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate("/dashboard/student/projects")}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+        style={{ fontSize: "0.85rem" }}
+      >
+        <FolderOpen className="w-4 h-4" /> Go To Project
+      </button>
+    );
+  }
+
+  const isRejected = app.status === "rejected";
+
+  return (
+    <div
+      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border font-semibold ${
+        isRejected
+          ? "border-red-100 bg-red-50 text-red-500"
+          : "border-slate-200 bg-slate-50 text-slate-500"
+      }`}
+      style={{ fontSize: "0.85rem" }}
+      aria-disabled="true"
+    >
+      {isRejected ? <Ban className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+      {isRejected ? "Application Rejected" : "Application Withdrawn"}
+    </div>
+  );
+}
 
 function ViewDetailsPanel({
   app,
@@ -296,13 +353,29 @@ function ViewDetailsPanel({
 }) {
   const [tab, setTab] = useState<DetailTab>("job");
   const [showWithdraw, setShowWithdraw] = useState(false);
-  const navigate = useNavigate();
-  const cfg = APP_STATUS_CFG[app.status];
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedElement = useRef<HTMLElement | null>(null);
 
   const tabs: { label: string; value: DetailTab }[] = [
     { label: "Job Details", value: "job" },
     { label: "My Application", value: "application" },
   ];
+
+  useEffect(() => {
+    previouslyFocusedElement.current = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocusedElement.current?.focus?.();
+    };
+  }, [onClose]);
 
   return (
     <>
@@ -310,22 +383,30 @@ function ViewDetailsPanel({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex justify-end"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+        role="presentation"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
         <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-lg bg-slate-50 flex flex-col h-full shadow-2xl overflow-hidden"
+          initial={{ opacity: 0, scale: 0.96, y: 14 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 10 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-4xl max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="application-workspace-title"
         >
           {/* Header */}
           <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
             <div>
-              <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+              <p
+                id="application-workspace-title"
+                className="text-slate-900 font-bold"
+                style={{ fontSize: "0.95rem" }}
+              >
                 Application Details
               </p>
               <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
@@ -333,8 +414,11 @@ function ViewDetailsPanel({
               </p>
             </div>
             <button
+              ref={closeButtonRef}
+              type="button"
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+              aria-label="Close application workspace"
             >
               <X className="w-4 h-4" />
             </button>
@@ -345,8 +429,10 @@ function ViewDetailsPanel({
             {tabs.map((t) => (
               <button
                 key={t.value}
+                type="button"
                 onClick={() => setTab(t.value)}
                 className="px-4 py-1.5 rounded-full border font-semibold transition-all duration-200"
+                aria-pressed={tab === t.value}
                 style={{
                   background: tab === t.value ? "#EFF6FF" : "#F8FAFC",
                   color: tab === t.value ? "#2563EB" : "#64748B",
@@ -379,102 +465,13 @@ function ViewDetailsPanel({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -12 }}
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="p-5 flex flex-col gap-4"
                 >
-                  {/* Status row */}
-                  <div className="bg-white rounded-2xl border border-black/[0.06] p-4 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center gap-2 text-slate-500"
-                        style={{ fontSize: "0.78rem" }}
-                      >
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>Application Date</span>
-                      </div>
-                      <span
-                        className="text-slate-900 font-semibold"
-                        style={{ fontSize: "0.78rem" }}
-                      >
-                        {app.appliedAt}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center gap-2 text-slate-500"
-                        style={{ fontSize: "0.78rem" }}
-                      >
-                        <User className="w-3.5 h-3.5" />
-                        <span>Status</span>
-                      </div>
-                      <StatusBadge
-                        config={cfg}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-semibold"
-                        style={{ fontSize: "0.65rem" }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Cover Message */}
-                  <div className="bg-white rounded-2xl border border-black/[0.06] p-4 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                      <span className="text-slate-900 font-bold" style={{ fontSize: "0.8rem" }}>
-                        Cover Message
-                      </span>
-                    </div>
-                    <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-                      {app.coverMessage}
-                    </p>
-                  </div>
-
-                  {/* Estimated Completion Time */}
-                  <div className="bg-white rounded-2xl border border-black/[0.06] p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Timer className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-slate-900 font-bold" style={{ fontSize: "0.8rem" }}>
-                        Estimated Completion Time
-                      </span>
-                    </div>
-                    <span
-                      className="bg-emerald-50 text-emerald-600 font-semibold px-3 py-1 rounded-full border border-emerald-300"
-                      style={{ fontSize: "0.72rem" }}
-                    >
-                      {app.estimatedTime}
-                    </span>
-                  </div>
-
-                  {/* Why Are You Suitable */}
-                  <div className="bg-white rounded-2xl border border-black/[0.06] p-4 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-violet-600" />
-                      <span className="text-slate-900 font-bold" style={{ fontSize: "0.8rem" }}>
-                        Why Are You Suitable?
-                      </span>
-                    </div>
-                    <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-                      {app.whySuitable}
-                    </p>
-                  </div>
-
-                  {/* Status actions */}
-                  {app.status === "pending" && (
-                    <button
-                      onClick={() => setShowWithdraw(true)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-500 font-semibold hover:bg-red-100 transition-colors"
-                      style={{ fontSize: "0.85rem" }}
-                    >
-                      <X className="w-4 h-4" /> Withdraw Application
-                    </button>
-                  )}
-                  {app.status === "accepted" && (
-                    <button
-                      onClick={() => navigate("/dashboard/student/projects")}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-                      style={{ fontSize: "0.85rem" }}
-                    >
-                      <FolderOpen className="w-4 h-4" /> Go To Project
-                    </button>
-                  )}
+                  <ApplicationDetailsContent
+                    application={app}
+                    action={
+                      <ApplicationAction app={app} onWithdraw={() => setShowWithdraw(true)} />
+                    }
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -501,7 +498,6 @@ function ViewDetailsPanel({
             onConfirm={() => {
               onWithdraw(app.id);
               setShowWithdraw(false);
-              onClose();
             }}
             onClose={() => setShowWithdraw(false)}
           />
@@ -612,6 +608,26 @@ function AppCard({
               <FolderOpen className="w-3 h-3" /> Go To Project
             </button>
           )}
+
+          {app.status === "rejected" && (
+            <span
+              className="inline-flex items-center gap-1.5 text-red-500 bg-red-50 font-semibold px-4 py-2 rounded-xl border border-red-100"
+              style={{ fontSize: "0.75rem" }}
+              aria-disabled="true"
+            >
+              <Ban className="w-3 h-3" /> Application Rejected
+            </span>
+          )}
+
+          {app.status === "withdrawn" && (
+            <span
+              className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 font-semibold px-4 py-2 rounded-xl border border-slate-200"
+              style={{ fontSize: "0.75rem" }}
+              aria-disabled="true"
+            >
+              <ShieldCheck className="w-3 h-3" /> Application Withdrawn
+            </span>
+          )}
         </div>
       </motion.div>
 
@@ -690,8 +706,30 @@ export default function MyApplicationsPage() {
   });
 
   const handleWithdraw = (id: string) => {
-    setApps((prev) => prev.filter((a) => a.id !== id));
-    if (selectedApp?.id === id) setSelectedApp(null);
+    setApps((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              status: "withdrawn",
+              withdrawnAt: "Today",
+              updatedAt: "Today",
+            }
+          : a
+      )
+    );
+    if (selectedApp?.id === id) {
+      setSelectedApp((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "withdrawn",
+              withdrawnAt: "Today",
+              updatedAt: "Today",
+            }
+          : null
+      );
+    }
   };
 
   return (
