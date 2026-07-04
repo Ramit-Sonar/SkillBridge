@@ -28,6 +28,7 @@ import {
   type ClientCardData,
 } from "../../app/components/shared/ClientInformationCard";
 import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
+import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
 import {
   JOB_CATEGORIES,
@@ -429,10 +430,12 @@ function JobDetailPanel({
   job,
   onClose,
   onApply,
+  hasApplied,
 }: {
   job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
+  hasApplied: boolean;
 }) {
   const durLabel = DURATIONS.find((d) => d.value === job.duration)?.label;
 
@@ -609,14 +612,28 @@ function JobDetailPanel({
       {/* Sticky footer */}
       <div className="p-4 border-t border-black/[0.05] flex gap-3">
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={!hasApplied ? { scale: 1.02 } : {}}
+          whileTap={!hasApplied ? { scale: 0.97 } : {}}
           onClick={onApply}
-          className="flex-1 inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-md hover:shadow-blue-200 hover:shadow-lg"
+          disabled={hasApplied}
+          className={`flex-1 inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-colors shadow-md ${
+            hasApplied
+              ? "bg-emerald-50 text-emerald-600 cursor-default"
+              : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-lg"
+          }`}
           style={{ fontSize: "0.875rem" }}
         >
-          Apply Now
-          <ArrowRight className="w-4 h-4" />
+          {hasApplied ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              Application Submitted
+            </>
+          ) : (
+            <>
+              Apply Now
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
         </motion.button>
         <button
           onClick={onClose}
@@ -636,10 +653,12 @@ function MobileDetailModal({
   job,
   onClose,
   onApply,
+  hasApplied,
 }: {
   job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
+  hasApplied: boolean;
 }) {
   const durLabel = DURATIONS.find((d) => d.value === job.duration)?.label;
   return (
@@ -757,10 +776,24 @@ function MobileDetailModal({
           <div className="p-4 border-t border-black/[0.05]">
             <button
               onClick={onApply}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-3 rounded-xl"
+              disabled={hasApplied}
+              className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl ${
+                hasApplied
+                  ? "bg-emerald-50 text-emerald-600 cursor-default"
+                  : "bg-blue-600 text-white"
+              }`}
               style={{ fontSize: "0.875rem" }}
             >
-              Apply for this Job <ArrowRight className="w-4 h-4" />
+              {hasApplied ? (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Application Submitted
+                </>
+              ) : (
+                <>
+                  Apply for this Job <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </motion.div>
@@ -1002,6 +1035,8 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   const [durations, setDurations] = useState<string[]>([]);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
+  const [submittedJobIds, setSubmittedJobIds] = useState<string[]>([]);
+  const [notification, setNotification] = useState<NotificationMessage>(null);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [pendingJobId, setPendingJobId] = useState<string | undefined>(undefined);
   const navigate = useNavigate();
@@ -1102,12 +1137,22 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   };
 
   const handleApply = (jobId: string) => {
+    if (submittedJobIds.includes(jobId)) return;
+
     if (isGuest) {
       setPendingJobId(jobId);
       setShowGuestModal(true);
       return;
     }
     setApplyingJobId(jobId);
+  };
+
+  const handleApplicationSubmitted = (jobId: string) => {
+    setSubmittedJobIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
+    setNotification({
+      type: "success",
+      text: "Application submitted successfully.",
+    });
   };
 
   const toggleArr = (arr: string[], setArr: (a: string[]) => void, v: string) =>
@@ -1363,6 +1408,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
               job={detailsJob}
               onClose={handleCloseDetails}
               onApply={() => handleApply(detailsJob.id)}
+              hasApplied={submittedJobIds.includes(detailsJob.id)}
             />
           )}
         </AnimatePresence>
@@ -1374,7 +1420,12 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
           (() => {
             const job = openJobs.find((j) => j.id === applyingJobId) ?? detailsJob;
             return job ? (
-              <ApplyModal key={applyingJobId} job={job} onClose={() => setApplyingJobId(null)} />
+              <ApplyModal
+                key={applyingJobId}
+                job={job}
+                onClose={() => setApplyingJobId(null)}
+                onSubmitted={handleApplicationSubmitted}
+              />
             ) : null;
           })()}
         {selectedJobId && !detailsLoading && !detailsError && detailsJob && (
@@ -1383,6 +1434,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
             job={detailsJob}
             onClose={handleCloseDetails}
             onApply={() => handleApply(detailsJob.id)}
+            hasApplied={submittedJobIds.includes(detailsJob.id)}
           />
         )}
         {showGuestModal && (
@@ -1395,6 +1447,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
           />
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </>
   );
 }
