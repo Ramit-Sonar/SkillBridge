@@ -98,4 +98,54 @@ const submitApplication = asyncHandler(async (req, res) => {
   }
 });
 
-export { submitApplication };
+const getMyApplications = asyncHandler(async () => {
+  throw new ApiError(
+    501,
+    "Get my applications controller logic has not been implemented yet"
+  );
+});
+
+const getJobApplications = asyncHandler(async () => {
+  throw new ApiError(
+    501,
+    "Get job applications controller logic has not been implemented yet"
+  );
+});
+
+const getApplicationById = asyncHandler(async () => {
+  throw new ApiError(
+    501,
+    "Get application by id controller logic has not been implemented yet"
+  );
+});
+
+const withdrawApplication = asyncHandler(async () => {
+  throw new ApiError(
+    501,
+    "Withdraw application controller logic has not been implemented yet"
+  );
+});
+
+const acceptApplication = asyncHandler(async () => {
+  throw new ApiError(
+    501,
+    "Accept application controller logic has not been implemented yet"
+  );
+});
+
+const rejectApplication = asyncHandler(async () => {
+  throw new ApiError(
+    501,
+    "Reject application controller logic has not been implemented yet"
+  );
+});
+
+export {
+  acceptApplication,
+  getApplicationById,
+  getJobApplications,
+  getMyApplications,
+  rejectApplication,
+  submitApplication,
+  withdrawApplication,
+};
