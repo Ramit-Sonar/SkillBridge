@@ -1,35 +1,5 @@
 import mongoose from "mongoose";
-
-const attachmentSchema = new mongoose.Schema(
-  {
-    url: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    publicId: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    originalName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    mimeType: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    size: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-  },
-  { _id: false }
-);
+import { attachmentSchema } from "../schemas/attachment.schema.js";
 
 const jobSchema = new mongoose.Schema(
   {
