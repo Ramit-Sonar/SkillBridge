@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
 import { Project } from "../models/project.model.js";
+import { Verification } from "../models/verification.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { buildClientSummary } from "../utils/buildClientSummary.js";
@@ -97,6 +98,38 @@ const uploadJobAttachments = async (uploadedFiles, submittedFiles) => {
   }
 
   return attachments;
+};
+
+const toPublicClient = (client, verificationStatus = null) => {
+  if (!client) return null;
+
+  return {
+    fullName: client.fullName,
+    avatar: client.avatar,
+    verification: {
+      status: verificationStatus,
+    },
+  };
+};
+
+const getClientVerificationMap = async (clientIds) => {
+  const uniqueClientIds = [...new Set(clientIds.filter(Boolean).map(String))];
+
+  if (uniqueClientIds.length === 0) return new Map();
+
+  const verifications = await Verification.find({
+    user: { $in: uniqueClientIds },
+    type: "client",
+  })
+    .select("user status")
+    .lean();
+
+  return new Map(
+    verifications.map((verification) => [
+      verification.user.toString(),
+      verification.status,
+    ])
+  );
 };
 
 const createJob = asyncHandler(async (req, res) => {
@@ -235,46 +268,92 @@ const getClientJobs = asyncHandler(async (req, res) => {
 });
 
 const getAllOpenJobs = asyncHandler(async (req, res) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not authenticated");
-  }
-
-  if (req.user.role !== "student") {
-    throw new ApiError(403, "Only students can browse open jobs");
-  }
-
   const jobs = await Job.find({
     status: "open",
   })
     .select(
-      "title category description budget duration deadline skills status createdAt"
+      "client title category description budget duration deadline skills complexity status createdAt"
     )
-    .sort({ createdAt: -1 });
+    .populate("client", "fullName avatar")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const verificationMap = await getClientVerificationMap(
+    jobs.map((job) => job.client?._id)
+  );
+  const publicJobs = jobs.map((job) => ({
+    _id: job._id,
+    title: job.title,
+    category: job.category,
+    description: job.description,
+    budget: job.budget,
+    duration: job.duration,
+    deadline: job.deadline,
+    skills: job.skills,
+    complexity: job.complexity,
+    status: job.status,
+    createdAt: job.createdAt,
+    client: toPublicClient(
+      job.client,
+      verificationMap.get(job.client?._id?.toString()) ?? null
+    ),
+  }));
 
   return res
     .status(200)
-    .json(new ApiResponse(200, jobs, "Open jobs fetched successfully"));
+    .json(new ApiResponse(200, publicJobs, "Open jobs fetched successfully"));
 });
 
 const getJobById = asyncHandler(async (req, res) => {
   const { jobId } = req.params;
 
-  if (!req.user) {
-    throw new ApiError(401, "User not authenticated");
-  }
-
   if (!mongoose.isValidObjectId(jobId)) {
     throw new ApiError(400, "Invalid job id");
   }
 
-  const job = await Job.findById(jobId);
+  const job = await Job.findById(jobId)
+    .populate("client", "fullName avatar")
+    .lean();
 
   if (!job) {
     throw new ApiError(404, "Job not found");
   }
 
-  const jobResponse = job.toObject();
-  jobResponse.client = await buildClientSummary(job.client);
+  if (!req.user) {
+    if (job.status !== "open") {
+      throw new ApiError(403, "You are not allowed to view this job");
+    }
+
+    const clientId = job.client?._id || job.client;
+    const verificationMap = await getClientVerificationMap([clientId]);
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          _id: job._id,
+          title: job.title,
+          category: job.category,
+          description: job.description,
+          budget: job.budget,
+          duration: job.duration,
+          deadline: job.deadline,
+          skills: job.skills,
+          complexity: job.complexity,
+          status: job.status,
+          createdAt: job.createdAt,
+          client: toPublicClient(
+            job.client,
+            verificationMap.get(clientId?.toString()) ?? null
+          ),
+        },
+        "Job fetched successfully"
+      )
+    );
+  }
+
+  const jobResponse = { ...job };
+  jobResponse.client = await buildClientSummary(job.client?._id || job.client);
 
   return res
     .status(200)

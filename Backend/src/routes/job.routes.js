@@ -7,12 +7,14 @@ import {
   getJobById,
   updateJob,
 } from "../controllers/job.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  optionalVerifyJWT,
+  verifyJWT,
+} from "../middlewares/auth.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
-const studentRoles = authorizeRoles("student");
 const clientRoles = authorizeRoles("client");
 
 router
@@ -23,13 +25,13 @@ router
     jobAttachmentUpload.array("attachments", 3),
     createJob
   )
-  .get(verifyJWT, studentRoles, getAllOpenJobs);
+  .get(optionalVerifyJWT, getAllOpenJobs);
 
 router.route("/my-jobs").get(verifyJWT, clientRoles, getClientJobs);
 
 router
   .route("/:jobId")
-  .get(verifyJWT, getJobById)
+  .get(optionalVerifyJWT, getJobById)
   .patch(
     verifyJWT,
     clientRoles,

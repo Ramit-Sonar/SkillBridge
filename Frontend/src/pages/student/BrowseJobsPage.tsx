@@ -1009,19 +1009,13 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedJobId = routeJobId ?? searchParams.get("jobId");
   const [jobs, setJobs] = useState<BrowseJob[]>([]);
-  const [loading, setLoading] = useState(!isGuest);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailsJob, setDetailsJob] = useState<JobDetailData | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
 
   useEffect(() => {
-    if (isGuest) {
-      setJobs([]);
-      setLoading(false);
-      return;
-    }
-
     let mounted = true;
 
     const loadOpenJobs = async () => {
@@ -1051,10 +1045,10 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     return () => {
       mounted = false;
     };
-  }, [isGuest]);
+  }, []);
 
   useEffect(() => {
-    if (!selectedJobId || isGuest) {
+    if (!selectedJobId) {
       setDetailsJob(null);
       setDetailsError("");
       setDetailsLoading(false);
@@ -1090,7 +1084,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     return () => {
       mounted = false;
     };
-  }, [selectedJobId, isGuest]);
+  }, [selectedJobId]);
 
   const handleViewDetails = (jobId: string) => {
     navigate(isGuest ? `/browse?jobId=${jobId}` : `/dashboard/student/browse-jobs/${jobId}`);

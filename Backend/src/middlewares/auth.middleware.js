@@ -32,3 +32,29 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, error?.message || "Invalid or expired token");
   }
 });
+
+export const optionalVerifyJWT = asyncHandler(async (req, res, next) => {
+  const token =
+    req.cookies?.accessToken ||
+    req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token || typeof token !== "string") {
+    next();
+    return;
+  }
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const user = await User.findById(decodedToken?._id).select(
+      "-password -refreshToken"
+    );
+
+    if (user) {
+      req.user = user;
+    }
+  } catch (error) {
+    // Public routes should still work when no valid session is present.
+  }
+
+  next();
+});
