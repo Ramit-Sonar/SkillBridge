@@ -96,6 +96,64 @@ interface Job {
   applicants: Applicant[];
 }
 
+const PROTOTYPE_ATTACHMENT_URL =
+  "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+
+const PROTOTYPE_APPLICANT: Applicant = {
+  id: "prototype-ramit-sonar-application",
+  name: "Ramit Sonar",
+  initials: "RS",
+  education: "Kathmandu, Nepal",
+  university: "Pokhara University",
+  verified: true,
+  skills: [
+    { name: "React", verified: true },
+    { name: "Node.js", verified: true },
+    { name: "MongoDB", verified: true },
+    { name: "TypeScript", verified: true },
+    { name: "TailwindCSS", verified: true },
+  ],
+  rating: 4.9,
+  reviewCount: 12,
+  completedProjects: 8,
+  bio: "Full-stack MERN developer focused on building clean, responsive dashboards and production-ready web applications. I enjoy turning business requirements into simple, maintainable interfaces with strong attention to performance and user experience.",
+  appliedAt: "2 July 2026",
+  updatedAt: "2 July 2026",
+  estimatedTime: "7 Days",
+  coverMessage:
+    "Hello, I would be excited to work on this project. I have practical experience building responsive React interfaces, Node.js APIs, and MongoDB-backed dashboards for real users. I can review your requirements carefully, plan the implementation clearly, and deliver a polished result within the expected timeline while keeping communication transparent throughout the project.",
+  whySuitable:
+    "I am a strong fit because my recent projects use the same MERN stack required for this work. I have completed multiple client-facing dashboards, integrated REST APIs, handled reusable components, and worked with TypeScript and TailwindCSS to keep code readable and scalable. I can deliver quickly without sacrificing maintainability.",
+  attachments: [
+    {
+      url: PROTOTYPE_ATTACHMENT_URL,
+      publicId: "prototype/applications/ramit-sonar/resume",
+      originalName: "Resume.pdf",
+      mimeType: "application/pdf",
+      size: 245760,
+    },
+    {
+      url: PROTOTYPE_ATTACHMENT_URL,
+      publicId: "prototype/applications/ramit-sonar/portfolio",
+      originalName: "Portfolio.pdf",
+      mimeType: "application/pdf",
+      size: 524288,
+    },
+    {
+      url: PROTOTYPE_ATTACHMENT_URL,
+      publicId: "prototype/applications/ramit-sonar/proposal",
+      originalName: "Proposal.pdf",
+      mimeType: "application/pdf",
+      size: 331776,
+    },
+  ],
+  status: "pending",
+  avatarUrl: "https://i.pravatar.cc/160?img=12",
+  github: "github.com/ramitsonar",
+  linkedin: "linkedin.com/in/ramitsonar",
+  portfolio: "ramitsonar.dev",
+};
+
 function formatJobDate(date?: string) {
   if (!date) return "";
 
@@ -694,52 +752,41 @@ function ApplicantWorkspaceModal({
   );
 }
 
-// Applications panel (list view)
+// Application module prototype list
 
-function ApplicationsPanel({
-  job,
-  onClose,
-  onUpdateStatus,
-}: {
-  job: Job;
-  onClose: () => void;
-  onUpdateStatus: (jobId: string, appId: string, status: AppStatus) => void;
-}) {
+function ApplicationsPanel({ job, onClose }: { job: Job; onClose: () => void }) {
+  const [prototypeApplicant, setPrototypeApplicant] = useState<Applicant>(PROTOTYPE_APPLICANT);
   const [workspaceApplicant, setWorkspaceApplicant] = useState<Applicant | null>(null);
   const [hireTarget, setHireTarget] = useState<Applicant | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Applicant | null>(null);
 
-  const handleHire = (a: Applicant) => {
-    onUpdateStatus(job.id, a.id, "hired");
-    setWorkspaceApplicant((prev) => (prev?.id === a.id ? { ...prev, status: "hired" } : prev));
-  };
-  const handleReject = (a: Applicant) => {
-    onUpdateStatus(job.id, a.id, "rejected");
-    setWorkspaceApplicant((prev) => (prev?.id === a.id ? { ...prev, status: "rejected" } : prev));
+  const handleHire = () => {
+    setPrototypeApplicant((prev) => ({ ...prev, status: "hired", acceptedAt: "2 July 2026" }));
+    setWorkspaceApplicant((prev) =>
+      prev ? { ...prev, status: "hired", acceptedAt: "2 July 2026" } : prev
+    );
   };
 
-  // Sorted: pending first
-  const sorted = [...job.applicants].sort((a, b) => {
-    const order: Record<AppStatus, number> = {
-      pending: 0,
-      hired: 1,
-      rejected: 2,
-      withdrawn: 3,
-    };
-    return order[a.status] - order[b.status];
-  });
+  const handleReject = () => {
+    setPrototypeApplicant((prev) => ({ ...prev, status: "rejected", rejectedAt: "2 July 2026" }));
+    setWorkspaceApplicant((prev) =>
+      prev ? { ...prev, status: "rejected", rejectedAt: "2 July 2026" } : prev
+    );
+  };
 
   if (workspaceApplicant) {
     return (
       <ApplicantWorkspaceModal
-        applicant={job.applicants.find((a) => a.id === workspaceApplicant.id) ?? workspaceApplicant}
+        applicant={prototypeApplicant}
         jobTitle={job.title}
         onClose={() => setWorkspaceApplicant(null)}
-        onHire={() => handleHire(workspaceApplicant)}
-        onReject={() => handleReject(workspaceApplicant)}
+        onHire={handleHire}
+        onReject={handleReject}
       />
     );
   }
+
+  const appCfg = APP_STATUS_CFG[prototypeApplicant.status];
 
   return (
     <>
@@ -747,101 +794,94 @@ function ApplicationsPanel({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex justify-end"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+        role="presentation"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
         <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-lg bg-slate-50 flex flex-col h-full shadow-2xl overflow-hidden"
+          initial={{ opacity: 0, scale: 0.96, y: 14 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 10 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-2xl max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="applications-list-title"
         >
-          {/* Header */}
           <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
             <div>
-              <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
-                {job.title}
+              <p
+                id="applications-list-title"
+                className="text-slate-900 font-bold"
+                style={{ fontSize: "0.95rem" }}
+              >
+                Applications
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <Users className="w-3.5 h-3.5 text-slate-400" />
                 <p className="text-slate-500" style={{ fontSize: "0.75rem" }}>
-                  {job.applicants.length} Applicant
-                  {job.applicants.length !== 1 ? "s" : ""}
+                  1 applicant for <span className="text-slate-700 font-semibold">{job.title}</span>
                 </p>
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+              aria-label="Close applications list"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-            {sorted.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-16 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-black/[0.06] flex items-center justify-center">
-                  <Users className="w-6 h-6 text-slate-300" />
-                </div>
-                <p className="text-slate-400" style={{ fontSize: "0.82rem" }}>
-                  No applications yet.
-                </p>
-              </div>
-            ) : (
-              sorted.map((a, i) => {
-                const appCfg = APP_STATUS_CFG[a.status];
-                return (
-                  <StudentSummaryCard
-                    key={a.id}
-                    initials={a.initials}
-                    name={a.name}
-                    education={a.education}
-                    headline={a.university}
-                    verified={a.verified}
-                    rating={a.rating}
-                    reviewCount={a.reviewCount}
-                    completedProjects={a.completedProjects}
-                    skills={a.skills}
-                    delay={i * 0.06}
-                    meta={`Applied ${a.appliedAt}`}
-                    badge={<StatusBadge config={appCfg} style={{ fontSize: "0.6rem" }} />}
-                    actions={
-                      <>
-                        <button
-                          onClick={() => setWorkspaceApplicant(a)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 font-semibold transition-all"
-                          style={{ fontSize: "0.68rem" }}
-                        >
-                          <Eye className="w-3 h-3" /> View Details
-                        </button>
-                        {a.status === "pending" && (
-                          <>
-                            <button
-                              onClick={() => setHireTarget(a)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold transition-all"
-                              style={{ fontSize: "0.68rem" }}
-                            >
-                              <UserCheck className="w-3 h-3" /> Hire
-                            </button>
-                            <button
-                              onClick={() => setRejectTarget(a)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-semibold transition-all"
-                              style={{ fontSize: "0.68rem" }}
-                            >
-                              <XCircle className="w-3 h-3" /> Reject
-                            </button>
-                          </>
-                        )}
-                      </>
-                    }
-                  />
-                );
-              })
-            )}
+            <StudentSummaryCard
+              initials={prototypeApplicant.initials}
+              name={prototypeApplicant.name}
+              education={prototypeApplicant.education}
+              headline={prototypeApplicant.university}
+              verified={prototypeApplicant.verified}
+              rating={prototypeApplicant.rating}
+              reviewCount={prototypeApplicant.reviewCount}
+              completedProjects={prototypeApplicant.completedProjects}
+              skills={prototypeApplicant.skills}
+              meta={`Applied ${prototypeApplicant.appliedAt}`}
+              badge={<StatusBadge config={appCfg} style={{ fontSize: "0.6rem" }} />}
+              actions={
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setWorkspaceApplicant(prototypeApplicant)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 font-semibold transition-all"
+                    style={{ fontSize: "0.68rem" }}
+                  >
+                    <Eye className="w-3 h-3" /> View Details
+                  </button>
+                  {prototypeApplicant.status === "pending" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setHireTarget(prototypeApplicant)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold transition-all"
+                        style={{ fontSize: "0.68rem" }}
+                      >
+                        <UserCheck className="w-3 h-3" /> Hire
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRejectTarget(prototypeApplicant)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-semibold transition-all"
+                        style={{ fontSize: "0.68rem" }}
+                      >
+                        <XCircle className="w-3 h-3" /> Reject
+                      </button>
+                    </>
+                  )}
+                </>
+              }
+            />
           </div>
         </motion.div>
       </motion.div>
@@ -854,7 +894,7 @@ function ApplicationsPanel({
             confirmLabel="Hire Student"
             confirmColor="#059669"
             onConfirm={() => {
-              handleHire(hireTarget);
+              handleHire();
               setHireTarget(null);
             }}
             onClose={() => setHireTarget(null)}
@@ -867,7 +907,7 @@ function ApplicationsPanel({
             confirmLabel="Reject"
             confirmColor="#64748B"
             onConfirm={() => {
-              handleReject(rejectTarget);
+              handleReject();
               setRejectTarget(null);
             }}
             onClose={() => setRejectTarget(null)}
@@ -1140,29 +1180,6 @@ export default function ManageJobsPage() {
     navigate(location.pathname, { replace: true, state: null });
   }, [location.pathname, location.state, navigate]);
 
-  const updateAppStatus = (jobId: string, appId: string, status: AppStatus) => {
-    setJobs((prev) =>
-      prev.map((j) =>
-        j.id !== jobId
-          ? j
-          : {
-              ...j,
-              applicants: j.applicants.map((a) => (a.id === appId ? { ...a, status } : a)),
-            }
-      )
-    );
-    if (applicationsJob?.id === jobId) {
-      setApplicationsJob((prev) =>
-        prev
-          ? {
-              ...prev,
-              applicants: prev.applicants.map((a) => (a.id === appId ? { ...a, status } : a)),
-            }
-          : null
-      );
-    }
-  };
-
   const handleCancelJob = async () => {
     if (!cancelTarget || cancellingRef.current) return;
 
@@ -1332,11 +1349,7 @@ export default function ManageJobsPage() {
           />
         )}
         {applicationsJob && (
-          <ApplicationsPanel
-            job={applicationsJob}
-            onClose={() => setApplicationsJob(null)}
-            onUpdateStatus={updateAppStatus}
-          />
+          <ApplicationsPanel job={applicationsJob} onClose={() => setApplicationsJob(null)} />
         )}
       </AnimatePresence>
       <Notification message={notification} onClose={() => setNotification(null)} />
