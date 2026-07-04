@@ -12,6 +12,11 @@ import {
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
+import {
+  ApplicationDetailsContent,
+  type ApplicationDetailsData,
+  type ApplicationStatus,
+} from "../../app/components/shared/ApplicationDetailsContent";
 import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 import { cancelJob, getClientJobs, type JobData } from "../../services/jobService";
 import { type FileAttachment } from "../../utils/fileUtils";
@@ -29,12 +34,15 @@ import {
   UserCheck,
   XCircle,
   Edit3,
+  FolderOpen,
+  Ban,
+  ShieldCheck,
 } from "lucide-react";
 
 // Types
 
 type JobStatus = "open" | "closed" | "cancelled";
-type AppStatus = "pending" | "hired" | "rejected";
+type AppStatus = "pending" | "hired" | "rejected" | "withdrawn";
 
 interface VerifiedSkill {
   name: string;
@@ -54,7 +62,16 @@ interface Applicant {
   completedProjects: number;
   bio: string;
   appliedAt: string;
+  updatedAt?: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
+  withdrawnAt?: string;
+  estimatedTime?: string;
+  coverMessage?: string;
+  whySuitable?: string;
+  attachments?: FileAttachment[];
   status: AppStatus;
+  avatarUrl?: string;
   github?: string;
   linkedin?: string;
   portfolio?: string;
@@ -177,14 +194,63 @@ const APP_STATUS_CFG: Record<
     bg: "#FFFBEB",
     border: "#FDE68A",
   },
-  hired: { label: "Hired", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },
+  hired: { label: "Accepted", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },
   rejected: {
     label: "Rejected",
     color: "#64748B",
     bg: "#F8FAFC",
     border: "#E2E8F0",
   },
+  withdrawn: {
+    label: "Withdrawn",
+    color: "#64748B",
+    bg: "#F8FAFC",
+    border: "#CBD5E1",
+  },
 };
+
+const APP_STATUS_TO_DETAILS_STATUS: Record<AppStatus, ApplicationStatus> = {
+  pending: "pending",
+  hired: "accepted",
+  rejected: "rejected",
+  withdrawn: "withdrawn",
+};
+
+function getApplicantProfileData(applicant: Applicant) {
+  return {
+    name: applicant.name,
+    initials: applicant.initials,
+    headline: applicant.university,
+    education: applicant.education,
+    university: applicant.university,
+    bio: applicant.bio,
+    verified: applicant.verified,
+    skills: applicant.skills,
+    rating: applicant.rating,
+    reviewCount: applicant.reviewCount,
+    completedProjectsCount: applicant.completedProjects,
+    avatarUrl: applicant.avatarUrl,
+    github: applicant.github,
+    linkedin: applicant.linkedin,
+    portfolio: applicant.portfolio,
+  };
+}
+
+function getApplicantApplicationData(applicant: Applicant): ApplicationDetailsData {
+  return {
+    id: applicant.id,
+    status: APP_STATUS_TO_DETAILS_STATUS[applicant.status],
+    appliedAt: applicant.appliedAt,
+    updatedAt: applicant.updatedAt ?? applicant.appliedAt,
+    acceptedAt: applicant.acceptedAt,
+    rejectedAt: applicant.rejectedAt,
+    withdrawnAt: applicant.withdrawnAt,
+    estimatedTime: applicant.estimatedTime ?? "Not provided",
+    coverMessage: applicant.coverMessage ?? "No cover letter was submitted.",
+    whySuitable: applicant.whySuitable ?? "No suitability response was submitted.",
+    attachments: applicant.attachments ?? [],
+  };
+}
 
 // Three-dot menu
 
@@ -391,9 +457,11 @@ function DeleteModal({
   );
 }
 
-// Student Profile panel — uses shared StudentProfileView
+// Applicant workspace modal
 
-function StudentProfilePanel({
+type ApplicantWorkspaceTab = "application" | "profile";
+
+function ApplicantWorkspaceModal({
   applicant,
   jobTitle,
   onClose,
@@ -406,26 +474,35 @@ function StudentProfilePanel({
   onHire: () => void;
   onReject: () => void;
 }) {
+  const [tab, setTab] = useState<ApplicantWorkspaceTab>("application");
   const [hireModal, setHireModal] = useState(false);
   const [rejectModal, setRejectModal] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedElement = useRef<HTMLElement | null>(null);
+  const navigate = useNavigate();
   const appCfg = APP_STATUS_CFG[applicant.status];
+  const profileData = getApplicantProfileData(applicant);
+  const applicationData = getApplicantApplicationData(applicant);
+  const tabs: { label: string; value: ApplicantWorkspaceTab }[] = [
+    { label: "Application", value: "application" },
+    { label: "Student Profile", value: "profile" },
+  ];
 
-  const profileData = {
-    name: applicant.name,
-    initials: applicant.initials,
-    headline: applicant.university,
-    education: applicant.education,
-    university: applicant.university,
-    bio: applicant.bio,
-    verified: applicant.verified,
-    skills: applicant.skills,
-    rating: applicant.rating,
-    reviewCount: applicant.reviewCount,
-    completedProjectsCount: applicant.completedProjects,
-    github: applicant.github,
-    linkedin: applicant.linkedin,
-    portfolio: applicant.portfolio,
-  };
+  useEffect(() => {
+    previouslyFocusedElement.current = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocusedElement.current?.focus?.();
+    };
+  }, [onClose]);
 
   return (
     <>
@@ -433,75 +510,155 @@ function StudentProfilePanel({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex justify-end"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+        role="presentation"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
         <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-xl bg-slate-50 flex flex-col h-full shadow-2xl overflow-hidden"
+          initial={{ opacity: 0, scale: 0.96, y: 14 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 10 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-4xl max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="applicant-workspace-title"
         >
           {/* Header */}
           <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
+            <div>
+              <p
+                id="applicant-workspace-title"
+                className="text-slate-900 font-bold"
+                style={{ fontSize: "0.95rem" }}
+              >
+                Applicant Details
+              </p>
+              <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
+                Applied on {applicant.appliedAt}
+              </p>
+              <StatusBadge
+                config={appCfg}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-semibold mt-2"
+                style={{ fontSize: "0.65rem" }}
+              />
+            </div>
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+              aria-label="Close applicant workspace"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="bg-white border-b border-black/[0.05] px-5 py-3 flex gap-2 shrink-0">
+            {tabs.map((item) => (
               <button
-                onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+                key={item.value}
+                type="button"
+                onClick={() => setTab(item.value)}
+                className="px-4 py-1.5 rounded-full border font-semibold transition-all duration-200"
+                aria-pressed={tab === item.value}
+                style={{
+                  background: tab === item.value ? "#EFF6FF" : "#F8FAFC",
+                  color: tab === item.value ? "#2563EB" : "#64748B",
+                  borderColor: tab === item.value ? "#BFDBFE" : "#E2E8F0",
+                  fontSize: "0.78rem",
+                }}
               >
-                <X className="w-4 h-4" />
+                {item.label}
               </button>
-              <div>
-                <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
-                  Student Profile
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <StatusBadge
-                    config={appCfg}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-semibold"
-                    dotClassName="w-1 h-1 rounded-full"
-                    style={{ fontSize: "0.58rem" }}
-                  />
-                  <span className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-                    · Applied {applicant.appliedAt} for{" "}
-                    <span className="text-slate-500 font-medium">{jobTitle}</span>
-                  </span>
-                </div>
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <AnimatePresence mode="wait">
+              {tab === "application" ? (
+                <motion.div
+                  key="application"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <ApplicationDetailsContent application={applicationData} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="profile"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="p-5"
+                >
+                  <StudentProfileView profile={profileData} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="bg-white border-t border-black/[0.05] px-5 py-4 shrink-0">
+            {applicant.status === "pending" && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setRejectModal(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  <XCircle className="w-4 h-4" /> Reject
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setHireModal(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  <UserCheck className="w-4 h-4" /> Hire
+                </motion.button>
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Full profile — shared component */}
-          <div className="flex-1 overflow-y-auto p-5">
-            <StudentProfileView profile={profileData} />
-          </div>
-
-          {/* Sticky action bar */}
-          {applicant.status === "pending" && (
-            <div className="bg-white border-t border-black/[0.05] px-5 py-4 flex gap-3 shrink-0">
+            {applicant.status === "hired" && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setHireModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                onClick={() => navigate("/dashboard/client/projects")}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
                 style={{ fontSize: "0.85rem" }}
               >
-                <UserCheck className="w-4 h-4" /> Hire
+                <FolderOpen className="w-4 h-4" /> Go To Project
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setRejectModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
+            )}
+
+            {applicant.status === "rejected" && (
+              <div
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-100 bg-red-50 text-red-500 font-semibold"
                 style={{ fontSize: "0.85rem" }}
+                aria-disabled="true"
               >
-                <XCircle className="w-4 h-4" /> Reject
-              </motion.button>
-            </div>
-          )}
+                <Ban className="w-4 h-4" /> Application Rejected
+              </div>
+            )}
+
+            {applicant.status === "withdrawn" && (
+              <div
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 font-semibold"
+                style={{ fontSize: "0.85rem" }}
+                aria-disabled="true"
+              >
+                <ShieldCheck className="w-4 h-4" /> Application Withdrawn
+              </div>
+            )}
+          </div>
         </motion.div>
       </motion.div>
 
@@ -548,17 +705,17 @@ function ApplicationsPanel({
   onClose: () => void;
   onUpdateStatus: (jobId: string, appId: string, status: AppStatus) => void;
 }) {
-  const [profileApplicant, setProfileApplicant] = useState<Applicant | null>(null);
+  const [workspaceApplicant, setWorkspaceApplicant] = useState<Applicant | null>(null);
   const [hireTarget, setHireTarget] = useState<Applicant | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Applicant | null>(null);
 
   const handleHire = (a: Applicant) => {
     onUpdateStatus(job.id, a.id, "hired");
-    setProfileApplicant((prev) => (prev?.id === a.id ? { ...prev, status: "hired" } : prev));
+    setWorkspaceApplicant((prev) => (prev?.id === a.id ? { ...prev, status: "hired" } : prev));
   };
   const handleReject = (a: Applicant) => {
     onUpdateStatus(job.id, a.id, "rejected");
-    setProfileApplicant((prev) => (prev?.id === a.id ? { ...prev, status: "rejected" } : prev));
+    setWorkspaceApplicant((prev) => (prev?.id === a.id ? { ...prev, status: "rejected" } : prev));
   };
 
   // Sorted: pending first
@@ -567,18 +724,19 @@ function ApplicationsPanel({
       pending: 0,
       hired: 1,
       rejected: 2,
+      withdrawn: 3,
     };
     return order[a.status] - order[b.status];
   });
 
-  if (profileApplicant) {
+  if (workspaceApplicant) {
     return (
-      <StudentProfilePanel
-        applicant={job.applicants.find((a) => a.id === profileApplicant.id) ?? profileApplicant}
+      <ApplicantWorkspaceModal
+        applicant={job.applicants.find((a) => a.id === workspaceApplicant.id) ?? workspaceApplicant}
         jobTitle={job.title}
-        onClose={() => setProfileApplicant(null)}
-        onHire={() => handleHire(profileApplicant)}
-        onReject={() => handleReject(profileApplicant)}
+        onClose={() => setWorkspaceApplicant(null)}
+        onHire={() => handleHire(workspaceApplicant)}
+        onReject={() => handleReject(workspaceApplicant)}
       />
     );
   }
@@ -654,11 +812,11 @@ function ApplicationsPanel({
                     actions={
                       <>
                         <button
-                          onClick={() => setProfileApplicant(a)}
+                          onClick={() => setWorkspaceApplicant(a)}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 font-semibold transition-all"
                           style={{ fontSize: "0.68rem" }}
                         >
-                          <Eye className="w-3 h-3" /> Profile
+                          <Eye className="w-3 h-3" /> View Details
                         </button>
                         {a.status === "pending" && (
                           <>
