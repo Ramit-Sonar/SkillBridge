@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ElementType } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import {
+  ConfirmDialog,
   FilterChipGroup,
   Notification,
   StatusBadge,
@@ -225,103 +226,6 @@ function ApplicationsError({ message, onRetry }: { message: string; onRetry: () 
   );
 }
 
-function ConfirmModal({
-  icon: Icon,
-  iconBg,
-  iconColor,
-  title,
-  body,
-  confirmLabel,
-  confirmColor,
-  onConfirm,
-  onClose,
-}: {
-  icon: ElementType;
-  iconBg: string;
-  iconColor: string;
-  title: string;
-  body: React.ReactNode;
-  confirmLabel: string;
-  confirmColor: string;
-  onConfirm: () => Promise<void> | void;
-  onClose: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-
-  const handleConfirm = async () => {
-    if (busy) return;
-
-    setBusy(true);
-
-    try {
-      await onConfirm();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose();
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.93, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.93, y: 8 }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-2xl shadow-2xl p-7 flex flex-col items-center text-center gap-5 w-full max-w-sm"
-      >
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center"
-          style={{ background: iconBg }}
-        >
-          <Icon className="w-7 h-7" style={{ color: iconColor }} />
-        </div>
-        <div>
-          <h3 className="text-slate-900" style={{ fontSize: "1rem", fontWeight: 800 }}>
-            {title}
-          </h3>
-          <div className="text-slate-500 mt-2 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-            {body}
-          </div>
-        </div>
-        <div className="flex gap-3 w-full">
-          <button
-            onClick={onClose}
-            disabled={busy}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 hover:border-slate-300 transition-all disabled:opacity-60"
-            style={{ fontSize: "0.875rem" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={busy}
-            className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
-            style={{ background: confirmColor, fontSize: "0.875rem" }}
-          >
-            {busy ? (
-              <motion.span
-                className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-              />
-            ) : (
-              confirmLabel
-            )}
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 type DetailTab = "job" | "application";
 
 function ApplicationAction({ app, onWithdraw }: { app: Application; onWithdraw: () => void }) {
@@ -507,10 +411,12 @@ function ViewDetailsPanel({
 
       <AnimatePresence>
         {showWithdraw && (
-          <ConfirmModal
+          <ConfirmDialog
             icon={AlertTriangle}
             iconBg="#FEF2F2"
             iconColor="#EF4444"
+            align="center"
+            busyDelayMs={0}
             title="Withdraw Application?"
             body={
               <>
@@ -657,10 +563,12 @@ function AppCard({
 
       <AnimatePresence>
         {showWithdraw && (
-          <ConfirmModal
+          <ConfirmDialog
             icon={AlertTriangle}
             iconBg="#FEF2F2"
             iconColor="#EF4444"
+            align="center"
+            busyDelayMs={0}
             title="Withdraw Application?"
             body={
               <>

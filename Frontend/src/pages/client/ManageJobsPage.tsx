@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useLocation, useNavigate } from "react-router";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import {
+  ConfirmDialog,
   Notification,
   SearchInput,
   SidePanel,
@@ -447,97 +448,6 @@ function CardMenu({
   );
 }
 
-// Confirm modal
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  confirmColor,
-  onConfirm,
-  onClose,
-  loading,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  confirmColor: string;
-  onConfirm: () => Promise<void> | void;
-  onClose: () => void;
-  loading?: boolean;
-}) {
-  const [busy, setBusy] = useState(false);
-  const isExternalLoading = loading !== undefined;
-  const isBusy = busy || Boolean(loading);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !isBusy) onClose();
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col gap-5"
-      >
-        <div>
-          <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
-            {title}
-          </p>
-          <p
-            className="text-slate-500 mt-1.5 leading-relaxed"
-            style={{ fontSize: "0.82rem" }}
-            dangerouslySetInnerHTML={{ __html: message }}
-          />
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={isBusy}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
-            style={{ fontSize: "0.875rem" }}
-          >
-            Cancel
-          </button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              if (isBusy) return;
-              if (isExternalLoading) {
-                onConfirm();
-                return;
-              }
-              setBusy(true);
-              Promise.resolve(onConfirm()).finally(() => setBusy(false));
-            }}
-            disabled={isBusy}
-            className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
-            style={{ background: confirmColor, fontSize: "0.875rem" }}
-          >
-            {isBusy ? (
-              <motion.span
-                className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
-              />
-            ) : (
-              confirmLabel
-            )}
-          </motion.button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 // Cancel job modal
 
 function DeleteModal({
@@ -552,14 +462,20 @@ function DeleteModal({
   loading?: boolean;
 }) {
   return (
-    <ConfirmModal
+    <ConfirmDialog
       title="Cancel Job"
-      message={`Are you sure you want to cancel <strong>"${jobTitle}"</strong>? The job will stay in your records.`}
+      body={
+        <>
+          Are you sure you want to cancel <strong className="text-slate-900">"{jobTitle}"</strong>?
+          The job will stay in your records.
+        </>
+      }
       confirmLabel="Cancel Job"
       confirmColor="#DC2626"
       onConfirm={onConfirm}
       onClose={onClose}
       loading={loading}
+      busyDelayMs={0}
     />
   );
 }
@@ -777,9 +693,16 @@ function ApplicantWorkspaceModal({
 
       <AnimatePresence>
         {hireModal && (
-          <ConfirmModal
+          <ConfirmDialog
             title="Hire Student"
-            message={`Are you sure you want to hire <strong>${applicant.name}</strong> for:<br/><strong>${jobTitle}</strong>`}
+            body={
+              <>
+                Are you sure you want to hire{" "}
+                <strong className="text-slate-900">{applicant.name}</strong> for:
+                <br />
+                <strong className="text-slate-900">{jobTitle}</strong>
+              </>
+            }
             confirmLabel="Hire Student"
             confirmColor="#059669"
             onConfirm={async () => {
@@ -788,12 +711,13 @@ function ApplicantWorkspaceModal({
             }}
             onClose={() => setHireModal(false)}
             loading={actionLoading}
+            busyDelayMs={0}
           />
         )}
         {rejectModal && (
-          <ConfirmModal
+          <ConfirmDialog
             title="Reject Application"
-            message="Are you sure you want to reject this application?"
+            body="Are you sure you want to reject this application?"
             confirmLabel="Reject"
             confirmColor="#64748B"
             onConfirm={async () => {
@@ -802,6 +726,7 @@ function ApplicantWorkspaceModal({
             }}
             onClose={() => setRejectModal(false)}
             loading={actionLoading}
+            busyDelayMs={0}
           />
         )}
       </AnimatePresence>
@@ -1154,25 +1079,34 @@ function ApplicationsPanel({
 
       <AnimatePresence>
         {hireTarget && (
-          <ConfirmModal
+          <ConfirmDialog
             title="Hire Student"
-            message={`Are you sure you want to hire <strong>${hireTarget.name}</strong> for:<br/><strong>${job.title}</strong>`}
+            body={
+              <>
+                Are you sure you want to hire{" "}
+                <strong className="text-slate-900">{hireTarget.name}</strong> for:
+                <br />
+                <strong className="text-slate-900">{job.title}</strong>
+              </>
+            }
             confirmLabel="Hire Student"
             confirmColor="#059669"
             onConfirm={() => handleHire(hireTarget)}
             onClose={() => setHireTarget(null)}
             loading={actionLoading}
+            busyDelayMs={0}
           />
         )}
         {rejectTarget && (
-          <ConfirmModal
+          <ConfirmDialog
             title="Reject Application"
-            message="Are you sure you want to reject this application?"
+            body="Are you sure you want to reject this application?"
             confirmLabel="Reject"
             confirmColor="#64748B"
             onConfirm={() => handleReject(rejectTarget)}
             onClose={() => setRejectTarget(null)}
             loading={actionLoading}
+            busyDelayMs={0}
           />
         )}
       </AnimatePresence>

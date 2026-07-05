@@ -6,8 +6,9 @@ type ConfirmDialogProps = {
   body: ReactNode;
   confirmLabel: string;
   confirmColor: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onClose: () => void;
+  loading?: boolean;
   icon?: ElementType;
   iconBg?: string;
   iconColor?: string;
@@ -23,6 +24,7 @@ export function ConfirmDialog({
   confirmColor,
   onConfirm,
   onClose,
+  loading,
   icon: Icon,
   iconBg = "#F8FAFC",
   iconColor = "#64748B",
@@ -32,6 +34,25 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [busy, setBusy] = useState(false);
   const centered = align === "center";
+  const isBusy = busy || Boolean(loading);
+
+  const handleConfirm = async () => {
+    if (isBusy) return;
+
+    setBusy(true);
+
+    try {
+      if (busyDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, busyDelayMs));
+      }
+
+      await onConfirm();
+    } catch {
+      // Page-level action handlers show the backend error message.
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <motion.div
@@ -40,7 +61,7 @@ export function ConfirmDialog({
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && !isBusy) onClose();
       }}
     >
       <motion.div
@@ -71,23 +92,21 @@ export function ConfirmDialog({
         <div className="flex gap-3 w-full">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 transition-all"
+            disabled={isBusy}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 transition-all disabled:opacity-60"
             style={{ fontSize: "0.875rem" }}
           >
             Cancel
           </button>
           <motion.button
-            whileHover={!busy ? { scale: 1.02 } : {}}
-            whileTap={!busy ? { scale: 0.97 } : {}}
-            onClick={() => {
-              setBusy(true);
-              setTimeout(onConfirm, busyDelayMs);
-            }}
-            disabled={busy}
+            whileHover={!isBusy ? { scale: 1.02 } : {}}
+            whileTap={!isBusy ? { scale: 0.97 } : {}}
+            onClick={handleConfirm}
+            disabled={isBusy}
             className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
             style={{ background: confirmColor, fontSize: "0.875rem" }}
           >
-            {busy ? (
+            {isBusy ? (
               <motion.span
                 className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                 animate={{ rotate: 360 }}
