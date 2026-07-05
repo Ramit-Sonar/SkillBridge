@@ -141,8 +141,6 @@ export type RejectApplicationResponse = ApplicationActionResponse & {
   rejectedAt: string;
 };
 
-export type ApplicationData = ApplicationSubmitResponse;
-
 export type ApiResponse<T> = {
   statusCode: number;
   data: T;
@@ -188,8 +186,6 @@ export const submitApplication = async (
     "Failed to submit application."
   );
 };
-
-export const createApplication = submitApplication;
 
 export const getMyApplications = async (): Promise<ApiResponse<MyApplicationsResponse>> => {
   const response = await fetch(`${API_URL}/applications/my-applications`, {
