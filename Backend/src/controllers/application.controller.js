@@ -293,7 +293,7 @@ const getApplicationById = asyncHandler(async (req, res) => {
     })
     .populate({
       path: "student",
-      select: "_id fullName avatar role profileCompleted",
+      select: "_id fullName avatar profileCompleted",
     })
     .lean();
 
@@ -397,10 +397,25 @@ const withdrawApplication = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Only pending applications can be withdrawn");
   }
 
-  application.status = "withdrawn";
-  application.withdrawnAt = new Date();
+  const withdrawnApplication = await Application.findOneAndUpdate(
+    {
+      _id: application._id,
+      status: "pending",
+    },
+    {
+      $set: {
+        status: "withdrawn",
+        withdrawnAt: new Date(),
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("_id status appliedAt withdrawnAt updatedAt");
 
-  const withdrawnApplication = await application.save();
+  if (!withdrawnApplication) {
+    throw new ApiError(400, "Only pending applications can be withdrawn");
+  }
 
   return res.status(200).json(
     new ApiResponse(
@@ -438,11 +453,26 @@ const acceptApplication = asyncHandler(async (req, res) => {
   try {
     await session.withTransaction(async () => {
       const application = await Application.findById(applicationId)
-        .select("job student status appliedAt acceptedAt")
+        .select("job status appliedAt")
         .session(session);
 
       if (!application) {
         throw new ApiError(404, "Application not found");
+      }
+
+      const job = await Job.findById(application.job)
+        .select("client status")
+        .session(session);
+
+      if (!job) {
+        throw new ApiError(404, "Job not found");
+      }
+
+      if (job.client.toString() !== req.user._id.toString()) {
+        throw new ApiError(
+          403,
+          "You can accept applications only for your own jobs"
+        );
       }
 
       if (application.status === "accepted") {
@@ -459,21 +489,6 @@ const acceptApplication = asyncHandler(async (req, res) => {
 
       if (application.status !== "pending") {
         throw new ApiError(400, "Only pending applications can be accepted");
-      }
-
-      const job = await Job.findById(application.job)
-        .select("client status")
-        .session(session);
-
-      if (!job) {
-        throw new ApiError(404, "Job not found");
-      }
-
-      if (job.client.toString() !== req.user._id.toString()) {
-        throw new ApiError(
-          403,
-          "You can accept applications only for your own jobs"
-        );
       }
 
       if (job.status === "closed") {
@@ -593,22 +608,6 @@ const rejectApplication = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Application not found");
   }
 
-  if (application.status === "accepted") {
-    throw new ApiError(400, "Accepted applications cannot be rejected");
-  }
-
-  if (application.status === "rejected") {
-    throw new ApiError(400, "Application is already rejected");
-  }
-
-  if (application.status === "withdrawn") {
-    throw new ApiError(400, "Withdrawn applications cannot be rejected");
-  }
-
-  if (application.status !== "pending") {
-    throw new ApiError(400, "Only pending applications can be rejected");
-  }
-
   const job = await Job.findById(application.job)
     .select("client status")
     .lean();
@@ -628,10 +627,41 @@ const rejectApplication = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cancelled jobs cannot process applications");
   }
 
-  application.status = "rejected";
-  application.rejectedAt = new Date();
+  if (application.status === "accepted") {
+    throw new ApiError(400, "Accepted applications cannot be rejected");
+  }
 
-  const rejectedApplication = await application.save();
+  if (application.status === "rejected") {
+    throw new ApiError(400, "Application is already rejected");
+  }
+
+  if (application.status === "withdrawn") {
+    throw new ApiError(400, "Withdrawn applications cannot be rejected");
+  }
+
+  if (application.status !== "pending") {
+    throw new ApiError(400, "Only pending applications can be rejected");
+  }
+
+  const rejectedApplication = await Application.findOneAndUpdate(
+    {
+      _id: application._id,
+      status: "pending",
+    },
+    {
+      $set: {
+        status: "rejected",
+        rejectedAt: new Date(),
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("_id status appliedAt rejectedAt updatedAt");
+
+  if (!rejectedApplication) {
+    throw new ApiError(400, "Only pending applications can be rejected");
+  }
 
   return res.status(200).json(
     new ApiResponse(
