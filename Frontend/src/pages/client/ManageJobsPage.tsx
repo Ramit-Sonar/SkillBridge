@@ -108,6 +108,7 @@ interface Job {
   deadline: string;
   skills: string[];
   attachedFiles?: FileAttachment[];
+  applicationCount: number;
   applicants: Applicant[];
 }
 
@@ -175,6 +176,7 @@ function mapJobFromApi(job: JobData): Job {
         return attachment;
       })
       .filter((attachment) => Boolean(attachment.originalName)),
+    applicationCount: job.applicationCount ?? 0,
     applicants: [],
   };
 }
@@ -1206,7 +1208,7 @@ function JobDetailsPanel({
             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
             style={{ fontSize: "0.82rem" }}
           >
-            <Users className="w-3.5 h-3.5" /> Applications ({job.applicants.length})
+            <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
           </motion.button>
         }
       />
@@ -1285,7 +1287,7 @@ function JobCard({
       ? "Closed jobs cannot be edited."
       : job.status === "cancelled"
         ? "Cancelled jobs cannot be edited."
-        : job.applicants.length > 0
+        : job.applicationCount > 0
           ? "This job has already received applications and can no longer be edited."
           : "";
   const hasAcceptedApplication = job.applicants.some(
@@ -1346,8 +1348,8 @@ function JobCard({
         <div className="flex items-center gap-1.5 text-slate-500">
           <Users className="w-3.5 h-3.5 text-slate-400" />
           <span style={{ fontSize: "0.75rem" }}>
-            {job.applicants.length} Application
-            {job.applicants.length !== 1 ? "s" : ""}
+            {job.applicationCount} Application
+            {job.applicationCount !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-slate-500">
@@ -1374,7 +1376,7 @@ function JobCard({
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm"
           style={{ fontSize: "0.75rem" }}
         >
-          <Users className="w-3.5 h-3.5" /> Applications ({job.applicants.length})
+          <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
         </motion.button>
       </div>
     </motion.div>
@@ -1450,7 +1452,9 @@ export default function ManageJobsPage() {
 
   const handleApplicantsChange = useCallback((jobId: string, applicantList: Applicant[]) => {
     const updateJob = (job: Job) =>
-      job.id === jobId ? { ...job, applicants: applicantList } : job;
+      job.id === jobId
+        ? { ...job, applicants: applicantList, applicationCount: applicantList.length }
+        : job;
 
     setJobs((prev) => prev.map(updateJob));
     setDetailsJob((prev) => (prev ? updateJob(prev) : prev));

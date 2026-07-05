@@ -199,11 +199,42 @@ const getClientJobs = asyncHandler(async (req, res) => {
 
   const jobs = await Job.find({
     client: req.user._id,
-  }).sort({ createdAt: -1 });
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const applicationCounts = await Application.aggregate([
+    {
+      $match: {
+        job: { $in: jobs.map((job) => job._id) },
+      },
+    },
+    {
+      $group: {
+        _id: "$job",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const applicationCountMap = new Map(
+    applicationCounts.map((item) => [item._id.toString(), item.count])
+  );
+
+  const jobsWithApplicationCount = jobs.map((job) => ({
+    ...job,
+    applicationCount: applicationCountMap.get(job._id.toString()) || 0,
+  }));
 
   return res
     .status(200)
-    .json(new ApiResponse(200, jobs, "Client jobs fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        jobsWithApplicationCount,
+        "Client jobs fetched successfully"
+      )
+    );
 });
 
 const getAllOpenJobs = asyncHandler(async (req, res) => {

@@ -47,6 +47,7 @@ export type JobData = {
   complexity?: "small" | "medium";
   attachments?: JobAttachment[];
   status?: "open" | "closed" | "cancelled";
+  applicationCount?: number;
   createdAt?: string;
   updatedAt?: string;
 };
