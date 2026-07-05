@@ -570,10 +570,81 @@ const acceptApplication = asyncHandler(async (req, res) => {
     );
 });
 
-const rejectApplication = asyncHandler(async () => {
-  throw new ApiError(
-    501,
-    "Reject application controller logic has not been implemented yet"
+const rejectApplication = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (req.user.role !== "client") {
+    throw new ApiError(403, "Only clients can reject applications");
+  }
+
+  if (!mongoose.isValidObjectId(applicationId)) {
+    throw new ApiError(400, "Invalid application id");
+  }
+
+  const application = await Application.findById(applicationId).select(
+    "job status appliedAt rejectedAt updatedAt"
+  );
+
+  if (!application) {
+    throw new ApiError(404, "Application not found");
+  }
+
+  if (application.status === "accepted") {
+    throw new ApiError(400, "Accepted applications cannot be rejected");
+  }
+
+  if (application.status === "rejected") {
+    throw new ApiError(400, "Application is already rejected");
+  }
+
+  if (application.status === "withdrawn") {
+    throw new ApiError(400, "Withdrawn applications cannot be rejected");
+  }
+
+  if (application.status !== "pending") {
+    throw new ApiError(400, "Only pending applications can be rejected");
+  }
+
+  const job = await Job.findById(application.job)
+    .select("client status")
+    .lean();
+
+  if (!job) {
+    throw new ApiError(404, "Job not found");
+  }
+
+  if (job.client.toString() !== req.user._id.toString()) {
+    throw new ApiError(
+      403,
+      "You can reject applications only for your own jobs"
+    );
+  }
+
+  if (job.status === "cancelled") {
+    throw new ApiError(400, "Cancelled jobs cannot process applications");
+  }
+
+  application.status = "rejected";
+  application.rejectedAt = new Date();
+
+  const rejectedApplication = await application.save();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        applicationId: rejectedApplication._id,
+        status: rejectedApplication.status,
+        appliedAt: rejectedApplication.appliedAt,
+        rejectedAt: rejectedApplication.rejectedAt,
+        updatedAt: rejectedApplication.updatedAt,
+      },
+      "Application rejected successfully"
+    )
   );
 });
 
