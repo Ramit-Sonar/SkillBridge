@@ -17,6 +17,7 @@ type FileUploadAreaProps = {
   files: UploadedFile[];
   onAdd: (file: UploadedFile) => void;
   onRemove: (name: string) => void;
+  disabled?: boolean;
   maxFiles?: number;
   accept?: string;
 };
@@ -25,6 +26,7 @@ export function FileUploadArea({
   files,
   onAdd,
   onRemove,
+  disabled = false,
   maxFiles = 3,
   accept = DEFAULT_ACCEPT,
 }: FileUploadAreaProps) {
@@ -33,7 +35,9 @@ export function FileUploadArea({
 
   const handleRaw = useCallback(
     (raw: File) => {
-      if (files.length >= maxFiles || files.find((file) => file.name === raw.name)) return;
+      if (disabled || files.length >= maxFiles || files.find((file) => file.name === raw.name)) {
+        return;
+      }
 
       onAdd({
         file: raw,
@@ -42,12 +46,13 @@ export function FileUploadArea({
         type: raw.type || "application/octet-stream",
       });
     },
-    [files, maxFiles, onAdd]
+    [disabled, files, maxFiles, onAdd]
   );
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
+    if (disabled) return;
     Array.from(e.dataTransfer.files).forEach(handleRaw);
   };
 
@@ -59,12 +64,18 @@ export function FileUploadArea({
           transition={{ duration: 0.2 }}
           onDragOver={(e) => {
             e.preventDefault();
+            if (disabled) return;
             setDragging(true);
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className="flex flex-col items-center gap-3 rounded-2xl py-8 px-6 cursor-pointer transition-all duration-200"
+          onClick={() => {
+            if (disabled) return;
+            inputRef.current?.click();
+          }}
+          className={`flex flex-col items-center gap-3 rounded-2xl py-8 px-6 transition-all duration-200 ${
+            disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+          }`}
           style={{
             border: `2px dashed ${dragging ? "#2563EB" : "#E2E8F0"}`,
             background: dragging ? "#EFF6FF" : "#F8FAFC",
@@ -88,8 +99,10 @@ export function FileUploadArea({
               style={{ fontSize: "0.78rem" }}
               onClick={(e) => {
                 e.stopPropagation();
+                if (disabled) return;
                 inputRef.current?.click();
               }}
+              disabled={disabled}
             >
               Browse Files
             </button>
@@ -116,6 +129,7 @@ export function FileUploadArea({
         multiple
         accept={accept}
         className="hidden"
+        disabled={disabled}
         onChange={(e) => {
           Array.from(e.target.files ?? []).forEach(handleRaw);
           e.target.value = "";
@@ -156,7 +170,8 @@ export function FileUploadArea({
               <button
                 type="button"
                 onClick={() => onRemove(file.name)}
-                className="text-slate-400 hover:text-red-400 hover:bg-red-50 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200"
+                disabled={disabled}
+                className="text-slate-400 hover:text-red-400 hover:bg-red-50 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-slate-400"
                 aria-label={`Remove ${file.name}`}
               >
                 <X className="w-3.5 h-3.5" />

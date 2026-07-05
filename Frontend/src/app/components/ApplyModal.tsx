@@ -7,13 +7,13 @@ import {
   JOB_DURATION_LABELS,
   JOB_SKILL_COLORS,
 } from "../../constants/job.constants";
-import { createApplication } from "../../services/applicationService";
+import { submitApplication } from "../../services/applicationService";
 import type { BrowseJob } from "../../types";
 
 interface ApplyModalProps {
   job: BrowseJob;
   onClose: () => void;
-  onSubmitted?: (jobId: string) => void;
+  onSubmitted?: (jobId: string, message: string) => void;
   onError?: (message: string) => void;
 }
 
@@ -103,23 +103,6 @@ function SkillChip({
 
 function getSubmitErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "Failed to submit application.";
-  const normalized = message.toLowerCase();
-
-  if (normalized.includes("already applied")) {
-    return "You have already applied for this job.";
-  }
-
-  if (normalized.includes("closed")) {
-    return "This job is closed and no longer accepts applications.";
-  }
-
-  if (normalized.includes("verification")) {
-    return "Student verification is required before applying.";
-  }
-
-  if (normalized.includes("required")) {
-    return message;
-  }
 
   return message || "Network error. Please try again.";
 }
@@ -206,14 +189,14 @@ export function ApplyModal({ job, onClose, onSubmitted, onError }: ApplyModalPro
     setErrors({});
 
     try {
-      await createApplication(job.id, {
+      const response = await submitApplication(job.id, {
         coverLetter: coverLetter.trim(),
         estimatedCompletionTime: estimatedTime.trim(),
         whySuitable: whySuitable.trim(),
         files: files.map((file) => file.file),
       });
 
-      onSubmitted?.(job.id);
+      onSubmitted?.(response.data.jobId, response.message);
       onClose();
     } catch (error) {
       const message = getSubmitErrorMessage(error);
@@ -417,6 +400,7 @@ export function ApplyModal({ job, onClose, onSubmitted, onError }: ApplyModalPro
                 </div>
                 <FileUploadArea
                   files={files}
+                  disabled={submitting}
                   onAdd={(file) => setFiles((prev) => [...prev, file])}
                   onRemove={(name) => setFiles((prev) => prev.filter((file) => file.name !== name))}
                 />

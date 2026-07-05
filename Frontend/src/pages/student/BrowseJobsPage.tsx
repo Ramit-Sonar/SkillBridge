@@ -1147,11 +1147,11 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     setApplyingJobId(jobId);
   };
 
-  const handleApplicationSubmitted = (jobId: string) => {
+  const handleApplicationSubmitted = (jobId: string, message: string) => {
     setSubmittedJobIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
     setNotification({
       type: "success",
-      text: "Application submitted successfully.",
+      text: message,
     });
   };
 
