@@ -147,6 +147,7 @@ function mapApplicationDetails(application: ApiApplicationDetails): Application 
     job: {
       title: jobTitle,
       category: job?.category ?? "other",
+      status: job?.status,
       description: job?.description ?? "",
       requirements: job?.requirements ?? "",
       skills: job?.skills ?? [],

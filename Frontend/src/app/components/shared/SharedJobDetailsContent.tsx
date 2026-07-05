@@ -24,6 +24,7 @@ import {
   JOB_DURATION_LABELS,
   JOB_SKILL_COLORS,
 } from "../../../constants/job.constants";
+import { StatusBadge, type StatusBadgeConfig } from "./ui";
 
 // ── Category config ───────────────────────────────────────────────────────────
 
@@ -84,10 +85,12 @@ const CATEGORY_CONFIG: Record<
 // ── Data interface ────────────────────────────────────────────────────────────
 
 export type AttachedFile = FileAttachment;
+export type JobDisplayStatus = "open" | "closed" | "cancelled";
 
 export interface JobDetailData {
   title: string;
   category: string;
+  status?: JobDisplayStatus;
   description: string;
   requirements?: string;
   skills: string[];
@@ -110,6 +113,30 @@ export interface JobDetailData {
   clientJoinedDate?: string;
   clientRating?: number;
 }
+
+const JOB_STATUS_CFG: Record<JobDisplayStatus, StatusBadgeConfig> = {
+  open: {
+    label: "Open",
+    color: "#059669",
+    bg: "#ECFDF5",
+    border: "#6EE7B7",
+    dot: "#10B981",
+  },
+  closed: {
+    label: "Closed",
+    color: "#64748B",
+    bg: "#F8FAFC",
+    border: "#CBD5E1",
+    dot: "#94A3B8",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "#DC2626",
+    bg: "#FEF2F2",
+    border: "#FECACA",
+    dot: "#EF4444",
+  },
+};
 
 // ── Category badge ────────────────────────────────────────────────────────────
 
@@ -218,7 +245,16 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
               Recommended
             </div>
           )}
-          <CategoryBadge category={job.category} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <CategoryBadge category={job.category} />
+            {job.status && (
+              <StatusBadge
+                config={JOB_STATUS_CFG[job.status]}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold"
+                style={{ fontSize: "0.65rem" }}
+              />
+            )}
+          </div>
           <h2
             className="text-slate-900 leading-snug"
             style={{ fontSize: "1.05rem", fontWeight: 800 }}

@@ -109,6 +109,7 @@ function JobDetailsPanel({
         job={{
           title: job.title,
           category: job.category,
+          status: job.status,
           description: job.description,
           requirements: job.requirements,
           skills: job.skills,

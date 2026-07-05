@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Zap } from "lucide-react";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { PROJECTS } from "../../app/data/projects";
+import { REVIEWS } from "../../app/data/reviews";
 
 const PROFILE = {
   name: "Ramit Sonar",
@@ -21,6 +22,26 @@ const PROFILE = {
   github: "github.com/ramitsonar",
   linkedin: "linkedin.com/in/ramitsonar",
   portfolio: "ramitsonar.com",
+  projects: PROJECTS.filter((project) => project.status === "completed").map((project) => {
+    const review = REVIEWS.find((item) => item.projectId === project.id);
+
+    return {
+      id: project.id,
+      title: project.title,
+      category: project.category,
+      description: project.description,
+      skills: project.skills,
+      rating: review?.rating,
+    };
+  }),
+  reviews: REVIEWS.map((review) => ({
+    id: review.id,
+    clientName: review.clientName,
+    clientInitials: review.clientInitials,
+    rating: review.rating,
+    comment: review.comment,
+    submittedAt: review.submittedAt,
+  })),
 };
 
 export default function PublicProfilePage() {

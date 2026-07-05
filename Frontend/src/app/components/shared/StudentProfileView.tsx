@@ -1,15 +1,30 @@
-import { useState, useEffect, type ElementType } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { REVIEWS } from "../../data/reviews";
-import { PROJECTS } from "../../data/projects";
-import { Github, Linkedin, Globe, Star, CheckCircle, Briefcase } from "lucide-react";
+import { useState, type ElementType } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { Briefcase, CheckCircle, Github, Globe, Linkedin, Star } from "lucide-react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+export interface ProfileProject {
+  id: string;
+  title: string;
+  category: string;
+  description?: string;
+  skills: string[];
+  rating?: number;
+}
+
+export interface ProfileReview {
+  id: string;
+  clientName: string;
+  clientInitials: string;
+  rating: number;
+  comment: string;
+  submittedAt: string;
+}
 
 export interface ProfileViewProps {
   name: string;
   initials: string;
   headline: string;
+  location?: string;
   education?: string;
   university?: string;
   bio: string;
@@ -21,11 +36,11 @@ export interface ProfileViewProps {
   github?: string;
   linkedin?: string;
   portfolio?: string;
+  projects?: ProfileProject[];
+  reviews?: ProfileReview[];
   /** User.avatar from MongoDB */
   avatarUrl?: string;
 }
-
-// ── Social icon with tooltip ──────────────────────────────────────────────────
 
 function SocialIcon({
   icon: Icon,
@@ -86,8 +101,6 @@ function SocialIcon({
   );
 }
 
-// ── Section 1: Profile Overview ───────────────────────────────────────────────
-
 function ProfileOverview({ profile }: { profile: ProfileViewProps }) {
   const avatar = profile.avatarUrl;
   const verifiedSkillsCount = profile.skills.filter((skill) => skill.verified).length;
@@ -143,7 +156,12 @@ function ProfileOverview({ profile }: { profile: ProfileViewProps }) {
               {profile.university}
             </p>
           )}
-          {!profile.education && !profile.university && profile.headline && (
+          {profile.location && (
+            <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.78rem" }}>
+              {profile.location}
+            </p>
+          )}
+          {!profile.education && !profile.university && !profile.location && profile.headline && (
             <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.78rem" }}>
               {profile.headline}
             </p>
@@ -186,8 +204,6 @@ function ProfileOverview({ profile }: { profile: ProfileViewProps }) {
   );
 }
 
-// ── Section 2: About ──────────────────────────────────────────────────────────
-
 function About({ bio }: { bio: string }) {
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5">
@@ -195,44 +211,51 @@ function About({ bio }: { bio: string }) {
         About
       </p>
       <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-        {bio}
+        {bio || "No bio has been added yet."}
       </p>
     </div>
   );
 }
 
-// ── Section 3: Skills ─────────────────────────────────────────────────────────
-
 function Skills({ skills }: { skills: { name: string; verified: boolean }[] }) {
-  const verified = skills.filter((s) => s.verified);
-  const regular = skills.filter((s) => !s.verified);
+  const verified = skills.filter((skill) => skill.verified);
+  const regular = skills.filter((skill) => !skill.verified);
+
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-3">
       <p className="text-slate-900 font-bold" style={{ fontSize: "0.85rem" }}>
         Skills
       </p>
-      <div className="flex flex-wrap gap-2">
-        {verified.map((s) => (
-          <span
-            key={s.name}
-            className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-600 font-semibold px-2.5 py-1.5 rounded-xl"
-            style={{ fontSize: "0.72rem" }}
-          >
-            <CheckCircle className="w-3 h-3 shrink-0" />
-            {s.name}
-            <span style={{ fontSize: "0.58rem", color: "#6EE7B7", fontWeight: 600 }}>Verified</span>
-          </span>
-        ))}
-        {regular.map((s) => (
-          <span
-            key={s.name}
-            className="bg-slate-50 border border-slate-200 text-slate-600 font-medium px-2.5 py-1.5 rounded-xl"
-            style={{ fontSize: "0.72rem" }}
-          >
-            {s.name}
-          </span>
-        ))}
-      </div>
+      {skills.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {verified.map((skill) => (
+            <span
+              key={skill.name}
+              className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-600 font-semibold px-2.5 py-1.5 rounded-xl"
+              style={{ fontSize: "0.72rem" }}
+            >
+              <CheckCircle className="w-3 h-3 shrink-0" />
+              {skill.name}
+              <span style={{ fontSize: "0.58rem", color: "#6EE7B7", fontWeight: 600 }}>
+                Verified
+              </span>
+            </span>
+          ))}
+          {regular.map((skill) => (
+            <span
+              key={skill.name}
+              className="bg-slate-50 border border-slate-200 text-slate-600 font-medium px-2.5 py-1.5 rounded-xl"
+              style={{ fontSize: "0.72rem" }}
+            >
+              {skill.name}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
+          No skills have been added yet.
+        </p>
+      )}
       <p className="text-slate-300" style={{ fontSize: "0.65rem" }}>
         Verified skills are earned through completed projects and positive client ratings.
       </p>
@@ -240,11 +263,7 @@ function Skills({ skills }: { skills: { name: string; verified: boolean }[] }) {
   );
 }
 
-// ── Section 4: Portfolio & Experience ────────────────────────────────────────
-
-function Portfolio() {
-  const projects = PROJECTS.filter((p) => p.status === "completed");
-
+function Portfolio({ projects }: { projects: ProfileProject[] }) {
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -275,86 +294,71 @@ function Portfolio() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {projects.map((p) => {
-            const review = REVIEWS.find((r) => r.projectId === p.id);
-            return (
-              <motion.div
-                key={p.id}
-                whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
-                className="border border-black/[0.06] rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
-              >
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <p
-                    className="text-slate-900 font-semibold leading-tight"
-                    style={{ fontSize: "0.82rem" }}
-                  >
-                    {p.title}
-                  </p>
-                  <span
-                    className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 border border-emerald-300 font-semibold px-2 py-0.5 rounded-full shrink-0"
-                    style={{ fontSize: "0.55rem" }}
-                  >
-                    <CheckCircle className="w-2.5 h-2.5" /> Completed
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {review && (
-                    <>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3" fill="#F59E0B" color="#F59E0B" />
-                        <span
-                          className="text-amber-600 font-semibold"
-                          style={{ fontSize: "0.72rem" }}
-                        >
-                          {review.rating}.0
-                        </span>
-                      </div>
-                      <span className="text-slate-200" style={{ fontSize: "0.65rem" }}>
-                        ·
-                      </span>
-                    </>
-                  )}
-                  <span className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-                    {p.category}
-                  </span>
-                </div>
-                {p.description && (
-                  <p
-                    className="text-slate-500 leading-snug line-clamp-2"
-                    style={{ fontSize: "0.75rem" }}
-                  >
-                    {p.description}
-                  </p>
-                )}
-                <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-                  {p.skills.join(" • ")}
+          {projects.map((project) => (
+            <motion.div
+              key={project.id}
+              whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
+              className="border border-black/[0.06] rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
+            >
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <p
+                  className="text-slate-900 font-semibold leading-tight"
+                  style={{ fontSize: "0.82rem" }}
+                >
+                  {project.title}
                 </p>
-              </motion.div>
-            );
-          })}
+                <span
+                  className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 border border-emerald-300 font-semibold px-2 py-0.5 rounded-full shrink-0"
+                  style={{ fontSize: "0.55rem" }}
+                >
+                  <CheckCircle className="w-2.5 h-2.5" /> Completed
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {project.rating !== undefined && (
+                  <>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3" fill="#F59E0B" color="#F59E0B" />
+                      <span
+                        className="text-amber-600 font-semibold"
+                        style={{ fontSize: "0.72rem" }}
+                      >
+                        {project.rating.toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-slate-200" style={{ fontSize: "0.65rem" }}>
+                      {"\u00b7"}
+                    </span>
+                  </>
+                )}
+                <span className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                  {project.category}
+                </span>
+              </div>
+              {project.description && (
+                <p
+                  className="text-slate-500 leading-snug line-clamp-2"
+                  style={{ fontSize: "0.75rem" }}
+                >
+                  {project.description}
+                </p>
+              )}
+              <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                {project.skills.join(" - ")}
+              </p>
+            </motion.div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// ── Section 5: Reviews & Ratings ─────────────────────────────────────────────
-
-const FALLBACK_REVIEWS = [
-  {
-    id: "fr1",
-    clientName: "Dikshya Khanal",
-    clientInitials: "AC",
-    rating: 5,
-    comment: "Excellent communication and delivered before deadline. The quality was outstanding.",
-    submittedAt: "12 Jun 2026",
-  },
-];
-
-function Reviews() {
-  const raw = REVIEWS.filter((r) => r.studentName === "Priya Sharma");
-  const reviews = raw.length > 0 ? raw : FALLBACK_REVIEWS;
-  const avg = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+function Reviews({ reviews }: { reviews: ProfileReview[] }) {
+  const avg =
+    reviews.length > 0
+      ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+      : "0.0";
 
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
@@ -401,9 +405,9 @@ function Reviews() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {reviews.slice(0, 1).map((r) => (
+          {reviews.slice(0, 1).map((review) => (
             <motion.div
-              key={r.id}
+              key={review.id}
               whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
               className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
             >
@@ -413,24 +417,24 @@ function Reviews() {
                     className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0"
                     style={{ fontSize: "0.48rem" }}
                   >
-                    {r.clientInitials}
+                    {review.clientInitials}
                   </div>
                   <p className="text-slate-900 font-semibold" style={{ fontSize: "0.8rem" }}>
-                    {r.clientName}
+                    {review.clientName}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Star className="w-3 h-3" fill="#F59E0B" color="#F59E0B" />
                   <span className="text-amber-600 font-semibold" style={{ fontSize: "0.72rem" }}>
-                    {r.rating}.0
+                    {review.rating.toFixed(1)}
                   </span>
                   <span className="text-slate-300" style={{ fontSize: "0.62rem" }}>
-                    · {r.submittedAt}
+                    {"\u00b7"} {review.submittedAt}
                   </span>
                 </div>
               </div>
               <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.78rem" }}>
-                "{r.comment}"
+                "{review.comment}"
               </p>
             </motion.div>
           ))}
@@ -439,8 +443,6 @@ function Reviews() {
     </div>
   );
 }
-
-// ── Main export ───────────────────────────────────────────────────────────────
 
 export function StudentProfileView({
   profile,
@@ -453,8 +455,8 @@ export function StudentProfileView({
       <ProfileOverview profile={profile} />
       <About bio={profile.bio} />
       <Skills skills={profile.skills} />
-      <Portfolio />
-      <Reviews />
+      <Portfolio projects={profile.projects ?? []} />
+      <Reviews reviews={profile.reviews ?? []} />
     </div>
   );
 }

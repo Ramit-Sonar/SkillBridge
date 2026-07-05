@@ -13,7 +13,7 @@ import { StudentProfileView } from "../../app/components/shared/StudentProfileVi
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
 import {
-  ApplicationDetailsContent,
+  ReadOnlyApplicationView,
   type ApplicationDetailsData,
   type ApplicationStatus,
 } from "../../app/components/shared/ApplicationDetailsContent";
@@ -644,7 +644,7 @@ function ApplicantWorkspaceModal({
                   exit={{ opacity: 0, x: 12 }}
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <ApplicationDetailsContent application={applicationData} />
+                  <ReadOnlyApplicationView application={applicationData} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -941,6 +941,7 @@ function JobDetailsPanel({
         job={{
           title: job.title,
           category: job.categoryKey,
+          status: job.status,
           description: job.description,
           requirements: job.requirements,
           skills: job.skills,
