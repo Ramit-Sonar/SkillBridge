@@ -19,6 +19,14 @@ import {
 } from "../../app/components/shared/ApplicationDetailsContent";
 import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 import { cancelJob, getClientJobs, type JobData } from "../../services/jobService";
+import {
+  acceptApplication,
+  getApplicationById,
+  getJobApplications,
+  rejectApplication,
+  type ApplicantCard,
+  type ApplicationDetails,
+} from "../../services/applicationService";
 import { type FileAttachment } from "../../utils/fileUtils";
 import {
   PlusCircle,
@@ -42,7 +50,7 @@ import {
 // Types
 
 type JobStatus = "open" | "closed" | "cancelled";
-type AppStatus = "pending" | "hired" | "rejected" | "withdrawn";
+type AppStatus = ApplicationStatus;
 
 interface VerifiedSkill {
   name: string;
@@ -55,6 +63,7 @@ interface Applicant {
   initials: string;
   education: string;
   university: string;
+  headline: string;
   verified: boolean;
   skills: VerifiedSkill[];
   rating: number;
@@ -75,6 +84,8 @@ interface Applicant {
   github?: string;
   linkedin?: string;
   portfolio?: string;
+  profileCompleted?: boolean;
+  job?: ApplicationDetails["job"];
 }
 
 interface Job {
@@ -95,64 +106,6 @@ interface Job {
   attachedFiles?: FileAttachment[];
   applicants: Applicant[];
 }
-
-const PROTOTYPE_ATTACHMENT_URL =
-  "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
-
-const PROTOTYPE_APPLICANT: Applicant = {
-  id: "prototype-ramit-sonar-application",
-  name: "Ramit Sonar",
-  initials: "RS",
-  education: "Kathmandu, Nepal",
-  university: "Pokhara University",
-  verified: true,
-  skills: [
-    { name: "React", verified: true },
-    { name: "Node.js", verified: true },
-    { name: "MongoDB", verified: true },
-    { name: "TypeScript", verified: true },
-    { name: "TailwindCSS", verified: true },
-  ],
-  rating: 4.9,
-  reviewCount: 12,
-  completedProjects: 8,
-  bio: "Full-stack MERN developer focused on building clean, responsive dashboards and production-ready web applications. I enjoy turning business requirements into simple, maintainable interfaces with strong attention to performance and user experience.",
-  appliedAt: "2 July 2026",
-  updatedAt: "2 July 2026",
-  estimatedTime: "7 Days",
-  coverMessage:
-    "Hello, I would be excited to work on this project. I have practical experience building responsive React interfaces, Node.js APIs, and MongoDB-backed dashboards for real users. I can review your requirements carefully, plan the implementation clearly, and deliver a polished result within the expected timeline while keeping communication transparent throughout the project.",
-  whySuitable:
-    "I am a strong fit because my recent projects use the same MERN stack required for this work. I have completed multiple client-facing dashboards, integrated REST APIs, handled reusable components, and worked with TypeScript and TailwindCSS to keep code readable and scalable. I can deliver quickly without sacrificing maintainability.",
-  attachments: [
-    {
-      url: PROTOTYPE_ATTACHMENT_URL,
-      publicId: "prototype/applications/ramit-sonar/resume",
-      originalName: "Resume.pdf",
-      mimeType: "application/pdf",
-      size: 245760,
-    },
-    {
-      url: PROTOTYPE_ATTACHMENT_URL,
-      publicId: "prototype/applications/ramit-sonar/portfolio",
-      originalName: "Portfolio.pdf",
-      mimeType: "application/pdf",
-      size: 524288,
-    },
-    {
-      url: PROTOTYPE_ATTACHMENT_URL,
-      publicId: "prototype/applications/ramit-sonar/proposal",
-      originalName: "Proposal.pdf",
-      mimeType: "application/pdf",
-      size: 331776,
-    },
-  ],
-  status: "pending",
-  avatarUrl: "https://i.pravatar.cc/160?img=12",
-  github: "github.com/ramitsonar",
-  linkedin: "linkedin.com/in/ramitsonar",
-  portfolio: "ramitsonar.dev",
-};
 
 function formatJobDate(date?: string) {
   if (!date) return "";
@@ -252,7 +205,7 @@ const APP_STATUS_CFG: Record<
     bg: "#FFFBEB",
     border: "#FDE68A",
   },
-  hired: { label: "Accepted", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },
+  accepted: { label: "Accepted", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },
   rejected: {
     label: "Rejected",
     color: "#64748B",
@@ -269,16 +222,138 @@ const APP_STATUS_CFG: Record<
 
 const APP_STATUS_TO_DETAILS_STATUS: Record<AppStatus, ApplicationStatus> = {
   pending: "pending",
-  hired: "accepted",
+  accepted: "accepted",
   rejected: "rejected",
   withdrawn: "withdrawn",
 };
+
+function formatApplicationDate(date?: string | null) {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return date;
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getInitials(name?: string) {
+  if (!name) return "ST";
+
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+function isStudentVerified(student: ApplicantCard["student"] | ApplicationDetails["student"]) {
+  return student?.verification.status === "approved" || Boolean(student?.verification.verifiedAt);
+}
+
+function mapApplicantFromApi(applicant: ApplicantCard): Applicant {
+  const student = applicant.student;
+  const profile = student?.profile;
+  const skills = profile?.skills ?? [];
+  const university = profile?.university || "University not provided";
+  const headline = profile?.education || university;
+
+  return {
+    id: applicant.applicationId,
+    name: student?.fullName || "Unknown Student",
+    initials: getInitials(student?.fullName),
+    education: university,
+    university,
+    headline,
+    verified: isStudentVerified(student),
+    skills: skills.map((skill) => ({ name: skill, verified: false })),
+    rating: 0,
+    reviewCount: 0,
+    completedProjects: 0,
+    bio: profile?.bio || "No profile summary provided.",
+    appliedAt: formatApplicationDate(applicant.appliedAt),
+    status: applicant.status,
+    avatarUrl: student?.avatar,
+    github: profile?.github,
+    linkedin: profile?.linkedin,
+    portfolio: profile?.portfolio,
+    profileCompleted: student?.profileCompleted,
+  };
+}
+
+function mapApplicantDetailsFromApi(application: ApplicationDetails): Applicant {
+  const student = application.student;
+  const profile = student?.profile;
+  const skills = profile?.skills ?? [];
+  const university = profile?.university || "University not provided";
+  const headline = profile?.education || university;
+
+  return {
+    id: application.applicationId,
+    name: student?.fullName || "Unknown Student",
+    initials: getInitials(student?.fullName),
+    education: university,
+    university,
+    headline,
+    verified: isStudentVerified(student),
+    skills: skills.map((skill) => ({ name: skill, verified: false })),
+    rating: 0,
+    reviewCount: 0,
+    completedProjects: 0,
+    bio: profile?.bio || "No profile summary provided.",
+    appliedAt: formatApplicationDate(application.appliedAt),
+    updatedAt: formatApplicationDate(application.updatedAt),
+    acceptedAt: formatApplicationDate(application.acceptedAt),
+    rejectedAt: formatApplicationDate(application.rejectedAt),
+    withdrawnAt: formatApplicationDate(application.withdrawnAt),
+    estimatedTime: application.estimatedCompletionTime,
+    coverMessage: application.coverMessage,
+    whySuitable: application.whySuitable,
+    attachments: application.attachments,
+    status: application.status,
+    avatarUrl: student?.avatar,
+    github: profile?.github,
+    linkedin: profile?.linkedin,
+    portfolio: profile?.portfolio,
+    profileCompleted: student?.profileCompleted,
+    job: application.job,
+  };
+}
+
+function getApplicantJobData(applicant: Applicant) {
+  if (!applicant.job) return null;
+
+  const numericBudget = Number(applicant.job.budget);
+  const budget = Number.isNaN(numericBudget)
+    ? `NPR ${String(applicant.job.budget)}`
+    : `NPR ${numericBudget.toLocaleString("en-IN")}`;
+
+  return {
+    title: applicant.job.title,
+    category: applicant.job.category,
+    status: applicant.job.status,
+    description: applicant.job.description,
+    requirements: applicant.job.requirements,
+    skills: applicant.job.skills,
+    budget,
+    duration: applicant.job.duration,
+    deadline: formatDeadline(applicant.job.deadline),
+    complexity: applicant.job.complexity,
+    postedAt: formatJobDate(applicant.job.createdAt),
+    attachedFiles: applicant.job.attachments,
+  };
+}
 
 function getApplicantProfileData(applicant: Applicant) {
   return {
     name: applicant.name,
     initials: applicant.initials,
-    headline: applicant.university,
+    headline: applicant.headline,
     education: applicant.education,
     university: applicant.university,
     bio: applicant.bio,
@@ -413,7 +488,7 @@ function ConfirmModal({
   message: string;
   confirmLabel: string;
   confirmColor: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onClose: () => void;
   loading?: boolean;
 }) {
@@ -467,7 +542,7 @@ function ConfirmModal({
                 return;
               }
               setBusy(true);
-              setTimeout(onConfirm, 700);
+              Promise.resolve(onConfirm()).finally(() => setBusy(false));
             }}
             disabled={isBusy}
             className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
@@ -498,7 +573,7 @@ function DeleteModal({
   loading,
 }: {
   jobTitle: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onClose: () => void;
   loading?: boolean;
 }) {
@@ -517,7 +592,7 @@ function DeleteModal({
 
 // Applicant workspace modal
 
-type ApplicantWorkspaceTab = "application" | "profile";
+type ApplicantWorkspaceTab = "job" | "application" | "profile";
 
 function ApplicantWorkspaceModal({
   applicant,
@@ -525,12 +600,14 @@ function ApplicantWorkspaceModal({
   onClose,
   onHire,
   onReject,
+  actionLoading,
 }: {
   applicant: Applicant;
   jobTitle: string;
   onClose: () => void;
-  onHire: () => void;
-  onReject: () => void;
+  onHire: () => Promise<void> | void;
+  onReject: () => Promise<void> | void;
+  actionLoading?: boolean;
 }) {
   const [tab, setTab] = useState<ApplicantWorkspaceTab>("application");
   const [hireModal, setHireModal] = useState(false);
@@ -539,9 +616,11 @@ function ApplicantWorkspaceModal({
   const previouslyFocusedElement = useRef<HTMLElement | null>(null);
   const navigate = useNavigate();
   const appCfg = APP_STATUS_CFG[applicant.status];
+  const jobData = getApplicantJobData(applicant);
   const profileData = getApplicantProfileData(applicant);
   const applicationData = getApplicantApplicationData(applicant);
   const tabs: { label: string; value: ApplicantWorkspaceTab }[] = [
+    { label: "Job Details", value: "job" },
     { label: "Application", value: "application" },
     { label: "Student Profile", value: "profile" },
   ];
@@ -636,7 +715,27 @@ function ApplicantWorkspaceModal({
 
           <div className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
-              {tab === "application" ? (
+              {tab === "job" ? (
+                <motion.div
+                  key="job"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {jobData ? (
+                    <SharedJobDetailsContent showClientCard={false} job={jobData} />
+                  ) : (
+                    <div className="p-5">
+                      <div className="bg-white rounded-2xl border border-black/[0.06] p-5 text-center">
+                        <p className="text-slate-500" style={{ fontSize: "0.82rem" }}>
+                          Job details are not available for this application.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ) : tab === "application" ? (
                 <motion.div
                   key="application"
                   initial={{ opacity: 0, x: -12 }}
@@ -685,7 +784,7 @@ function ApplicantWorkspaceModal({
               </div>
             )}
 
-            {applicant.status === "hired" && (
+            {applicant.status === "accepted" && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
@@ -727,11 +826,12 @@ function ApplicantWorkspaceModal({
             message={`Are you sure you want to hire <strong>${applicant.name}</strong> for:<br/><strong>${jobTitle}</strong>`}
             confirmLabel="Hire Student"
             confirmColor="#059669"
-            onConfirm={() => {
+            onConfirm={async () => {
+              await onHire();
               setHireModal(false);
-              onHire();
             }}
             onClose={() => setHireModal(false)}
+            loading={actionLoading}
           />
         )}
         {rejectModal && (
@@ -740,11 +840,12 @@ function ApplicantWorkspaceModal({
             message="Are you sure you want to reject this application?"
             confirmLabel="Reject"
             confirmColor="#64748B"
-            onConfirm={() => {
+            onConfirm={async () => {
+              await onReject();
               setRejectModal(false);
-              onReject();
             }}
             onClose={() => setRejectModal(false)}
+            loading={actionLoading}
           />
         )}
       </AnimatePresence>
@@ -752,41 +853,191 @@ function ApplicantWorkspaceModal({
   );
 }
 
-// Application module prototype list
+// Application list
 
-function ApplicationsPanel({ job, onClose }: { job: Job; onClose: () => void }) {
-  const [prototypeApplicant, setPrototypeApplicant] = useState<Applicant>(PROTOTYPE_APPLICANT);
+function ApplicationsPanel({
+  job,
+  onClose,
+  onJobStatusChange,
+  onApplicantsChange,
+}: {
+  job: Job;
+  onClose: () => void;
+  onJobStatusChange: (jobId: string, status: JobStatus) => void;
+  onApplicantsChange: (jobId: string, applicants: Applicant[]) => void;
+}) {
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [workspaceApplicant, setWorkspaceApplicant] = useState<Applicant | null>(null);
   const [hireTarget, setHireTarget] = useState<Applicant | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Applicant | null>(null);
+  const [loadingApplicants, setLoadingApplicants] = useState(true);
+  const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [notification, setNotification] = useState<NotificationMessage>(null);
 
-  const handleHire = () => {
-    setPrototypeApplicant((prev) => ({ ...prev, status: "hired", acceptedAt: "2 July 2026" }));
-    setWorkspaceApplicant((prev) =>
-      prev ? { ...prev, status: "hired", acceptedAt: "2 July 2026" } : prev
-    );
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadApplicants() {
+      setLoadingApplicants(true);
+      setError("");
+
+      try {
+        const response = await getJobApplications(job.id);
+        if (!isMounted) return;
+        const applicantList = response.data.applicants.map(mapApplicantFromApi);
+        setApplicants(applicantList);
+        onApplicantsChange(job.id, applicantList);
+      } catch (error) {
+        if (!isMounted) return;
+        const message = error instanceof Error ? error.message : "Failed to load applications.";
+        setError(message);
+        setNotification({ type: "error", text: message });
+        setApplicants([]);
+      } finally {
+        if (isMounted) setLoadingApplicants(false);
+      }
+    }
+
+    loadApplicants();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [job.id, onApplicantsChange]);
+
+  const handleViewDetails = async (applicationId: string) => {
+    setDetailsLoadingId(applicationId);
+
+    try {
+      const response = await getApplicationById(applicationId);
+      setWorkspaceApplicant(mapApplicantDetailsFromApi(response.data));
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to load application details.",
+      });
+    } finally {
+      setDetailsLoadingId(null);
+    }
   };
 
-  const handleReject = () => {
-    setPrototypeApplicant((prev) => ({ ...prev, status: "rejected", rejectedAt: "2 July 2026" }));
-    setWorkspaceApplicant((prev) =>
-      prev ? { ...prev, status: "rejected", rejectedAt: "2 July 2026" } : prev
-    );
+  const handleHire = async (applicant: Applicant) => {
+    setActionLoading(true);
+
+    try {
+      const response = await acceptApplication(applicant.id);
+      const acceptedAt = formatApplicationDate(response.data.acceptedAt);
+      const updatedAt = formatApplicationDate(response.data.updatedAt);
+
+      setApplicants((prev) => {
+        const updatedApplicants = prev.map((item) => {
+          if (item.id === applicant.id) {
+            return { ...item, status: "accepted" as AppStatus, acceptedAt, updatedAt };
+          }
+
+          if (item.status === "pending") {
+            return { ...item, status: "rejected" as AppStatus };
+          }
+
+          return item;
+        });
+
+        onApplicantsChange(job.id, updatedApplicants);
+
+        return updatedApplicants;
+      });
+
+      setWorkspaceApplicant((prev) => {
+        if (!prev) return prev;
+
+        if (prev.id === applicant.id) {
+          return { ...prev, status: "accepted" as AppStatus, acceptedAt, updatedAt };
+        }
+
+        if (prev.status === "pending") {
+          return { ...prev, status: "rejected" as AppStatus };
+        }
+
+        return prev;
+      });
+
+      if (
+        response.data.job.status === "open" ||
+        response.data.job.status === "closed" ||
+        response.data.job.status === "cancelled"
+      ) {
+        onJobStatusChange(response.data.job.jobId, response.data.job.status);
+      }
+
+      setNotification({ type: "success", text: response.message });
+      setHireTarget(null);
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to accept application.",
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
+
+  const handleReject = async (applicant: Applicant) => {
+    setActionLoading(true);
+
+    try {
+      const response = await rejectApplication(applicant.id);
+      const rejectedAt = formatApplicationDate(response.data.rejectedAt);
+      const updatedAt = formatApplicationDate(response.data.updatedAt);
+
+      setApplicants((prev) => {
+        const updatedApplicants = prev.map((item) =>
+          item.id === applicant.id
+            ? { ...item, status: "rejected" as AppStatus, rejectedAt, updatedAt }
+            : item
+        );
+
+        onApplicantsChange(job.id, updatedApplicants);
+
+        return updatedApplicants;
+      });
+
+      setWorkspaceApplicant((prev) =>
+        prev?.id === applicant.id
+          ? { ...prev, status: "rejected" as AppStatus, rejectedAt, updatedAt }
+          : prev
+      );
+
+      setNotification({ type: "success", text: response.message });
+      setRejectTarget(null);
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to reject application.",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const applicantCountText = `${applicants.length} applicant${applicants.length !== 1 ? "s" : ""}`;
 
   if (workspaceApplicant) {
     return (
-      <ApplicantWorkspaceModal
-        applicant={prototypeApplicant}
-        jobTitle={job.title}
-        onClose={() => setWorkspaceApplicant(null)}
-        onHire={handleHire}
-        onReject={handleReject}
-      />
+      <>
+        <ApplicantWorkspaceModal
+          applicant={workspaceApplicant}
+          jobTitle={job.title}
+          onClose={() => setWorkspaceApplicant(null)}
+          onHire={() => handleHire(workspaceApplicant)}
+          onReject={() => handleReject(workspaceApplicant)}
+          actionLoading={actionLoading}
+        />
+        <Notification message={notification} onClose={() => setNotification(null)} />
+      </>
     );
   }
-
-  const appCfg = APP_STATUS_CFG[prototypeApplicant.status];
 
   return (
     <>
@@ -822,7 +1073,8 @@ function ApplicationsPanel({ job, onClose }: { job: Job; onClose: () => void }) 
               <div className="flex items-center gap-2 mt-1">
                 <Users className="w-3.5 h-3.5 text-slate-400" />
                 <p className="text-slate-500" style={{ fontSize: "0.75rem" }}>
-                  1 applicant for <span className="text-slate-700 font-semibold">{job.title}</span>
+                  {loadingApplicants ? "Loading applicants" : applicantCountText} for{" "}
+                  <span className="text-slate-700 font-semibold">{job.title}</span>
                 </p>
               </div>
             </div>
@@ -837,51 +1089,107 @@ function ApplicationsPanel({ job, onClose }: { job: Job; onClose: () => void }) 
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-            <StudentSummaryCard
-              initials={prototypeApplicant.initials}
-              name={prototypeApplicant.name}
-              education={prototypeApplicant.education}
-              headline={prototypeApplicant.university}
-              verified={prototypeApplicant.verified}
-              rating={prototypeApplicant.rating}
-              reviewCount={prototypeApplicant.reviewCount}
-              completedProjects={prototypeApplicant.completedProjects}
-              skills={prototypeApplicant.skills}
-              meta={`Applied ${prototypeApplicant.appliedAt}`}
-              badge={<StatusBadge config={appCfg} style={{ fontSize: "0.6rem" }} />}
-              actions={
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setWorkspaceApplicant(prototypeApplicant)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 font-semibold transition-all"
-                    style={{ fontSize: "0.68rem" }}
-                  >
-                    <Eye className="w-3 h-3" /> View Details
-                  </button>
-                  {prototypeApplicant.status === "pending" && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setHireTarget(prototypeApplicant)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold transition-all"
-                        style={{ fontSize: "0.68rem" }}
-                      >
-                        <UserCheck className="w-3 h-3" /> Hire
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRejectTarget(prototypeApplicant)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-semibold transition-all"
-                        style={{ fontSize: "0.68rem" }}
-                      >
-                        <XCircle className="w-3 h-3" /> Reject
-                      </button>
-                    </>
-                  )}
-                </>
-              }
-            />
+            {loadingApplicants ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-white border border-black/[0.06] rounded-2xl p-4 flex flex-col gap-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse" />
+                      <div className="space-y-2">
+                        <div className="w-32 h-3 rounded-full bg-slate-100 animate-pulse" />
+                        <div className="w-44 h-3 rounded-full bg-slate-100 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="w-16 h-5 rounded-full bg-slate-100 animate-pulse" />
+                  </div>
+                  <div className="w-full h-3 rounded-full bg-slate-100 animate-pulse" />
+                  <div className="flex justify-end gap-2 pt-1 border-t border-black/[0.04]">
+                    <div className="w-20 h-7 rounded-lg bg-slate-100 animate-pulse" />
+                    <div className="w-16 h-7 rounded-lg bg-slate-100 animate-pulse" />
+                  </div>
+                </div>
+              ))
+            ) : error ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
+                  {error}
+                </p>
+              </div>
+            ) : applicants.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <Users className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
+                  No applications received yet.
+                </p>
+              </div>
+            ) : (
+              applicants.map((applicant, index) => {
+                const appCfg = APP_STATUS_CFG[applicant.status];
+                const isDetailsLoading = detailsLoadingId === applicant.id;
+
+                return (
+                  <StudentSummaryCard
+                    key={applicant.id}
+                    initials={applicant.initials}
+                    name={applicant.name}
+                    education={applicant.education}
+                    headline={applicant.headline}
+                    verified={applicant.verified}
+                    rating={applicant.rating}
+                    reviewCount={applicant.reviewCount}
+                    completedProjects={applicant.completedProjects}
+                    skills={applicant.skills}
+                    meta={`Applied ${applicant.appliedAt}${applicant.profileCompleted ? " - Profile Complete" : ""}`}
+                    delay={index * 0.04}
+                    badge={<StatusBadge config={appCfg} style={{ fontSize: "0.6rem" }} />}
+                    actions={
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleViewDetails(applicant.id)}
+                          disabled={isDetailsLoading || actionLoading}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                          style={{ fontSize: "0.68rem" }}
+                        >
+                          <Eye className="w-3 h-3" />{" "}
+                          {isDetailsLoading ? "Loading" : "View Details"}
+                        </button>
+                        {applicant.status === "pending" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setHireTarget(applicant)}
+                              disabled={actionLoading}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                              style={{ fontSize: "0.68rem" }}
+                            >
+                              <UserCheck className="w-3 h-3" /> Hire
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRejectTarget(applicant)}
+                              disabled={actionLoading}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                              style={{ fontSize: "0.68rem" }}
+                            >
+                              <XCircle className="w-3 h-3" /> Reject
+                            </button>
+                          </>
+                        )}
+                      </>
+                    }
+                  />
+                );
+              })
+            )}
           </div>
         </motion.div>
       </motion.div>
@@ -893,11 +1201,9 @@ function ApplicationsPanel({ job, onClose }: { job: Job; onClose: () => void }) 
             message={`Are you sure you want to hire <strong>${hireTarget.name}</strong> for:<br/><strong>${job.title}</strong>`}
             confirmLabel="Hire Student"
             confirmColor="#059669"
-            onConfirm={() => {
-              handleHire();
-              setHireTarget(null);
-            }}
+            onConfirm={() => handleHire(hireTarget)}
             onClose={() => setHireTarget(null)}
+            loading={actionLoading}
           />
         )}
         {rejectTarget && (
@@ -906,14 +1212,13 @@ function ApplicationsPanel({ job, onClose }: { job: Job; onClose: () => void }) 
             message="Are you sure you want to reject this application?"
             confirmLabel="Reject"
             confirmColor="#64748B"
-            onConfirm={() => {
-              handleReject();
-              setRejectTarget(null);
-            }}
+            onConfirm={() => handleReject(rejectTarget)}
             onClose={() => setRejectTarget(null)}
+            loading={actionLoading}
           />
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </>
   );
 }
@@ -1045,7 +1350,9 @@ function JobCard({
         : job.applicants.length > 0
           ? "This job has already received applications and can no longer be edited."
           : "";
-  const hasAcceptedApplication = job.applicants.some((applicant) => applicant.status === "hired");
+  const hasAcceptedApplication = job.applicants.some(
+    (applicant) => applicant.status === "accepted"
+  );
   const cancelDisabledReason =
     job.status === "closed"
       ? "Closed jobs cannot be cancelled."
@@ -1203,6 +1510,23 @@ export default function ManageJobsPage() {
     }
   };
 
+  const handleApplicantsChange = useCallback((jobId: string, applicantList: Applicant[]) => {
+    const updateJob = (job: Job) =>
+      job.id === jobId ? { ...job, applicants: applicantList } : job;
+
+    setJobs((prev) => prev.map(updateJob));
+    setDetailsJob((prev) => (prev ? updateJob(prev) : prev));
+    setApplicationsJob((prev) => (prev ? updateJob(prev) : prev));
+  }, []);
+
+  const handleJobStatusChange = useCallback((jobId: string, status: JobStatus) => {
+    const updateJob = (job: Job) => (job.id === jobId ? { ...job, status } : job);
+
+    setJobs((prev) => prev.map(updateJob));
+    setDetailsJob((prev) => (prev ? updateJob(prev) : prev));
+    setApplicationsJob((prev) => (prev ? updateJob(prev) : prev));
+  }, []);
+
   const filtered = jobs.filter((j) => {
     const q = search.toLowerCase();
     const matchSearch =
@@ -1350,7 +1674,12 @@ export default function ManageJobsPage() {
           />
         )}
         {applicationsJob && (
-          <ApplicationsPanel job={applicationsJob} onClose={() => setApplicationsJob(null)} />
+          <ApplicationsPanel
+            job={applicationsJob}
+            onClose={() => setApplicationsJob(null)}
+            onJobStatusChange={handleJobStatusChange}
+            onApplicantsChange={handleApplicantsChange}
+          />
         )}
       </AnimatePresence>
       <Notification message={notification} onClose={() => setNotification(null)} />
