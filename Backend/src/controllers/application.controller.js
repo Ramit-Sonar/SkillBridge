@@ -5,8 +5,12 @@ import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import {
+  buildApplicationDetails,
+  buildApplicationSummary,
+} from "../utils/applicationResponse.js";
 import { buildClientSummary } from "../utils/buildClientSummary.js";
-import { uploadAttachments } from "../utils/attachment.js";
+import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
@@ -69,10 +73,14 @@ const submitApplication = asyncHandler(async (req, res) => {
       );
     }
 
-    const job = await Job.findById(jobId).select("status");
+    const job = await Job.findById(jobId).select("client status");
 
     if (!job) {
       throw new ApiError(404, "Job not found");
+    }
+
+    if (job.client.toString() === req.user._id.toString()) {
+      throw new ApiError(400, "You cannot apply to your own job");
     }
 
     if (job.status === "closed") {
@@ -118,6 +126,8 @@ const submitApplication = asyncHandler(async (req, res) => {
         appliedAt: new Date(),
       });
     } catch (error) {
+      await deleteAttachments(attachments);
+
       if (error?.code === 11000) {
         throw new ApiError(409, "You have already applied for this job");
       }
@@ -165,21 +175,9 @@ const getMyApplications = asyncHandler(async (req, res) => {
     .sort({ appliedAt: -1 })
     .lean();
 
-  const applicationList = applications.map((application) => ({
-    applicationId: application._id,
-    status: application.status,
-    appliedAt: application.appliedAt,
-    job: application.job
-      ? {
-          jobId: application.job._id,
-          title: application.job.title,
-          budget: application.job.budget,
-          jobType: application.job.category,
-          status: application.job.status,
-          clientName: application.job.client?.fullName || "",
-        }
-      : null,
-  }));
+  const applicationList = applications.map((application) =>
+    buildApplicationSummary(application)
+  );
 
   return res.status(200).json(
     new ApiResponse(
@@ -249,73 +247,28 @@ const getApplicationById = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not allowed to view this application");
   }
 
-  const studentProfile = studentId
-    ? await StudentProfile.findOne({ user: studentId })
-        .select("bio education university skills github linkedin portfolio")
-        .lean()
-    : null;
-  const studentVerification = studentId
-    ? await Verification.findOne({ user: studentId, type: "student" })
-        .select("status verifiedAt")
-        .lean()
-    : null;
-  const clientSummary = application.job?.client
-    ? await buildClientSummary(application.job.client)
-    : null;
-
-  const applicationDetails = {
-    applicationId: application._id,
-    status: application.status,
-    appliedAt: application.appliedAt,
-    acceptedAt: application.acceptedAt,
-    rejectedAt: application.rejectedAt,
-    withdrawnAt: application.withdrawnAt,
-    createdAt: application.createdAt,
-    updatedAt: application.updatedAt,
-    coverMessage: application.coverMessage,
-    estimatedCompletionTime: application.estimatedCompletionTime,
-    whySuitable: application.whySuitable,
-    attachments: application.attachments,
-    job: application.job
-      ? {
-          jobId: application.job._id,
-          title: application.job.title,
-          category: application.job.category,
-          description: application.job.description,
-          requirements: application.job.requirements,
-          skills: application.job.skills,
-          budget: application.job.budget,
-          duration: application.job.duration,
-          deadline: application.job.deadline,
-          complexity: application.job.complexity,
-          attachments: application.job.attachments,
-          status: application.job.status,
-          createdAt: application.job.createdAt,
-          client: clientSummary,
-        }
-      : null,
-    student: application.student
-      ? {
-          studentId: application.student._id,
-          fullName: application.student.fullName,
-          avatar: application.student.avatar,
-          profileCompleted: application.student.profileCompleted,
-          verification: {
-            status: studentVerification?.status || null,
-            verifiedAt: studentVerification?.verifiedAt || null,
-          },
-          profile: {
-            bio: studentProfile?.bio || "",
-            education: studentProfile?.education || "",
-            university: studentProfile?.university || "",
-            skills: studentProfile?.skills || [],
-            github: studentProfile?.github || "",
-            linkedin: studentProfile?.linkedin || "",
-            portfolio: studentProfile?.portfolio || "",
-          },
-        }
-      : null,
-  };
+  const [studentProfile, studentVerification, clientSummary] =
+    await Promise.all([
+      studentId
+        ? StudentProfile.findOne({ user: studentId })
+            .select("bio education university skills github linkedin portfolio")
+            .lean()
+        : null,
+      studentId
+        ? Verification.findOne({ user: studentId, type: "student" })
+            .select("status verifiedAt")
+            .lean()
+        : null,
+      application.job?.client
+        ? buildClientSummary(application.job.client)
+        : null,
+    ]);
+  const applicationDetails = buildApplicationDetails({
+    application,
+    studentProfile,
+    studentVerification,
+    clientSummary,
+  });
 
   return res
     .status(200)

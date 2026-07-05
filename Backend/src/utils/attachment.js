@@ -1,5 +1,5 @@
 import { ApiError } from "./ApiError.js";
-import { uploadOnCloudinary } from "./cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "./cloudinary.js";
 
 export const normalizeSubmittedAttachments = (files) => {
   if (!Array.isArray(files)) return [];
@@ -46,21 +46,34 @@ export const uploadAttachments = async (uploadedFiles, submittedFiles) => {
 
   const attachments = [];
 
-  for (const file of uploadedFiles) {
-    const uploadedAttachment = await uploadOnCloudinary(file.path);
+  try {
+    for (const file of uploadedFiles) {
+      const uploadedAttachment = await uploadOnCloudinary(file.path);
 
-    if (!uploadedAttachment?.url) {
-      throw new ApiError(500, "Attachment upload failed");
+      if (!uploadedAttachment?.url) {
+        throw new ApiError(500, "Attachment upload failed");
+      }
+
+      attachments.push({
+        url: uploadedAttachment.secure_url || uploadedAttachment.url,
+        publicId: uploadedAttachment.public_id || "",
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+      });
     }
 
-    attachments.push({
-      url: uploadedAttachment.secure_url || uploadedAttachment.url,
-      publicId: uploadedAttachment.public_id || "",
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-    });
+    return attachments;
+  } catch (error) {
+    await deleteAttachments(attachments);
+    throw error;
   }
+};
 
-  return attachments;
+export const deleteAttachments = async (attachments) => {
+  if (!Array.isArray(attachments) || attachments.length === 0) return;
+
+  await Promise.all(
+    attachments.map((attachment) => deleteFromCloudinary(attachment?.publicId))
+  );
 };
