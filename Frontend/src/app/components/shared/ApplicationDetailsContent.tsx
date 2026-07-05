@@ -1,6 +1,7 @@
 import { type ElementType, type ReactNode } from "react";
-import { Calendar, CheckCircle, FileText, MessageSquare, Timer } from "lucide-react";
+import { Calendar, FileText, MessageSquare, Timer } from "lucide-react";
 import { FileAttachmentCard, type FileAttachment } from "./FileAttachmentCard";
+import { Timeline, type TimelineItem } from "./Timeline";
 import { StatusBadge } from "./ui";
 
 export type ApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
@@ -51,13 +52,6 @@ export const APPLICATION_STATUS_CFG: Record<
     border: "#CBD5E1",
     dot: "#94A3B8",
   },
-};
-
-type TimelineItem = {
-  key: string;
-  label: string;
-  date?: string;
-  tone: "neutral" | "success" | "danger" | "muted";
 };
 
 function getApplicationTimeline(app: ApplicationDetailsData): TimelineItem[] {
@@ -198,48 +192,9 @@ function SupportingDocuments({ attachments }: { attachments?: FileAttachment[] }
 }
 
 function ApplicationTimeline({ app }: { app: ApplicationDetailsData }) {
-  const toneStyles: Record<TimelineItem["tone"], { bg: string; color: string; border: string }> = {
-    neutral: { bg: "#EFF6FF", color: "#2563EB", border: "#BFDBFE" },
-    success: { bg: "#ECFDF5", color: "#059669", border: "#6EE7B7" },
-    danger: { bg: "#FEF2F2", color: "#DC2626", border: "#FECACA" },
-    muted: { bg: "#F8FAFC", color: "#64748B", border: "#CBD5E1" },
-  };
-
   return (
     <WorkspaceSection icon={Calendar} iconColor="#7C3AED" title="Application Timeline">
-      <div className="flex flex-col gap-0">
-        {getApplicationTimeline(app).map((item, index, items) => {
-          const style = toneStyles[item.tone];
-
-          return (
-            <div key={item.key} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <span
-                  className="w-7 h-7 rounded-full border flex items-center justify-center"
-                  style={{
-                    background: style.bg,
-                    borderColor: style.border,
-                    color: style.color,
-                  }}
-                >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                </span>
-                {index < items.length - 1 && (
-                  <span className="w-px h-7" style={{ background: style.border }} />
-                )}
-              </div>
-              <div className="pb-4 min-w-0">
-                <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
-                  {item.label}
-                </p>
-                <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
-                  {item.date}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <Timeline items={getApplicationTimeline(app)} />
     </WorkspaceSection>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, type ElementType } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Briefcase, CheckCircle, Github, Globe, Linkedin, Star } from "lucide-react";
+import { Award, Briefcase, CheckCircle, Github, Globe, Linkedin, Star } from "lucide-react";
 
 export interface ProfileProject {
   id: string;
@@ -20,6 +20,14 @@ export interface ProfileReview {
   submittedAt: string;
 }
 
+export interface ProfileCertificate {
+  id: string;
+  title: string;
+  issuer?: string;
+  issuedAt?: string;
+  url?: string;
+}
+
 export interface ProfileViewProps {
   name: string;
   initials: string;
@@ -37,6 +45,7 @@ export interface ProfileViewProps {
   linkedin?: string;
   portfolio?: string;
   projects?: ProfileProject[];
+  certificates?: ProfileCertificate[];
   reviews?: ProfileReview[];
   /** User.avatar from MongoDB */
   avatarUrl?: string;
@@ -354,6 +363,76 @@ function Portfolio({ projects }: { projects: ProfileProject[] }) {
   );
 }
 
+function Certificates({ certificates }: { certificates: ProfileCertificate[] }) {
+  return (
+    <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-slate-900 font-bold" style={{ fontSize: "0.85rem" }}>
+            Certificates
+          </p>
+          <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
+            Credentials and learning achievements
+          </p>
+        </div>
+        <span
+          className="bg-emerald-50 text-emerald-600 font-semibold px-2.5 py-1 rounded-full"
+          style={{ fontSize: "0.62rem" }}
+        >
+          {certificates.length} certificate{certificates.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {certificates.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <Award className="w-5 h-5 text-slate-300" />
+          </div>
+          <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
+            No certificates added yet.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {certificates.map((certificate) => {
+            const content = (
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-start gap-3 transition-all duration-200">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                  <Award className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+                    {certificate.title}
+                  </p>
+                  {(certificate.issuer || certificate.issuedAt) && (
+                    <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.7rem" }}>
+                      {[certificate.issuer, certificate.issuedAt].filter(Boolean).join(" - ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+
+            return certificate.url ? (
+              <a
+                key={certificate.id}
+                href={certificate.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block hover:-translate-y-0.5 transition-transform"
+              >
+                {content}
+              </a>
+            ) : (
+              <div key={certificate.id}>{content}</div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Reviews({ reviews }: { reviews: ProfileReview[] }) {
   const avg =
     reviews.length > 0
@@ -456,6 +535,7 @@ export function StudentProfileView({
       <About bio={profile.bio} />
       <Skills skills={profile.skills} />
       <Portfolio projects={profile.projects ?? []} />
+      <Certificates certificates={profile.certificates ?? []} />
       <Reviews reviews={profile.reviews ?? []} />
     </div>
   );
