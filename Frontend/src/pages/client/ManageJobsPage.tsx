@@ -6,7 +6,6 @@ import {
   ConfirmDialog,
   Notification,
   SearchInput,
-  SidePanel,
   StatusBadge,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
@@ -1131,44 +1130,84 @@ function JobDetailsPanel({
   onViewApplications: () => void;
 }) {
   return (
-    <SidePanel
-      title="Job Details"
-      subtitle="Read-only view"
-      onClose={onClose}
-      bodyClassName="flex-1 min-h-0"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <SharedJobDetailsContent
-        showClientCard={false}
-        job={{
-          title: job.title,
-          category: job.categoryKey,
-          status: job.status,
-          description: job.description,
-          requirements: job.requirements,
-          skills: job.skills,
-          budget: job.budget,
-          duration: job.duration,
-          deadline: job.deadline,
-          complexity: job.complexity,
-          postedAt: job.postedAt,
-          attachedFiles: job.attachedFiles,
-        }}
-        actions={
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              onClose();
-              onViewApplications();
-            }}
-            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
-            style={{ fontSize: "0.82rem" }}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 10 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-4xl h-[90vh] max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="job-details-title"
+      >
+        <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
+          <div>
+            <p
+              id="job-details-title"
+              className="text-slate-900 font-bold"
+              style={{ fontSize: "0.95rem" }}
+            >
+              Job Details
+            </p>
+            <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
+              Read-only view
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+            aria-label="Close job details"
           >
-            <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
-          </motion.button>
-        }
-      />
-    </SidePanel>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 min-h-0">
+          <SharedJobDetailsContent
+            showClientCard={false}
+            job={{
+              title: job.title,
+              category: job.categoryKey,
+              status: job.status,
+              description: job.description,
+              requirements: job.requirements,
+              skills: job.skills,
+              budget: job.budget,
+              duration: job.duration,
+              deadline: job.deadline,
+              complexity: job.complexity,
+              postedAt: job.postedAt,
+              attachedFiles: job.attachedFiles,
+            }}
+            actions={
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  onClose();
+                  onViewApplications();
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                style={{ fontSize: "0.82rem" }}
+              >
+                <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
+              </motion.button>
+            }
+          />
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

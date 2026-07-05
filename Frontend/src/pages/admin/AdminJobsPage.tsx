@@ -1,7 +1,7 @@
 ﻿import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { SearchInput, SidePanel, StatusBadge } from "../../app/components/shared/ui";
+import { ConfirmDialog, SearchInput, StatusBadge } from "../../app/components/shared/ui";
 import {
   Briefcase,
   Tag,
@@ -11,6 +11,7 @@ import {
   Eye,
   ChevronDown,
   CheckCircle,
+  X,
 } from "lucide-react";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
 
@@ -99,84 +100,124 @@ function JobDetailsPanel({
   const [confirmRemove, setConfirmRemove] = useState(false);
 
   return (
-    <SidePanel
-      title="Job Details"
-      subtitle="Admin view — read only"
-      onClose={onClose}
-      bodyClassName="flex-1 min-h-0"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <SharedJobDetailsContent
-        job={{
-          title: job.title,
-          category: job.category,
-          status: job.status,
-          description: job.description,
-          requirements: job.requirements,
-          skills: job.skills,
-          budget: job.budget,
-          duration: job.duration,
-          deadline: job.deadline,
-          complexity: job.complexity,
-          postedAt: job.postedAt,
-          clientName: job.clientName,
-          clientInitials: job.clientInitials,
-          clientLocation: "Kathmandu, Nepal",
-          clientAbout: "Posted jobs on SkillBridge.",
-          clientJobsPosted: job.applications,
-          clientProjectsCompleted: 3,
-          clientJoinedDate: "Jun 2026",
-        }}
-        actions={
-          confirmRemove ? (
-            <>
-              <button
-                onClick={() => setConfirmRemove(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
-                style={{ fontSize: "0.875rem" }}
-              >
-                Cancel
-              </button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  setRemoving(true);
-                  setTimeout(() => {
-                    onRemove();
-                    onClose();
-                  }, 700);
-                }}
-                disabled={removing}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center justify-center"
-                style={{ fontSize: "0.875rem" }}
-              >
-                {removing ? (
-                  <motion.span
-                    className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 0.8,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  />
-                ) : (
-                  "Remove Job"
-                )}
-              </motion.button>
-            </>
-          ) : (
-            <button
-              onClick={() => setConfirmRemove(true)}
-              className="w-full flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
-              style={{ fontSize: "0.875rem" }}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 10 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-4xl h-[90vh] max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-job-details-title"
+      >
+        <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
+          <div>
+            <p
+              id="admin-job-details-title"
+              className="text-slate-900 font-bold"
+              style={{ fontSize: "0.95rem" }}
             >
-              <Trash2 className="w-4 h-4" /> Remove Job
-            </button>
-          )
-        }
-      />
-    </SidePanel>
+              Job Details
+            </p>
+            <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
+              Admin view — read only
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+            aria-label="Close job details"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 min-h-0">
+          <SharedJobDetailsContent
+            job={{
+              title: job.title,
+              category: job.category,
+              status: job.status,
+              description: job.description,
+              requirements: job.requirements,
+              skills: job.skills,
+              budget: job.budget,
+              duration: job.duration,
+              deadline: job.deadline,
+              complexity: job.complexity,
+              postedAt: job.postedAt,
+              clientName: job.clientName,
+              clientInitials: job.clientInitials,
+              clientLocation: "Kathmandu, Nepal",
+              clientAbout: "Posted jobs on SkillBridge.",
+              clientJobsPosted: job.applications,
+              clientProjectsCompleted: 3,
+              clientJoinedDate: "Jun 2026",
+            }}
+            actions={
+              confirmRemove ? (
+                <>
+                  <button
+                    onClick={() => setConfirmRemove(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    Cancel
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      setRemoving(true);
+                      setTimeout(() => {
+                        onRemove();
+                        onClose();
+                      }, 700);
+                    }}
+                    disabled={removing}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center justify-center"
+                    style={{ fontSize: "0.875rem" }}
+                  >
+                    {removing ? (
+                      <motion.span
+                        className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 0.8,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                      />
+                    ) : (
+                      "Remove Job"
+                    )}
+                  </motion.button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setConfirmRemove(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
+                  style={{ fontSize: "0.875rem" }}
+                >
+                  <Trash2 className="w-4 h-4" /> Remove Job
+                </button>
+              )
+            }
+          />
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -225,6 +266,7 @@ export default function AdminJobsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [selected, setSelected] = useState<AdminJob | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<AdminJob | null>(null);
 
   const filtered = jobs.filter((j) => {
     const q = search.toLowerCase();
@@ -235,6 +277,14 @@ export default function AdminJobsPage() {
   });
 
   const removeJob = (id: string) => setJobs((prev) => prev.filter((j) => j.id !== id));
+
+  const handleRemoveJob = (job: AdminJob) => {
+    removeJob(job.id);
+    setRemoveTarget(null);
+    if (selected?.id === job.id) {
+      setSelected(null);
+    }
+  };
 
   return (
     <DashboardLayout role="admin" title="Jobs" activeNav="jobs">
@@ -336,9 +386,7 @@ export default function AdminJobsPage() {
                       <Eye className="w-3.5 h-3.5" /> View Details
                     </button>
                     <button
-                      onClick={() => {
-                        setSelected(job);
-                      }}
+                      onClick={() => setRemoveTarget(job)}
                       className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 font-semibold hover:bg-red-600 hover:text-white transition-all"
                       style={{ fontSize: "0.75rem" }}
                     >
@@ -357,6 +405,24 @@ export default function AdminJobsPage() {
             job={selected}
             onClose={() => setSelected(null)}
             onRemove={() => removeJob(selected.id)}
+          />
+        )}
+        {removeTarget && (
+          <ConfirmDialog
+            title="Remove Job"
+            body={
+              <>
+                Are you sure you want to remove{" "}
+                <strong className="text-slate-900">"{removeTarget.title}"</strong>?
+              </>
+            }
+            confirmLabel="Remove"
+            confirmColor="#DC2626"
+            icon={Trash2}
+            iconBg="#FEF2F2"
+            iconColor="#DC2626"
+            onConfirm={() => handleRemoveJob(removeTarget)}
+            onClose={() => setRemoveTarget(null)}
           />
         )}
       </AnimatePresence>
