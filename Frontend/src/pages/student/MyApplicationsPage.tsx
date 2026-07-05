@@ -25,8 +25,8 @@ import {
   type JobDetailData,
 } from "../../app/components/shared/SharedJobDetailsContent";
 import {
-  ApplicationDetailsContent,
   APPLICATION_STATUS_CFG as APP_STATUS_CFG,
+  ReadOnlyApplicationView,
   type ApplicationDetailsData,
 } from "../../app/components/shared/ApplicationDetailsContent";
 import {
@@ -491,7 +491,7 @@ function ViewDetailsPanel({
                   exit={{ opacity: 0, x: -12 }}
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <ApplicationDetailsContent
+                  <ReadOnlyApplicationView
                     application={app}
                     action={
                       <ApplicationAction app={app} onWithdraw={() => setShowWithdraw(true)} />

@@ -1,5 +1,5 @@
 import { type ElementType, type ReactNode } from "react";
-import { Calendar, CheckCircle, Circle, FileText, MessageSquare, Timer } from "lucide-react";
+import { Calendar, CheckCircle, FileText, MessageSquare, Timer } from "lucide-react";
 import { FileAttachmentCard, type FileAttachment } from "./FileAttachmentCard";
 import { StatusBadge } from "./ui";
 
@@ -57,53 +57,56 @@ type TimelineItem = {
   key: string;
   label: string;
   date?: string;
-  occurred: boolean;
   tone: "neutral" | "success" | "danger" | "muted";
 };
 
 function getApplicationTimeline(app: ApplicationDetailsData): TimelineItem[] {
-  const isAccepted = app.status === "accepted";
-  const isRejected = app.status === "rejected";
-  const isWithdrawn = app.status === "withdrawn";
-  const isPending = app.status === "pending" || isAccepted || isRejected;
-
-  return [
+  const items: TimelineItem[] = [
     {
       key: "applied",
       label: "Applied",
       date: app.appliedAt,
-      occurred: true,
       tone: "success",
     },
-    {
+  ];
+
+  if (app.status === "pending") {
+    items.push({
       key: "pending",
       label: "Pending",
-      date: isPending ? (app.updatedAt ?? app.appliedAt) : undefined,
-      occurred: isPending,
+      date: app.updatedAt ?? app.appliedAt,
       tone: "neutral",
-    },
-    {
+    });
+  }
+
+  if (app.acceptedAt) {
+    items.push({
       key: "accepted",
       label: "Accepted",
       date: app.acceptedAt,
-      occurred: isAccepted,
       tone: "success",
-    },
-    {
+    });
+  }
+
+  if (app.rejectedAt) {
+    items.push({
       key: "rejected",
       label: "Rejected",
       date: app.rejectedAt,
-      occurred: isRejected,
       tone: "danger",
-    },
-    {
+    });
+  }
+
+  if (app.withdrawnAt) {
+    items.push({
       key: "withdrawn",
       label: "Withdrawn",
       date: app.withdrawnAt,
-      occurred: isWithdrawn,
       tone: "muted",
-    },
-  ];
+    });
+  }
+
+  return items;
 }
 
 function WorkspaceSection({
@@ -207,7 +210,6 @@ function ApplicationTimeline({ app }: { app: ApplicationDetailsData }) {
       <div className="flex flex-col gap-0">
         {getApplicationTimeline(app).map((item, index, items) => {
           const style = toneStyles[item.tone];
-          const Icon = item.occurred ? CheckCircle : Circle;
 
           return (
             <div key={item.key} className="flex gap-3">
@@ -215,29 +217,23 @@ function ApplicationTimeline({ app }: { app: ApplicationDetailsData }) {
                 <span
                   className="w-7 h-7 rounded-full border flex items-center justify-center"
                   style={{
-                    background: item.occurred ? style.bg : "#F8FAFC",
-                    borderColor: item.occurred ? style.border : "#E2E8F0",
-                    color: item.occurred ? style.color : "#CBD5E1",
+                    background: style.bg,
+                    borderColor: style.border,
+                    color: style.color,
                   }}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <CheckCircle className="w-3.5 h-3.5" />
                 </span>
                 {index < items.length - 1 && (
-                  <span
-                    className="w-px h-7"
-                    style={{ background: item.occurred ? style.border : "#E2E8F0" }}
-                  />
+                  <span className="w-px h-7" style={{ background: style.border }} />
                 )}
               </div>
               <div className="pb-4 min-w-0">
-                <p
-                  className={item.occurred ? "text-slate-900 font-semibold" : "text-slate-400"}
-                  style={{ fontSize: "0.78rem" }}
-                >
+                <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
                   {item.label}
                 </p>
                 <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
-                  {item.date ?? "Not reached yet"}
+                  {item.date}
                 </p>
               </div>
             </div>
@@ -292,3 +288,5 @@ export function ApplicationDetailsContent({
     </div>
   );
 }
+
+export const ReadOnlyApplicationView = ApplicationDetailsContent;
