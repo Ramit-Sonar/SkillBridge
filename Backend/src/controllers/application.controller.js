@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
 import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
+import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { buildClientSummary } from "../utils/buildClientSummary.js";
 import { uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
@@ -198,11 +200,132 @@ const getJobApplications = asyncHandler(async () => {
   );
 });
 
-const getApplicationById = asyncHandler(async () => {
-  throw new ApiError(
-    501,
-    "Get application by id controller logic has not been implemented yet"
-  );
+const getApplicationById = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (!mongoose.isValidObjectId(applicationId)) {
+    throw new ApiError(400, "Invalid application id");
+  }
+
+  const application = await Application.findById(applicationId)
+    .select(
+      "job student coverMessage estimatedCompletionTime whySuitable attachments status appliedAt acceptedAt rejectedAt withdrawnAt createdAt updatedAt"
+    )
+    .populate({
+      path: "job",
+      select:
+        "_id client title category description requirements skills budget duration deadline complexity attachments status createdAt",
+    })
+    .populate({
+      path: "student",
+      select: "_id fullName avatar role profileCompleted",
+    })
+    .lean();
+
+  if (!application) {
+    throw new ApiError(404, "Application not found");
+  }
+
+  const studentId = application.student?._id?.toString();
+  const clientId = application.job?.client?.toString();
+  const loggedInUserId = req.user._id.toString();
+
+  if (req.user.role === "student" && studentId !== loggedInUserId) {
+    throw new ApiError(403, "You can view only your own applications");
+  }
+
+  if (req.user.role === "client" && clientId !== loggedInUserId) {
+    throw new ApiError(
+      403,
+      "You can view only applications submitted to your jobs"
+    );
+  }
+
+  if (!["student", "client", "admin"].includes(req.user.role)) {
+    throw new ApiError(403, "You are not allowed to view this application");
+  }
+
+  const studentProfile = studentId
+    ? await StudentProfile.findOne({ user: studentId })
+        .select("bio education university skills github linkedin portfolio")
+        .lean()
+    : null;
+  const studentVerification = studentId
+    ? await Verification.findOne({ user: studentId, type: "student" })
+        .select("status verifiedAt")
+        .lean()
+    : null;
+  const clientSummary = application.job?.client
+    ? await buildClientSummary(application.job.client)
+    : null;
+
+  const applicationDetails = {
+    applicationId: application._id,
+    status: application.status,
+    appliedAt: application.appliedAt,
+    acceptedAt: application.acceptedAt,
+    rejectedAt: application.rejectedAt,
+    withdrawnAt: application.withdrawnAt,
+    createdAt: application.createdAt,
+    updatedAt: application.updatedAt,
+    coverMessage: application.coverMessage,
+    estimatedCompletionTime: application.estimatedCompletionTime,
+    whySuitable: application.whySuitable,
+    attachments: application.attachments,
+    job: application.job
+      ? {
+          jobId: application.job._id,
+          title: application.job.title,
+          category: application.job.category,
+          description: application.job.description,
+          requirements: application.job.requirements,
+          skills: application.job.skills,
+          budget: application.job.budget,
+          duration: application.job.duration,
+          deadline: application.job.deadline,
+          complexity: application.job.complexity,
+          attachments: application.job.attachments,
+          status: application.job.status,
+          createdAt: application.job.createdAt,
+          client: clientSummary,
+        }
+      : null,
+    student: application.student
+      ? {
+          studentId: application.student._id,
+          fullName: application.student.fullName,
+          avatar: application.student.avatar,
+          profileCompleted: application.student.profileCompleted,
+          verification: {
+            status: studentVerification?.status || null,
+            verifiedAt: studentVerification?.verifiedAt || null,
+          },
+          profile: {
+            bio: studentProfile?.bio || "",
+            education: studentProfile?.education || "",
+            university: studentProfile?.university || "",
+            skills: studentProfile?.skills || [],
+            github: studentProfile?.github || "",
+            linkedin: studentProfile?.linkedin || "",
+            portfolio: studentProfile?.portfolio || "",
+          },
+        }
+      : null,
+  };
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        applicationDetails,
+        "Application fetched successfully"
+      )
+    );
 });
 
 const withdrawApplication = asyncHandler(async () => {
