@@ -1,21 +1,25 @@
-﻿import { useState } from "react";
-import { useEffect, useRef, type ElementType } from "react";
+import { useEffect, useRef, useState, type ElementType } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { FilterChipGroup, StatusBadge } from "../../app/components/shared/ui";
 import {
-  Clock,
-  Tag,
-  ChevronRight,
-  X,
-  FileText,
   AlertTriangle,
-  Search,
-  FolderOpen,
   Ban,
+  ChevronRight,
+  Clock,
+  FileText,
+  FolderOpen,
+  Search,
   ShieldCheck,
+  Tag,
+  X,
 } from "lucide-react";
+import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
+import {
+  FilterChipGroup,
+  Notification,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import {
   SharedJobDetailsContent,
   type JobDetailData,
@@ -25,10 +29,27 @@ import {
   APPLICATION_STATUS_CFG as APP_STATUS_CFG,
   type ApplicationDetailsData,
 } from "../../app/components/shared/ApplicationDetailsContent";
-
-// Types
+import {
+  getApplicationById,
+  getMyApplications,
+  withdrawApplication,
+  type ApplicationCard as ApiApplicationCard,
+  type ApplicationDetails as ApiApplicationDetails,
+} from "../../services/applicationService";
+import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 
 type AppStatus = ApplicationDetailsData["status"];
+
+interface ApplicationListItem {
+  id: string;
+  jobTitle: string;
+  category: string;
+  budget: string;
+  status: AppStatus;
+  appliedAt: string;
+  coverSnippet: string;
+  estimatedTime: string;
+}
 
 interface Application extends ApplicationDetailsData {
   id: string;
@@ -39,162 +60,6 @@ interface Application extends ApplicationDetailsData {
   job: JobDetailData;
 }
 
-const SAMPLE_ATTACHMENT_URL =
-  "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
-
-// Dummy data
-
-const DUMMY_APPS: Application[] = [
-  {
-    id: "a1",
-    jobTitle: "Design a Landing Page for EdTech Startup",
-    category: "UI/UX Design",
-    status: "pending",
-    appliedAt: "10 Jun 2026",
-    updatedAt: "10 Jun 2026",
-    estimatedTime: "7 Days",
-    budget: "8,000",
-    coverSnippet:
-      "I have designed multiple landing pages for SaaS and EdTech clients using Figma...",
-    coverMessage:
-      "I have designed multiple landing pages for SaaS and EdTech clients using Figma and TailwindCSS. I understand user psychology and conversion-focused design principles, which I will apply to make this landing page both visually impressive and highly effective.",
-    whySuitable:
-      "I have 2+ years of UI/UX experience with a focus on EdTech products. My portfolio includes 5 similar landing page projects with measurable conversion improvements. I am also proficient in Figma, Adobe XD, and front-end implementation.",
-    attachments: [
-      {
-        url: SAMPLE_ATTACHMENT_URL,
-        publicId: "student-applications/a1/resume",
-        originalName: "Resume.pdf",
-        mimeType: "application/pdf",
-        size: 245760,
-      },
-      {
-        url: SAMPLE_ATTACHMENT_URL,
-        publicId: "student-applications/a1/proposal",
-        originalName: "Proposal.pdf",
-        mimeType: "application/pdf",
-        size: 331776,
-      },
-      {
-        url: SAMPLE_ATTACHMENT_URL,
-        publicId: "student-applications/a1/portfolio",
-        originalName: "Portfolio.pdf",
-        mimeType: "application/pdf",
-        size: 524288,
-      },
-    ],
-    job: {
-      title: "Design a Landing Page for EdTech Startup",
-      category: "ui-ux",
-      description:
-        "We need a modern, conversion-focused landing page for our EdTech platform targeting college students. The design should be clean, engaging, and clearly communicate our value proposition.",
-      requirements:
-        "Must have experience with SaaS or EdTech product design. Portfolio required. Figma source files to be delivered.",
-      skills: ["Figma", "UI Design", "Landing Page", "EdTech", "Conversion Design"],
-      budget: "8,000",
-      duration: "7d",
-      deadline: "2026-06-30",
-      complexity: "medium",
-      postedAt: "8 Jun 2026",
-      clientName: "Anil Chakraborty",
-      clientInitials: "AC",
-      clientLocation: "Kathmandu, Nepal",
-      clientAbout:
-        "Founder of LearnSphere, an EdTech startup focused on skill development for college students.",
-      clientJobsPosted: 4,
-      clientProjectsCompleted: 3,
-      clientJoinedDate: "May 2026",
-    },
-  },
-  {
-    id: "a2",
-    jobTitle: "Build a React Portfolio Website",
-    category: "Web Development",
-    status: "accepted",
-    appliedAt: "8 Jun 2026",
-    updatedAt: "9 Jun 2026",
-    acceptedAt: "9 Jun 2026",
-    estimatedTime: "5 Days",
-    budget: "6,500",
-    coverSnippet:
-      "I specialize in React and TailwindCSS and have built several portfolio websites...",
-    coverMessage:
-      "I specialize in React and TailwindCSS and have built several portfolio websites for designers, photographers, and developers. I focus on clean code, fast performance, and pixel-perfect implementation from Figma designs.",
-    whySuitable:
-      "I have built 10+ portfolio websites using React and TailwindCSS. I am comfortable with animations using Framer Motion, responsive layouts, and SEO best practices. I can deliver within 5 days with full source code.",
-    attachments: [
-      {
-        url: SAMPLE_ATTACHMENT_URL,
-        publicId: "student-applications/a2/resume",
-        originalName: "Resume.pdf",
-        mimeType: "application/pdf",
-        size: 245760,
-      },
-    ],
-    job: {
-      title: "Build a React Portfolio Website",
-      category: "web-dev",
-      description:
-        "Looking for a developer to build a personal portfolio website using React and TailwindCSS. The design will be provided in Figma. The site should be fully responsive and optimized for performance.",
-      requirements:
-        "Strong React skills required. Must be comfortable with Figma handoff. Clean and commented code expected.",
-      skills: ["React", "TailwindCSS", "Figma", "JavaScript", "Responsive Design"],
-      budget: "6,500",
-      duration: "5d",
-      deadline: "2026-06-28",
-      complexity: "small",
-      postedAt: "6 Jun 2026",
-      clientName: "Sneha Rao",
-      clientInitials: "SR",
-      clientLocation: "Lalitpur, Nepal",
-      clientAbout:
-        "Product designer and content creator. Looking for a reliable developer to bring my Figma designs to life.",
-      clientJobsPosted: 2,
-      clientProjectsCompleted: 2,
-      clientJoinedDate: "Jun 2026",
-    },
-  },
-  {
-    id: "a4",
-    jobTitle: "Create Social Media Post Templates",
-    category: "Graphic Design",
-    status: "rejected",
-    appliedAt: "4 Jun 2026",
-    updatedAt: "6 Jun 2026",
-    rejectedAt: "6 Jun 2026",
-    estimatedTime: "3 Days",
-    budget: "3,500",
-    coverSnippet:
-      "I am proficient in Canva and have created branded social media kits for local businesses...",
-    coverMessage:
-      "I am proficient in Canva and Adobe Illustrator and have created branded social media kits for local businesses and NGOs. I understand brand consistency and can create templates that are easy to edit and maintain.",
-    whySuitable:
-      "I have designed social media kits for 8+ clients across Instagram, Facebook, and LinkedIn. I deliver editable Canva and AI files with a style guide. My designs are clean, modern, and aligned with brand identity.",
-    job: {
-      title: "Create Social Media Post Templates",
-      category: "graphic",
-      description:
-        "We need 20 editable social media post templates for Instagram and LinkedIn. Templates should reflect our brand colors, typography, and tone. Both feed posts and story sizes required.",
-      requirements:
-        "Proficiency in Canva or Adobe Illustrator. Must deliver editable files. Brand guidelines will be shared.",
-      skills: ["Canva", "Graphic Design", "Social Media", "Brand Design", "Adobe Illustrator"],
-      budget: "3,500",
-      duration: "3d",
-      deadline: "2026-06-27",
-      complexity: "small",
-      postedAt: "2 Jun 2026",
-      clientName: "Meera Joshi",
-      clientInitials: "MJ",
-      clientLocation: "Kathmandu, Nepal",
-      clientAbout:
-        "Marketing manager at a local retail brand. Looking for fresh social media creative.",
-      clientJobsPosted: 5,
-      clientProjectsCompleted: 4,
-      clientJoinedDate: "Mar 2026",
-    },
-  },
-];
-
 const APP_FILTERS: { label: string; value: AppStatus | "all" }[] = [
   { label: "All", value: "all" },
   { label: "Pending", value: "pending" },
@@ -203,7 +68,161 @@ const APP_FILTERS: { label: string; value: AppStatus | "all" }[] = [
   { label: "Withdrawn", value: "withdrawn" },
 ];
 
-// Confirm modal
+function formatDate(date?: string | null) {
+  if (!date) return undefined;
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
+function getCategoryLabel(category?: string) {
+  if (!category) return "Uncategorized";
+
+  return JOB_CATEGORY_LABELS[category as keyof typeof JOB_CATEGORY_LABELS] ?? category;
+}
+
+function getInitials(name?: string) {
+  if (!name) return "";
+
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function getMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function mapApplicationCard(application: ApiApplicationCard): ApplicationListItem {
+  const job = application.job;
+
+  return {
+    id: application.applicationId,
+    jobTitle: job?.title ?? "Job unavailable",
+    category: getCategoryLabel(job?.jobType),
+    budget: String(job?.budget ?? "Not specified"),
+    status: application.status,
+    appliedAt: formatDate(application.appliedAt) ?? application.appliedAt,
+    coverSnippet: job?.clientName
+      ? `Submitted to ${job.clientName}`
+      : "Open details to view your submitted application.",
+    estimatedTime: "View details",
+  };
+}
+
+function mapApplicationDetails(application: ApiApplicationDetails): Application {
+  const job = application.job;
+  const client = job?.client;
+  const jobTitle = job?.title ?? "Job unavailable";
+
+  return {
+    id: application.applicationId,
+    jobTitle,
+    category: getCategoryLabel(job?.category),
+    budget: String(job?.budget ?? "Not specified"),
+    coverSnippet: application.coverMessage,
+    status: application.status,
+    appliedAt: formatDate(application.appliedAt) ?? application.appliedAt,
+    updatedAt: formatDate(application.updatedAt),
+    acceptedAt: formatDate(application.acceptedAt),
+    rejectedAt: formatDate(application.rejectedAt),
+    withdrawnAt: formatDate(application.withdrawnAt),
+    estimatedTime: application.estimatedCompletionTime,
+    coverMessage: application.coverMessage,
+    whySuitable: application.whySuitable,
+    attachments: application.attachments,
+    job: {
+      title: jobTitle,
+      category: job?.category ?? "other",
+      description: job?.description ?? "",
+      requirements: job?.requirements ?? "",
+      skills: job?.skills ?? [],
+      budget: String(job?.budget ?? "Not specified"),
+      duration: job?.duration,
+      deadline: formatDate(job?.deadline),
+      complexity: job?.complexity,
+      postedAt: formatDate(job?.createdAt),
+      attachedFiles: job?.attachments ?? [],
+      clientName: client?.fullName,
+      clientInitials: getInitials(client?.fullName),
+      clientAvatar: client?.avatar,
+      clientLocation: client?.location,
+      clientAbout: client?.bio,
+      clientVerified: client?.verification.status === "approved",
+      clientJobsPosted: client?.statistics.jobsPosted,
+      clientProjectsCompleted: client?.statistics.projectsCompleted ?? undefined,
+      clientJoinedDate: formatDate(client?.joined),
+      clientRating: client?.statistics.averageRating ?? undefined,
+    },
+  };
+}
+
+function ApplicationsLoading() {
+  return (
+    <div className="flex flex-col gap-3">
+      {[0, 1, 2].map((item) => (
+        <div
+          key={item}
+          className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col sm:flex-row sm:items-start gap-4"
+        >
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+            <div className="flex gap-2">
+              <div className="h-6 w-20 rounded-full bg-slate-100 animate-pulse" />
+              <div className="h-4 w-28 rounded bg-slate-100 animate-pulse" />
+            </div>
+            <div className="h-5 w-2/3 rounded bg-slate-100 animate-pulse" />
+            <div className="h-4 w-full rounded bg-slate-100 animate-pulse" />
+            <div className="flex gap-3">
+              <div className="h-5 w-20 rounded-full bg-slate-100 animate-pulse" />
+              <div className="h-5 w-24 rounded bg-slate-100 animate-pulse" />
+              <div className="h-5 w-20 rounded bg-slate-100 animate-pulse" />
+            </div>
+          </div>
+          <div className="h-9 w-28 rounded-xl bg-slate-100 animate-pulse" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ApplicationsError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="bg-red-50 border border-red-100 rounded-2xl p-6 flex flex-col items-center text-center gap-3">
+      <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center">
+        <AlertTriangle className="w-6 h-6 text-red-500" />
+      </div>
+      <div>
+        <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+          Could not load applications
+        </p>
+        <p className="text-red-500 mt-1" style={{ fontSize: "0.82rem" }}>
+          {message}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="bg-white text-red-500 border border-red-200 font-semibold px-4 py-2 rounded-xl hover:bg-red-100 transition-colors"
+        style={{ fontSize: "0.82rem" }}
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
 
 function ConfirmModal({
   icon: Icon,
@@ -223,10 +242,23 @@ function ConfirmModal({
   body: React.ReactNode;
   confirmLabel: string;
   confirmColor: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+
+  const handleConfirm = async () => {
+    if (busy) return;
+
+    setBusy(true);
+
+    try {
+      await onConfirm();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -234,7 +266,7 @@ function ConfirmModal({
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !busy) onClose();
       }}
     >
       <motion.div
@@ -261,16 +293,14 @@ function ConfirmModal({
         <div className="flex gap-3 w-full">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 hover:border-slate-300 transition-all"
+            disabled={busy}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 hover:border-slate-300 transition-all disabled:opacity-60"
             style={{ fontSize: "0.875rem" }}
           >
             Cancel
           </button>
           <button
-            onClick={() => {
-              setBusy(true);
-              setTimeout(onConfirm, 900);
-            }}
+            onClick={handleConfirm}
             disabled={busy}
             className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
             style={{ background: confirmColor, fontSize: "0.875rem" }}
@@ -290,8 +320,6 @@ function ConfirmModal({
     </motion.div>
   );
 }
-
-// Application Workspace
 
 type DetailTab = "job" | "application";
 
@@ -349,7 +377,7 @@ function ViewDetailsPanel({
 }: {
   app: Application;
   onClose: () => void;
-  onWithdraw: (id: string) => void;
+  onWithdraw: (id: string) => Promise<void>;
 }) {
   const [tab, setTab] = useState<DetailTab>("job");
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -399,7 +427,6 @@ function ViewDetailsPanel({
           aria-modal="true"
           aria-labelledby="application-workspace-title"
         >
-          {/* Header */}
           <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
             <div>
               <p
@@ -424,7 +451,6 @@ function ViewDetailsPanel({
             </button>
           </div>
 
-          {/* Tab switcher */}
           <div className="bg-white border-b border-black/[0.05] px-5 py-3 flex gap-2 shrink-0">
             {tabs.map((t) => (
               <button
@@ -445,7 +471,6 @@ function ViewDetailsPanel({
             ))}
           </div>
 
-          {/* Tab content — single scroll area per tab */}
           <div className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
               {tab === "job" ? (
@@ -495,8 +520,8 @@ function ViewDetailsPanel({
             }
             confirmLabel="Withdraw Application"
             confirmColor="#EF4444"
-            onConfirm={() => {
-              onWithdraw(app.id);
+            onConfirm={async () => {
+              await onWithdraw(app.id);
               setShowWithdraw(false);
             }}
             onClose={() => setShowWithdraw(false)}
@@ -507,16 +532,16 @@ function ViewDetailsPanel({
   );
 }
 
-// Application card
-
 function AppCard({
   app,
   onWithdraw,
   onViewDetails,
+  loadingDetails,
 }: {
-  app: Application;
-  onWithdraw: (id: string) => void;
-  onViewDetails: (app: Application) => void;
+  app: ApplicationListItem;
+  onWithdraw: (id: string) => Promise<void>;
+  onViewDetails: (id: string) => void;
+  loadingDetails: boolean;
 }) {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const navigate = useNavigate();
@@ -578,16 +603,15 @@ function AppCard({
         </div>
 
         <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0">
-          {/* View Details — always shown */}
           <button
-            onClick={() => onViewDetails(app)}
-            className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-xl border border-slate-200 hover:border-blue-200 transition-all duration-200"
+            onClick={() => onViewDetails(app.id)}
+            disabled={loadingDetails}
+            className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-xl border border-slate-200 hover:border-blue-200 transition-all duration-200 disabled:opacity-60"
             style={{ fontSize: "0.75rem" }}
           >
-            View Details <ChevronRight className="w-3 h-3" />
+            {loadingDetails ? "Loading..." : "View Details"} <ChevronRight className="w-3 h-3" />
           </button>
 
-          {/* Pending: Withdraw */}
           {app.status === "pending" && (
             <button
               onClick={() => setShowWithdraw(true)}
@@ -598,7 +622,6 @@ function AppCard({
             </button>
           )}
 
-          {/* Accepted: Go To Project */}
           {app.status === "accepted" && (
             <button
               onClick={() => navigate("/dashboard/student/projects")}
@@ -647,8 +670,8 @@ function AppCard({
             }
             confirmLabel="Withdraw Application"
             confirmColor="#EF4444"
-            onConfirm={() => {
-              onWithdraw(app.id);
+            onConfirm={async () => {
+              await onWithdraw(app.id);
               setShowWithdraw(false);
             }}
             onClose={() => setShowWithdraw(false)}
@@ -659,10 +682,9 @@ function AppCard({
   );
 }
 
-// Empty state
-
 function AppliedEmpty() {
   const navigate = useNavigate();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -691,44 +713,91 @@ function AppliedEmpty() {
   );
 }
 
-// Main page
-
 export default function MyApplicationsPage() {
-  const [apps, setApps] = useState<Application[]>(DUMMY_APPS);
+  const [apps, setApps] = useState<ApplicationListItem[]>([]);
   const [appFilter, setAppFilter] = useState<AppStatus | "all">("all");
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<NotificationMessage>(null);
 
-  const filteredApps = appFilter === "all" ? apps : apps.filter((a) => a.status === appFilter);
+  const loadApplications = async () => {
+    setLoading(true);
+    setLoadError("");
+
+    try {
+      const response = await getMyApplications();
+      setApps(response.data.applications.map(mapApplicationCard));
+    } catch (error) {
+      const message = getMessage(error, "Failed to load applications.");
+      setLoadError(message);
+      setNotification({ type: "error", text: message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadApplications();
+  }, []);
+
+  const filteredApps = appFilter === "all" ? apps : apps.filter((app) => app.status === appFilter);
 
   const appCounts: Record<string, number> = { all: apps.length };
-  apps.forEach((a) => {
-    appCounts[a.status] = (appCounts[a.status] ?? 0) + 1;
+  apps.forEach((app) => {
+    appCounts[app.status] = (appCounts[app.status] ?? 0) + 1;
   });
 
-  const handleWithdraw = (id: string) => {
-    setApps((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              status: "withdrawn",
-              withdrawnAt: "Today",
-              updatedAt: "Today",
-            }
-          : a
-      )
-    );
-    if (selectedApp?.id === id) {
+  const handleViewDetails = async (applicationId: string) => {
+    setDetailsLoadingId(applicationId);
+
+    try {
+      const response = await getApplicationById(applicationId);
+      setSelectedApp(mapApplicationDetails(response.data));
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: getMessage(error, "Failed to load application details."),
+      });
+    } finally {
+      setDetailsLoadingId(null);
+    }
+  };
+
+  const handleWithdraw = async (id: string) => {
+    try {
+      const response = await withdrawApplication(id);
+      const withdrawnAt = formatDate(response.data.withdrawnAt);
+      const updatedAt = formatDate(response.data.updatedAt);
+
+      setApps((prev) =>
+        prev.map((app) =>
+          app.id === id
+            ? {
+                ...app,
+                status: response.data.status,
+              }
+            : app
+        )
+      );
+
       setSelectedApp((prev) =>
-        prev
+        prev && prev.id === id
           ? {
               ...prev,
-              status: "withdrawn",
-              withdrawnAt: "Today",
-              updatedAt: "Today",
+              status: response.data.status,
+              withdrawnAt,
+              updatedAt,
             }
-          : null
+          : prev
       );
+
+      setNotification({ type: "success", text: response.message });
+    } catch (error) {
+      const message = getMessage(error, "Failed to withdraw application.");
+      setNotification({ type: "error", text: message });
+      throw error;
     }
   };
 
@@ -740,7 +809,6 @@ export default function MyApplicationsPage() {
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         className="flex flex-col gap-6"
       >
-        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-slate-900" style={{ fontSize: "1.1rem", fontWeight: 800 }}>
@@ -760,7 +828,6 @@ export default function MyApplicationsPage() {
           </div>
         </div>
 
-        {/* Filter chips */}
         <FilterChipGroup
           items={APP_FILTERS.map((opt) => ({
             ...opt,
@@ -771,24 +838,32 @@ export default function MyApplicationsPage() {
           onChange={setAppFilter}
         />
 
-        {/* Applications list */}
-        {filteredApps.length === 0 ? (
+        {loading ? (
+          <ApplicationsLoading />
+        ) : loadError ? (
+          <ApplicationsError message={loadError} onRetry={loadApplications} />
+        ) : filteredApps.length === 0 ? (
           <AppliedEmpty />
         ) : (
           <div className="flex flex-col gap-3">
             <AnimatePresence>
-              {filteredApps.map((app, i) => (
+              {filteredApps.map((app, index) => (
                 <motion.div
                   key={app.id}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
-                    delay: i * 0.06,
+                    delay: index * 0.06,
                     duration: 0.35,
                     ease: [0.22, 1, 0.36, 1],
                   }}
                 >
-                  <AppCard app={app} onWithdraw={handleWithdraw} onViewDetails={setSelectedApp} />
+                  <AppCard
+                    app={app}
+                    onWithdraw={handleWithdraw}
+                    onViewDetails={handleViewDetails}
+                    loadingDetails={detailsLoadingId === app.id}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -796,7 +871,6 @@ export default function MyApplicationsPage() {
         )}
       </motion.div>
 
-      {/* View Details panel */}
       <AnimatePresence>
         {selectedApp && (
           <ViewDetailsPanel
@@ -806,6 +880,8 @@ export default function MyApplicationsPage() {
           />
         )}
       </AnimatePresence>
+
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }
