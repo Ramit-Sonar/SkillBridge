@@ -138,6 +138,7 @@ const submitApplication = asyncHandler(async (req, res) => {
 
     const responseData = {
       applicationId: application._id,
+      jobId: application.job,
       status: application.status,
       appliedAt: application.appliedAt,
     };
