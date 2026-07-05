@@ -8,7 +8,6 @@ import {
   List,
   User,
   Clock,
-  Calendar,
   Tag,
   ChevronRight,
   Globe,
@@ -19,15 +18,14 @@ import {
   Cpu,
   CheckCircle,
   ArrowRight,
-  SlidersHorizontal,
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { ApplyModal } from "../../app/components/ApplyModal";
+import { type ClientCardData } from "../../app/components/shared/ClientInformationCard";
 import {
-  ClientInformationCard,
-  type ClientCardData,
-} from "../../app/components/shared/ClientInformationCard";
-import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
+  SharedJobDetailsContent,
+  type JobDetailData as SharedJobDetailData,
+} from "../../app/components/shared/SharedJobDetailsContent";
 import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
 import {
@@ -124,6 +122,35 @@ function mapJobDetailsFromApi(job: JobData): JobDetailData {
         return attachment;
       })
       .filter((attachment) => Boolean(attachment.originalName)),
+  };
+}
+
+function mapSharedJobDetails(job: JobDetailData): SharedJobDetailData {
+  return {
+    title: job.title,
+    category: job.category,
+    status: job.status,
+    description: job.description,
+    requirements: job.requirements,
+    skills: job.skills,
+    budget: job.budget,
+    duration: job.duration,
+    deadline: job.deadline,
+    complexity: job.complexity,
+    postedAt: job.postedAt,
+    recommended: job.recommended,
+    attachedFiles: job.attachedFiles,
+    clientName: job.client?.fullName,
+    clientAvatar: job.client?.avatar,
+    clientLocation: job.client?.location,
+    clientCompanyName: job.client?.companyName,
+    clientWebsite: job.client?.website,
+    clientAbout: job.client?.bio,
+    clientVerified: job.client?.verification?.status === "approved",
+    clientJobsPosted: job.client?.statistics?.jobsPosted ?? undefined,
+    clientProjectsCompleted: job.client?.statistics?.projectsCompleted ?? undefined,
+    clientJoinedDate: formatJobDate(job.client?.joined),
+    clientRating: job.client?.statistics?.averageRating ?? undefined,
   };
 }
 // Config
@@ -426,6 +453,43 @@ function JobCardList({
 
 // Job detail panel
 
+function ApplyJobButton({
+  hasApplied,
+  onApply,
+  label,
+}: {
+  hasApplied: boolean;
+  onApply: () => void;
+  label: string;
+}) {
+  return (
+    <motion.button
+      whileHover={!hasApplied ? { scale: 1.02 } : {}}
+      whileTap={!hasApplied ? { scale: 0.97 } : {}}
+      onClick={onApply}
+      disabled={hasApplied}
+      className={`flex-1 w-full inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-colors shadow-md ${
+        hasApplied
+          ? "bg-emerald-50 text-emerald-600 cursor-default"
+          : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-lg"
+      }`}
+      style={{ fontSize: "0.875rem" }}
+    >
+      {hasApplied ? (
+        <>
+          <CheckCircle className="w-4 h-4" />
+          Application Submitted
+        </>
+      ) : (
+        <>
+          {label}
+          <ArrowRight className="w-4 h-4" />
+        </>
+      )}
+    </motion.button>
+  );
+}
+
 function JobDetailPanel({
   job,
   onClose,
@@ -437,35 +501,25 @@ function JobDetailPanel({
   onApply: () => void;
   hasApplied: boolean;
 }) {
-  const durLabel = DURATIONS.find((d) => d.value === job.duration)?.label;
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 32 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 32 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="hidden lg:flex flex-col bg-white rounded-2xl border border-black/[0.06] shadow-xl overflow-hidden shrink-0"
+      className="hidden lg:flex flex-col bg-white rounded-2xl border border-black/[0.06] shadow-xl overflow-hidden shrink-0 min-h-0"
       style={{
         width: 400,
+        height: "calc(100vh - 8rem)",
         maxHeight: "calc(100vh - 8rem)",
         position: "sticky",
         top: "1.5rem",
       }}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 p-5 border-b border-black/[0.05]">
-        <div className="flex flex-col gap-2 min-w-0">
-          {job.recommended && (
-            <div
-              className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-600 font-bold px-2 py-0.5 rounded-full w-fit"
-              style={{ fontSize: "0.58rem" }}
-            >
-              Recommended
-            </div>
-          )}
-          <CategoryBadge category={job.category} />
-        </div>
+      <div className="flex items-center justify-between gap-3 p-5 border-b border-black/[0.05]">
+        <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+          Job Details
+        </p>
         <button
           onClick={onClose}
           className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-50 shrink-0"
@@ -473,176 +527,21 @@ function JobDetailPanel({
           <X className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Body — scrollable */}
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-        {/* Title */}
-        <h2
-          className="text-slate-900 leading-snug"
-          style={{ fontSize: "1.05rem", fontWeight: 800 }}
-        >
-          {job.title}
-        </h2>
-        <div className="flex items-center gap-2 flex-wrap">
-          {job.postedAt && (
-            <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-              Posted {job.postedAt}
-            </p>
-          )}
-          {job.status && (
-            <p className="text-slate-400 capitalize" style={{ fontSize: "0.68rem" }}>
-              Status: {job.status}
-            </p>
-          )}
-        </div>
-
-        {/* Key details grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            {
-              label: "Budget",
-              value: `Rs. ${job.budget}`,
-              icon: Tag,
-              color: "#2563EB",
-              bg: "#EFF6FF",
-            },
-            {
-              label: "Duration",
-              value: durLabel ?? "",
-              icon: Clock,
-              color: "#14B8A6",
-              bg: "#F0FDFA",
-            },
-            {
-              label: "Deadline",
-              value: job.deadline,
-              icon: Calendar,
-              color: "#D97706",
-              bg: "#FFFBEB",
-            },
-            {
-              label: "Complexity",
-              value: job.complexity === "small" ? "Small Task" : "Medium Task",
-              icon: SlidersHorizontal,
-              color: "#7C3AED",
-              bg: "#F5F3FF",
-            },
-          ].map((d) => (
-            <div
-              key={d.label}
-              className="flex items-center gap-2.5 bg-slate-50 rounded-xl p-3 border border-black/[0.04]"
+      <SharedJobDetailsContent
+        job={mapSharedJobDetails(job)}
+        actions={
+          <>
+            <ApplyJobButton hasApplied={hasApplied} onApply={onApply} label="Apply Now" />
+            <button
+              onClick={onClose}
+              className="px-3 py-3 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-all"
+              style={{ fontSize: "0.75rem" }}
             >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: d.bg }}
-              >
-                <d.icon className="w-3.5 h-3.5" style={{ color: d.color }} />
-              </div>
-              <div>
-                <p className="text-slate-400" style={{ fontSize: "0.62rem", fontWeight: 600 }}>
-                  {d.label}
-                </p>
-                <p className="text-slate-900 font-semibold" style={{ fontSize: "0.75rem" }}>
-                  {d.value}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Description */}
-        <div>
-          <p className="text-slate-900 font-bold mb-2" style={{ fontSize: "0.82rem" }}>
-            Job Description
-          </p>
-          <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-            {job.description}
-          </p>
-        </div>
-
-        {/* Skills */}
-        <div>
-          <p className="text-slate-900 font-bold mb-2.5" style={{ fontSize: "0.82rem" }}>
-            Required Skills
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {job.skills.map((s, i) => (
-              <SkillChip key={s} skill={s} index={i} />
-            ))}
-          </div>
-        </div>
-
-        {/* Client Requirements */}
-        {job.requirements && (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-            <p className="text-slate-900 font-bold mb-1.5" style={{ fontSize: "0.82rem" }}>
-              Client Requirements
-            </p>
-            <p className="text-slate-500 leading-relaxed" style={{ fontSize: "0.78rem" }}>
-              {job.requirements}
-            </p>
-          </div>
-        )}
-
-        {/* Attached files */}
-        <div>
-          <p className="text-slate-900 font-bold mb-2" style={{ fontSize: "0.82rem" }}>
-            Attached Files
-          </p>
-          {job.attachedFiles && job.attachedFiles.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {job.attachedFiles.map((file) => (
-                <FileAttachmentCard key={`${file.originalName}-${file.url}`} attachment={file} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
-              <FileText className="w-5 h-5 text-slate-300" />
-              <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-                No attachment available.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Client Information Card */}
-        {job.client && <ClientInformationCard client={job.client} />}
-      </div>
-
-      {/* Sticky footer */}
-      <div className="p-4 border-t border-black/[0.05] flex gap-3">
-        <motion.button
-          whileHover={!hasApplied ? { scale: 1.02 } : {}}
-          whileTap={!hasApplied ? { scale: 0.97 } : {}}
-          onClick={onApply}
-          disabled={hasApplied}
-          className={`flex-1 inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-colors shadow-md ${
-            hasApplied
-              ? "bg-emerald-50 text-emerald-600 cursor-default"
-              : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-lg"
-          }`}
-          style={{ fontSize: "0.875rem" }}
-        >
-          {hasApplied ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              Application Submitted
-            </>
-          ) : (
-            <>
-              Apply Now
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </motion.button>
-        <button
-          onClick={onClose}
-          className="px-3 py-3 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-all"
-          style={{ fontSize: "0.75rem" }}
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+              <X className="w-4 h-4" />
+            </button>
+          </>
+        }
+      />
     </motion.div>
   );
 }
@@ -660,7 +559,6 @@ function MobileDetailModal({
   onApply: () => void;
   hasApplied: boolean;
 }) {
-  const durLabel = DURATIONS.find((d) => d.value === job.duration)?.label;
   return (
     <AnimatePresence>
       <motion.div
@@ -676,10 +574,12 @@ function MobileDetailModal({
           exit={{ y: "100%" }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-t-3xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+          className="bg-white rounded-t-3xl w-full h-[90vh] max-h-[90vh] flex flex-col overflow-hidden min-h-0"
         >
           <div className="flex items-center justify-between p-5 border-b border-black/[0.05]">
-            <CategoryBadge category={job.category} />
+            <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+              Job Details
+            </p>
             <button
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-50 transition-colors"
@@ -687,115 +587,16 @@ function MobileDetailModal({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4">
-            <h2 className="text-slate-900" style={{ fontSize: "1.05rem", fontWeight: 800 }}>
-              {job.title}
-            </h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              {job.postedAt && (
-                <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-                  Posted {job.postedAt}
-                </p>
-              )}
-              {job.status && (
-                <p className="text-slate-400 capitalize" style={{ fontSize: "0.68rem" }}>
-                  Status: {job.status}
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-blue-50 rounded-xl p-3">
-                <p className="text-slate-400" style={{ fontSize: "0.6rem", fontWeight: 600 }}>
-                  Budget
-                </p>
-                <p className="text-blue-600 font-bold" style={{ fontSize: "0.82rem" }}>
-                  Rs. {job.budget}
-                </p>
-              </div>
-              <div className="bg-teal-50 rounded-xl p-3">
-                <p className="text-slate-400" style={{ fontSize: "0.6rem", fontWeight: 600 }}>
-                  Duration
-                </p>
-                <p className="text-teal-500 font-bold" style={{ fontSize: "0.82rem" }}>
-                  {durLabel}
-                </p>
-              </div>
-              {job.deadline && (
-                <div className="bg-amber-50 rounded-xl p-3">
-                  <p className="text-slate-400" style={{ fontSize: "0.6rem", fontWeight: 600 }}>
-                    Deadline
-                  </p>
-                  <p className="text-amber-600 font-bold" style={{ fontSize: "0.82rem" }}>
-                    {job.deadline}
-                  </p>
-                </div>
-              )}
-            </div>
-            <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-              {job.description}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {job.skills.map((s, i) => (
-                <SkillChip key={s} skill={s} index={i} />
-              ))}
-            </div>
-            {job.requirements && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <p className="text-slate-900 font-semibold mb-1" style={{ fontSize: "0.72rem" }}>
-                  Client Requirements
-                </p>
-                <p className="text-slate-500" style={{ fontSize: "0.78rem" }}>
-                  {job.requirements}
-                </p>
-              </div>
-            )}
-            <div>
-              <p className="text-slate-900 font-bold mb-2" style={{ fontSize: "0.82rem" }}>
-                Attached Files
-              </p>
-              {job.attachedFiles && job.attachedFiles.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {job.attachedFiles.map((file) => (
-                    <FileAttachmentCard
-                      key={`${file.originalName}-${file.url}`}
-                      attachment={file}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-2 bg-slate-50 border border-dashed border-slate-200 rounded-xl py-5">
-                  <FileText className="w-5 h-5 text-slate-300" />
-                  <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-                    No attachment available.
-                  </p>
-                </div>
-              )}
-            </div>
-            {job.client && <ClientInformationCard client={job.client} />}
-          </div>
-          <div className="p-4 border-t border-black/[0.05]">
-            <button
-              onClick={onApply}
-              disabled={hasApplied}
-              className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl ${
-                hasApplied
-                  ? "bg-emerald-50 text-emerald-600 cursor-default"
-                  : "bg-blue-600 text-white"
-              }`}
-              style={{ fontSize: "0.875rem" }}
-            >
-              {hasApplied ? (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  Application Submitted
-                </>
-              ) : (
-                <>
-                  Apply for this Job <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
+          <SharedJobDetailsContent
+            job={mapSharedJobDetails(job)}
+            actions={
+              <ApplyJobButton
+                hasApplied={hasApplied}
+                onApply={onApply}
+                label="Apply for this Job"
+              />
+            }
+          />
         </motion.div>
       </motion.div>
     </AnimatePresence>

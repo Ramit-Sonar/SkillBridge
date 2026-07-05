@@ -106,6 +106,8 @@ export interface JobDetailData {
   clientInitials?: string;
   clientAvatar?: string;
   clientLocation?: string;
+  clientCompanyName?: string;
+  clientWebsite?: string;
   clientAbout?: string;
   clientVerified?: boolean;
   clientJobsPosted?: number;
@@ -233,8 +235,8 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
   const hasFiles = job.attachedFiles && job.attachedFiles.length > 0;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-5">
         {/* Category + title */}
         <div className="flex flex-col gap-2">
           {job.recommended && (
@@ -375,6 +377,8 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
               fullName: job.clientName,
               avatar: job.clientAvatar,
               location: job.clientLocation,
+              companyName: job.clientCompanyName,
+              website: job.clientWebsite,
               joined: job.clientJoinedDate,
               bio: job.clientAbout,
               verification: {

@@ -12,7 +12,10 @@ import {
 } from "../../app/components/shared/ui";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
-import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
+import {
+  SharedJobDetailsContent,
+  type JobDetailData as SharedJobDetailData,
+} from "../../app/components/shared/SharedJobDetailsContent";
 import {
   ReadOnlyApplicationView,
   type ApplicationDetailsData,
@@ -86,6 +89,7 @@ interface Applicant {
   linkedin?: string;
   portfolio?: string;
   profileCompleted?: boolean;
+  job?: ApplicationDetails["job"];
 }
 
 interface Job {
@@ -321,6 +325,26 @@ function mapApplicantDetailsFromApi(application: ApplicationDetails): Applicant 
     linkedin: profile?.linkedin,
     portfolio: profile?.portfolio,
     profileCompleted: student?.profileCompleted,
+    job: application.job,
+  };
+}
+
+function getApplicantJobData(applicant: Applicant): SharedJobDetailData | null {
+  if (!applicant.job) return null;
+
+  return {
+    title: applicant.job.title,
+    category: applicant.job.category,
+    status: applicant.job.status,
+    description: applicant.job.description,
+    requirements: applicant.job.requirements,
+    skills: applicant.job.skills,
+    budget: String(applicant.job.budget ?? "Not specified"),
+    duration: applicant.job.duration,
+    deadline: formatDeadline(applicant.job.deadline),
+    complexity: applicant.job.complexity,
+    postedAt: formatJobDate(applicant.job.createdAt),
+    attachedFiles: applicant.job.attachments,
   };
 }
 
@@ -482,7 +506,7 @@ function DeleteModal({
 
 // Applicant workspace modal
 
-type ApplicantWorkspaceTab = "application" | "profile";
+type ApplicantWorkspaceTab = "job" | "application" | "profile";
 
 function ApplicantWorkspaceModal({
   applicant,
@@ -510,9 +534,11 @@ function ApplicantWorkspaceModal({
   const previouslyFocusedElement = useRef<HTMLElement | null>(null);
   const navigate = useNavigate();
   const appCfg = APP_STATUS_CFG[applicant.status];
+  const jobData = getApplicantJobData(applicant);
   const profileData = getApplicantProfileData(applicant);
   const applicationData = getApplicantApplicationData(applicant);
   const tabs: { label: string; value: ApplicantWorkspaceTab }[] = [
+    { label: "Job Details", value: "job" },
     { label: "Application", value: "application" },
     { label: "Student Profile", value: "profile" },
   ];
@@ -607,7 +633,27 @@ function ApplicantWorkspaceModal({
 
           <div className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
-              {tab === "application" ? (
+              {tab === "job" ? (
+                <motion.div
+                  key="job"
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {jobData ? (
+                    <SharedJobDetailsContent showClientCard={false} job={jobData} />
+                  ) : (
+                    <div className="p-5">
+                      <div className="bg-white rounded-2xl border border-black/[0.06] p-5 text-center">
+                        <p className="text-slate-500" style={{ fontSize: "0.82rem" }}>
+                          Job details are not available for this application.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ) : tab === "application" ? (
                 <motion.div
                   key="application"
                   initial={{ opacity: 0, x: -12 }}
