@@ -417,11 +417,157 @@ const withdrawApplication = asyncHandler(async (req, res) => {
   );
 });
 
-const acceptApplication = asyncHandler(async () => {
-  throw new ApiError(
-    501,
-    "Accept application controller logic has not been implemented yet"
-  );
+const acceptApplication = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (req.user.role !== "client") {
+    throw new ApiError(403, "Only clients can accept applications");
+  }
+
+  if (!mongoose.isValidObjectId(applicationId)) {
+    throw new ApiError(400, "Invalid application id");
+  }
+
+  const session = await mongoose.startSession();
+  let responseData;
+
+  try {
+    await session.withTransaction(async () => {
+      const application = await Application.findById(applicationId)
+        .select("job student status appliedAt acceptedAt")
+        .session(session);
+
+      if (!application) {
+        throw new ApiError(404, "Application not found");
+      }
+
+      if (application.status === "accepted") {
+        throw new ApiError(400, "Application is already accepted");
+      }
+
+      if (application.status === "rejected") {
+        throw new ApiError(400, "Rejected applications cannot be accepted");
+      }
+
+      if (application.status === "withdrawn") {
+        throw new ApiError(400, "Withdrawn applications cannot be accepted");
+      }
+
+      if (application.status !== "pending") {
+        throw new ApiError(400, "Only pending applications can be accepted");
+      }
+
+      const job = await Job.findById(application.job)
+        .select("client status")
+        .session(session);
+
+      if (!job) {
+        throw new ApiError(404, "Job not found");
+      }
+
+      if (job.client.toString() !== req.user._id.toString()) {
+        throw new ApiError(
+          403,
+          "You can accept applications only for your own jobs"
+        );
+      }
+
+      if (job.status === "closed") {
+        throw new ApiError(400, "Closed jobs cannot accept applications");
+      }
+
+      if (job.status === "cancelled") {
+        throw new ApiError(400, "Cancelled jobs cannot accept applications");
+      }
+
+      if (job.status !== "open") {
+        throw new ApiError(400, "Only open jobs can accept applications");
+      }
+
+      const decisionDate = new Date();
+      const acceptedApplication = await Application.findOneAndUpdate(
+        {
+          _id: application._id,
+          status: "pending",
+        },
+        {
+          $set: {
+            status: "accepted",
+            acceptedAt: decisionDate,
+          },
+        },
+        {
+          new: true,
+          session,
+        }
+      ).select("_id job student status appliedAt acceptedAt updatedAt");
+
+      if (!acceptedApplication) {
+        throw new ApiError(400, "Only pending applications can be accepted");
+      }
+
+      const rejectedApplications = await Application.updateMany(
+        {
+          job: application.job,
+          _id: { $ne: application._id },
+          status: "pending",
+        },
+        {
+          $set: {
+            status: "rejected",
+            rejectedAt: decisionDate,
+          },
+        },
+        { session }
+      );
+
+      const closedJob = await Job.findOneAndUpdate(
+        {
+          _id: job._id,
+          status: "open",
+        },
+        {
+          $set: {
+            status: "closed",
+          },
+        },
+        {
+          new: true,
+          session,
+        }
+      ).select("_id status");
+
+      if (!closedJob) {
+        throw new ApiError(400, "Only open jobs can accept applications");
+      }
+
+      // Phase 8: create a Project from the accepted application here.
+      responseData = {
+        applicationId: acceptedApplication._id,
+        status: acceptedApplication.status,
+        appliedAt: acceptedApplication.appliedAt,
+        acceptedAt: acceptedApplication.acceptedAt,
+        updatedAt: acceptedApplication.updatedAt,
+        rejectedApplicationsCount: rejectedApplications.modifiedCount,
+        job: {
+          jobId: closedJob._id,
+          status: closedJob.status,
+        },
+      };
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, responseData, "Application accepted successfully")
+    );
 });
 
 const rejectApplication = asyncHandler(async () => {
