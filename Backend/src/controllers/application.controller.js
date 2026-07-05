@@ -6,6 +6,7 @@ import { Verification } from "../models/verification.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import {
+  buildApplicantSummary,
   buildApplicationDetails,
   buildApplicationSummary,
 } from "../utils/applicationResponse.js";
@@ -191,10 +192,82 @@ const getMyApplications = asyncHandler(async (req, res) => {
   );
 });
 
-const getJobApplications = asyncHandler(async () => {
-  throw new ApiError(
-    501,
-    "Get job applications controller logic has not been implemented yet"
+const getJobApplications = asyncHandler(async (req, res) => {
+  const { jobId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (req.user.role !== "client") {
+    throw new ApiError(403, "Only clients can view job applications");
+  }
+
+  if (!mongoose.isValidObjectId(jobId)) {
+    throw new ApiError(400, "Invalid job id");
+  }
+
+  const job = await Job.findById(jobId).select("client").lean();
+
+  if (!job) {
+    throw new ApiError(404, "Job not found");
+  }
+
+  if (job.client.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You can view applications only for your own jobs");
+  }
+
+  const applications = await Application.find({ job: jobId })
+    .select("_id student status appliedAt")
+    .populate({
+      path: "student",
+      select: "_id fullName avatar profileCompleted",
+    })
+    .sort({ appliedAt: -1 })
+    .lean();
+
+  const studentIds = applications
+    .map((application) => application.student?._id)
+    .filter(Boolean);
+
+  const [studentProfiles, studentVerifications] = await Promise.all([
+    StudentProfile.find({ user: { $in: studentIds } })
+      .select("user education university skills portfolio")
+      .lean(),
+    Verification.find({ user: { $in: studentIds }, type: "student" })
+      .select("user status verifiedAt")
+      .lean(),
+  ]);
+
+  const studentProfileMap = new Map(
+    studentProfiles.map((profile) => [profile.user.toString(), profile])
+  );
+  const studentVerificationMap = new Map(
+    studentVerifications.map((verification) => [
+      verification.user.toString(),
+      verification,
+    ])
+  );
+
+  const applicants = applications.map((application) => {
+    const studentId = application.student?._id?.toString();
+
+    return buildApplicantSummary({
+      application,
+      studentProfile: studentProfileMap.get(studentId),
+      studentVerification: studentVerificationMap.get(studentId),
+    });
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalApplications: applicants.length,
+        applicants,
+      },
+      "Job applications fetched successfully"
+    )
   );
 });
 

@@ -14,6 +14,44 @@ export const buildApplicationSummary = (application) => ({
     : null,
 });
 
+export const buildStudentSummary = ({
+  student,
+  studentProfile,
+  studentVerification,
+}) => ({
+  studentId: student._id,
+  fullName: student.fullName,
+  avatar: student.avatar,
+  profileCompleted: student.profileCompleted,
+  verification: {
+    status: studentVerification?.status || null,
+    verifiedAt: studentVerification?.verifiedAt || null,
+  },
+  profile: {
+    education: studentProfile?.education || "",
+    university: studentProfile?.university || "",
+    skills: studentProfile?.skills || [],
+    portfolio: studentProfile?.portfolio || "",
+  },
+});
+
+export const buildApplicantSummary = ({
+  application,
+  studentProfile,
+  studentVerification,
+}) => ({
+  applicationId: application._id,
+  status: application.status,
+  appliedAt: application.appliedAt,
+  student: application.student
+    ? buildStudentSummary({
+        student: application.student,
+        studentProfile,
+        studentVerification,
+      })
+    : null,
+});
+
 export const buildApplicationDetails = ({
   application,
   studentProfile,
@@ -52,14 +90,11 @@ export const buildApplicationDetails = ({
     : null,
   student: application.student
     ? {
-        studentId: application.student._id,
-        fullName: application.student.fullName,
-        avatar: application.student.avatar,
-        profileCompleted: application.student.profileCompleted,
-        verification: {
-          status: studentVerification?.status || null,
-          verifiedAt: studentVerification?.verifiedAt || null,
-        },
+        ...buildStudentSummary({
+          student: application.student,
+          studentProfile,
+          studentVerification,
+        }),
         profile: {
           bio: studentProfile?.bio || "",
           education: studentProfile?.education || "",

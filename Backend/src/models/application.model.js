@@ -72,6 +72,7 @@ const applicationSchema = new mongoose.Schema(
 // One student can apply only once to the same job
 applicationSchema.index({ job: 1, student: 1 }, { unique: true });
 applicationSchema.index({ job: 1, status: 1 });
+applicationSchema.index({ job: 1, appliedAt: -1 });
 applicationSchema.index({ student: 1, createdAt: -1 });
 applicationSchema.index({ student: 1, appliedAt: -1 });
 
