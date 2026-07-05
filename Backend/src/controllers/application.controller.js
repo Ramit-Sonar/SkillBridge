@@ -354,10 +354,66 @@ const getApplicationById = asyncHandler(async (req, res) => {
     );
 });
 
-const withdrawApplication = asyncHandler(async () => {
-  throw new ApiError(
-    501,
-    "Withdraw application controller logic has not been implemented yet"
+const withdrawApplication = asyncHandler(async (req, res) => {
+  const { applicationId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (req.user.role !== "student") {
+    throw new ApiError(403, "Only students can withdraw applications");
+  }
+
+  if (!mongoose.isValidObjectId(applicationId)) {
+    throw new ApiError(400, "Invalid application id");
+  }
+
+  const application = await Application.findById(applicationId).select(
+    "student status appliedAt withdrawnAt updatedAt"
+  );
+
+  if (!application) {
+    throw new ApiError(404, "Application not found");
+  }
+
+  if (application.student.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You can withdraw only your own application");
+  }
+
+  if (application.status === "accepted") {
+    throw new ApiError(400, "Accepted applications cannot be withdrawn");
+  }
+
+  if (application.status === "rejected") {
+    throw new ApiError(400, "Rejected applications cannot be withdrawn");
+  }
+
+  if (application.status === "withdrawn") {
+    throw new ApiError(400, "Application is already withdrawn");
+  }
+
+  if (application.status !== "pending") {
+    throw new ApiError(400, "Only pending applications can be withdrawn");
+  }
+
+  application.status = "withdrawn";
+  application.withdrawnAt = new Date();
+
+  const withdrawnApplication = await application.save();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        applicationId: withdrawnApplication._id,
+        status: withdrawnApplication.status,
+        appliedAt: withdrawnApplication.appliedAt,
+        withdrawnAt: withdrawnApplication.withdrawnAt,
+        updatedAt: withdrawnApplication.updatedAt,
+      },
+      "Application withdrawn successfully"
+    )
   );
 });
 
