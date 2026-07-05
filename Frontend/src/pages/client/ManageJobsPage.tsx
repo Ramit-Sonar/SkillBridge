@@ -85,7 +85,6 @@ interface Applicant {
   linkedin?: string;
   portfolio?: string;
   profileCompleted?: boolean;
-  job?: ApplicationDetails["job"];
 }
 
 interface Job {
@@ -321,31 +320,6 @@ function mapApplicantDetailsFromApi(application: ApplicationDetails): Applicant 
     linkedin: profile?.linkedin,
     portfolio: profile?.portfolio,
     profileCompleted: student?.profileCompleted,
-    job: application.job,
-  };
-}
-
-function getApplicantJobData(applicant: Applicant) {
-  if (!applicant.job) return null;
-
-  const numericBudget = Number(applicant.job.budget);
-  const budget = Number.isNaN(numericBudget)
-    ? `NPR ${String(applicant.job.budget)}`
-    : `NPR ${numericBudget.toLocaleString("en-IN")}`;
-
-  return {
-    title: applicant.job.title,
-    category: applicant.job.category,
-    status: applicant.job.status,
-    description: applicant.job.description,
-    requirements: applicant.job.requirements,
-    skills: applicant.job.skills,
-    budget,
-    duration: applicant.job.duration,
-    deadline: formatDeadline(applicant.job.deadline),
-    complexity: applicant.job.complexity,
-    postedAt: formatJobDate(applicant.job.createdAt),
-    attachedFiles: applicant.job.attachments,
   };
 }
 
@@ -592,7 +566,7 @@ function DeleteModal({
 
 // Applicant workspace modal
 
-type ApplicantWorkspaceTab = "job" | "application" | "profile";
+type ApplicantWorkspaceTab = "application" | "profile";
 
 function ApplicantWorkspaceModal({
   applicant,
@@ -601,6 +575,8 @@ function ApplicantWorkspaceModal({
   onHire,
   onReject,
   actionLoading,
+  showApplicantActions = true,
+  showProjectButton = true,
 }: {
   applicant: Applicant;
   jobTitle: string;
@@ -608,6 +584,8 @@ function ApplicantWorkspaceModal({
   onHire: () => Promise<void> | void;
   onReject: () => Promise<void> | void;
   actionLoading?: boolean;
+  showApplicantActions?: boolean;
+  showProjectButton?: boolean;
 }) {
   const [tab, setTab] = useState<ApplicantWorkspaceTab>("application");
   const [hireModal, setHireModal] = useState(false);
@@ -616,11 +594,9 @@ function ApplicantWorkspaceModal({
   const previouslyFocusedElement = useRef<HTMLElement | null>(null);
   const navigate = useNavigate();
   const appCfg = APP_STATUS_CFG[applicant.status];
-  const jobData = getApplicantJobData(applicant);
   const profileData = getApplicantProfileData(applicant);
   const applicationData = getApplicantApplicationData(applicant);
   const tabs: { label: string; value: ApplicantWorkspaceTab }[] = [
-    { label: "Job Details", value: "job" },
     { label: "Application", value: "application" },
     { label: "Student Profile", value: "profile" },
   ];
@@ -715,27 +691,7 @@ function ApplicantWorkspaceModal({
 
           <div className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
-              {tab === "job" ? (
-                <motion.div
-                  key="job"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {jobData ? (
-                    <SharedJobDetailsContent showClientCard={false} job={jobData} />
-                  ) : (
-                    <div className="p-5">
-                      <div className="bg-white rounded-2xl border border-black/[0.06] p-5 text-center">
-                        <p className="text-slate-500" style={{ fontSize: "0.82rem" }}>
-                          Job details are not available for this application.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ) : tab === "application" ? (
+              {tab === "application" ? (
                 <motion.div
                   key="application"
                   initial={{ opacity: 0, x: -12 }}
@@ -761,7 +717,7 @@ function ApplicantWorkspaceModal({
           </div>
 
           <div className="bg-white border-t border-black/[0.05] px-5 py-4 shrink-0">
-            {applicant.status === "pending" && (
+            {showApplicantActions && applicant.status === "pending" && (
               <div className="flex flex-col sm:flex-row gap-3">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -784,7 +740,7 @@ function ApplicantWorkspaceModal({
               </div>
             )}
 
-            {applicant.status === "accepted" && (
+            {showProjectButton && applicant.status === "accepted" && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
@@ -1033,6 +989,8 @@ function ApplicationsPanel({
           onHire={() => handleHire(workspaceApplicant)}
           onReject={() => handleReject(workspaceApplicant)}
           actionLoading={actionLoading}
+          showApplicantActions
+          showProjectButton
         />
         <Notification message={notification} onClose={() => setNotification(null)} />
       </>
