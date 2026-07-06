@@ -86,7 +86,7 @@ function VerificationCard<
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.07)" }}
-      className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4 transition-shadow duration-300"
+      className="bg-white rounded-2xl border border-black/[0.06] shadow-sm hover:border-blue-200 p-5 flex flex-col gap-4 transition-all duration-300"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">

@@ -67,12 +67,12 @@ const submitApplication = asyncHandler(async (req, res) => {
       type: "student",
     }).select("status");
 
-    if (verification?.status !== "approved") {
-      throw new ApiError(
-        403,
-        "Student verification is required before applying"
-      );
-    }
+    // if (verification?.status !== "approved") {
+    //   throw new ApiError(
+    //     403,
+    //     "Student verification is required before applying"
+    //   );
+    // }
 
     const job = await Job.findById(jobId).select("client status");
 

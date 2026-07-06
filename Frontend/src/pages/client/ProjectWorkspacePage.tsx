@@ -1,182 +1,131 @@
-﻿import { useState, useRef, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router";
-import { motion, AnimatePresence } from "motion/react";
-import { DashboardLayout, type DashboardRole } from "../../app/components/layout/DashboardLayout";
-import { PROJECTS, type ProjectStatus, type ProjectFile } from "../../app/data/projects";
-import { ReviewModal } from "../../app/components/ReviewModal";
+import { useState, type ElementType } from "react";
+import { useLocation, useNavigate, useParams } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
-  CheckCircle,
-  XCircle,
   Calendar,
+  CheckCircle,
+  Clock,
+  FileText,
+  GitPullRequest,
+  Lock,
+  MessageSquare,
   Tag,
   Upload,
   X,
-  FileText,
-  Award,
-  Link,
-  Circle,
-  Download,
 } from "lucide-react";
+import { DashboardLayout, type DashboardRole } from "../../app/components/layout/DashboardLayout";
+import { ReviewModal } from "../../app/components/ReviewModal";
+import { ReadOnlyApplicationView } from "../../app/components/shared/ApplicationDetailsContent";
+import { DeliverableVersionCard } from "../../app/components/shared/DeliverableVersionCard";
+import { FileUploadArea, type UploadedFile } from "../../app/components/shared/FileUploadArea";
+import { ProjectOverview } from "../../app/components/shared/ProjectOverview";
+import {
+  ProjectSubmissionForm,
+  type ProjectSubmissionFormData,
+} from "../../app/components/shared/ProjectSubmissionForm";
+import { RevisionRequestCard } from "../../app/components/shared/RevisionRequestCard";
+import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
+import {
+  StudentProfileView,
+  type ProfileViewProps,
+} from "../../app/components/shared/StudentProfileView";
+import { Timeline } from "../../app/components/shared/Timeline";
+import { ConfirmDialog, SidePanel } from "../../app/components/shared/ui";
+import {
+  PROJECTS,
+  type Project,
+  type ProjectFile,
+  type ProjectStatus,
+  type ProjectSubmission,
+  type ProjectTimelineItem,
+  type RevisionRequest,
+} from "../../app/data/projects";
 
-// Status config
+type ProjectWorkspaceTab = "overview" | "deliverables" | "activity" | "job" | "proposal";
 
-const STATUS_CFG: Record<
-  ProjectStatus,
-  { label: string; color: string; bg: string; border: string }
-> = {
-  active: {
-    label: "Active",
-    color: "#2563EB",
-    bg: "#EFF6FF",
-    border: "#BFDBFE",
-  },
-  submitted: {
-    label: "Submitted",
-    color: "#7C3AED",
-    bg: "#F5F3FF",
-    border: "#DDD6FE",
-  },
-  completed: {
-    label: "Completed",
-    color: "#059669",
-    bg: "#ECFDF5",
-    border: "#6EE7B7",
-  },
-};
+const nowLabel = () =>
+  new Date().toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
-const STEPS: { key: ProjectStatus; label: string }[] = [
-  { key: "active", label: "Active" },
-  { key: "submitted", label: "Submitted" },
-  { key: "completed", label: "Completed" },
-];
-
-// Helpers
-
-function formatSize(bytes: number) {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+function uploadedToProjectFile(file: UploadedFile): ProjectFile {
+  return {
+    url: "#",
+    publicId: "",
+    originalName: file.name,
+    mimeType: file.type,
+    size: file.size,
+  };
 }
 
-function fileIcon(type: string) {
-  if (type.includes("zip")) return { label: "ZIP", color: "#D97706", bg: "#FFFBEB" };
-  if (type.includes("pdf")) return { label: "PDF", color: "#DC2626", bg: "#FEF2F2" };
-  if (type.includes("image")) return { label: "IMG", color: "#7C3AED", bg: "#F5F3FF" };
-  if (type.includes("presentation")) return { label: "PPT", color: "#059669", bg: "#ECFDF5" };
-  return { label: "DOC", color: "#2563EB", bg: "#EFF6FF" };
-}
-
-// Progress tracker
-
-function ProgressTracker({ status }: { status: ProjectStatus }) {
-  const stepIndex = STEPS.findIndex((s) => s.key === status);
-
+function EmptyState({
+  icon: Icon,
+  title,
+  message,
+}: {
+  icon: ElementType;
+  title: string;
+  message: string;
+}) {
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
-      <p className="text-slate-900 font-bold mb-5" style={{ fontSize: "0.9rem" }}>
-        Project Progress
-      </p>
-      <div className="flex flex-col gap-0">
-        {STEPS.map((step, i) => {
-          const done = i < stepIndex;
-          const active = i === stepIndex;
-          const pending = i > stepIndex;
-          const isLast = i === STEPS.length - 1;
-          const color = active ? STATUS_CFG[step.key].color : done ? "#059669" : "#CBD5E1";
-
-          return (
-            <div key={step.key} className="flex gap-4">
-              {/* Icon + connector */}
-              <div className="flex flex-col items-center">
-                <motion.div
-                  initial={false}
-                  animate={{ scale: active ? 1.1 : 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
-                  style={{
-                    background: pending ? "#F1F5F9" : done ? "#ECFDF5" : STATUS_CFG[step.key].bg,
-                  }}
-                >
-                  {done ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  ) : active ? (
-                    <Circle className="w-3.5 h-3.5" fill={color} color={color} />
-                  ) : (
-                    <Circle className="w-3.5 h-3.5 text-slate-300" />
-                  )}
-                </motion.div>
-                {!isLast && (
-                  <div
-                    className="w-px flex-1 my-1.5"
-                    style={{
-                      background: done ? "#6EE7B7" : "#E2E8F0",
-                      minHeight: "1.5rem",
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Label */}
-              <div className="pb-5 flex items-center gap-2 mt-1.5">
-                <p
-                  className="font-semibold leading-tight"
-                  style={{
-                    fontSize: "0.82rem",
-                    color: pending ? "#CBD5E1" : active ? color : "#059669",
-                  }}
-                >
-                  {step.label}
-                </p>
-                {active && (
-                  <span
-                    className="text-white font-bold px-2 py-0.5 rounded-full"
-                    style={{ background: color, fontSize: "0.55rem" }}
-                  >
-                    CURRENT
-                  </span>
-                )}
-                {done && (
-                  <span className="text-emerald-600 font-semibold" style={{ fontSize: "0.62rem" }}>
-                    ✓ Done
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
+    <div className="flex flex-col items-center gap-3 py-8 text-center">
+      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <Icon className="w-6 h-6 text-slate-300" />
+      </div>
+      <div>
+        <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
+          {title}
+        </p>
+        <p className="text-slate-400 mt-1" style={{ fontSize: "0.8rem" }}>
+          {message}
+        </p>
       </div>
     </div>
   );
 }
 
-// Confirm modal
-
-function ConfirmModal({
-  title,
-  message,
-  confirmLabel,
-  confirmColor,
-  onConfirm,
+function RevisionRequestDialog({
   onClose,
-  children,
+  onSubmit,
 }: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  confirmColor: string;
-  onConfirm: () => void;
   onClose: () => void;
-  children?: React.ReactNode;
+  onSubmit: (data: { message: string; files: UploadedFile[]; referenceLinks: string[] }) => void;
 }) {
+  const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [referenceLinks, setReferenceLinks] = useState("");
   const [busy, setBusy] = useState(false);
+  const canSubmit = message.trim().length > 0 && !busy;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+
+    setBusy(true);
+    setTimeout(() => {
+      onSubmit({
+        message: message.trim(),
+        files,
+        referenceLinks: referenceLinks
+          .split("\n")
+          .map((link) => link.trim())
+          .filter(Boolean),
+      });
+    }, 700);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
       }}
     >
       <motion.div
@@ -184,35 +133,90 @@ function ConfirmModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.93 }}
         transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-3xl shadow-2xl p-7 w-full max-w-sm flex flex-col gap-5"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-xl flex flex-col max-h-[90vh] overflow-hidden"
       >
-        <div>
-          <h3 className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
-            {title}
-          </h3>
-          <p className="text-slate-500 mt-1.5 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-            {message}
-          </p>
-        </div>
-        {children}
-        <div className="flex gap-3">
+        <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4 shrink-0 border-b border-black/[0.05]">
+          <div>
+            <h3 className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
+              Request Revision
+            </h3>
+            <p className="text-slate-500 mt-1.5 leading-relaxed" style={{ fontSize: "0.82rem" }}>
+              Explain what the student should change before resubmitting the deliverables.
+            </p>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 transition-all"
+            disabled={busy}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-50"
+            aria-label="Close revision request dialog"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+              Revision Message <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              rows={4}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="Describe exactly what needs to be changed."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 resize-none"
+              style={{ fontSize: "0.875rem" }}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+              Supporting Attachments <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <FileUploadArea
+              files={files}
+              onAdd={(file) => setFiles((current) => [...current, file])}
+              onRemove={(name) =>
+                setFiles((current) => current.filter((file) => file.name !== name))
+              }
+              maxFiles={3}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+              Reference Links <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={3}
+              value={referenceLinks}
+              onChange={(event) => setReferenceLinks(event.target.value)}
+              placeholder="Add one reference link per line."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 resize-none"
+              style={{ fontSize: "0.875rem" }}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 px-6 py-4 shrink-0 border-t border-black/[0.05]">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 transition-all disabled:opacity-60"
             style={{ fontSize: "0.875rem" }}
           >
             Cancel
           </button>
           <motion.button
-            whileHover={!busy ? { scale: 1.02 } : {}}
-            whileTap={!busy ? { scale: 0.97 } : {}}
-            onClick={() => {
-              setBusy(true);
-              setTimeout(onConfirm, 900);
-            }}
-            disabled={busy}
-            className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
-            style={{ background: confirmColor, fontSize: "0.875rem" }}
+            type="button"
+            whileHover={canSubmit ? { scale: 1.02 } : {}}
+            whileTap={canSubmit ? { scale: 0.97 } : {}}
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="flex-1 py-2.5 rounded-xl text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2 bg-amber-600"
+            style={{ fontSize: "0.875rem" }}
           >
             {busy ? (
               <motion.span
@@ -221,7 +225,7 @@ function ConfirmModal({
                 transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
               />
             ) : (
-              confirmLabel
+              "Request Revision"
             )}
           </motion.button>
         </div>
@@ -230,189 +234,53 @@ function ConfirmModal({
   );
 }
 
-// File upload area
-
-function FileUploadArea({
-  files,
-  onAdd,
-  onRemove,
-}: {
-  files: ProjectFile[];
-  onAdd: (f: ProjectFile) => void;
-  onRemove: (name: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
-
-  const handle = useCallback(
-    (raw: File) => {
-      if (!files.find((f) => f.name === raw.name))
-        onAdd({ name: raw.name, size: raw.size, type: raw.type });
-    },
-    [files, onAdd]
-  );
-
-  return (
-    <div className="flex flex-col gap-3">
-      <motion.div
-        animate={dragging ? { scale: 1.01 } : { scale: 1 }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          Array.from(e.dataTransfer.files).forEach(handle);
-        }}
-        onClick={() => inputRef.current?.click()}
-        className="flex flex-col items-center gap-2.5 rounded-2xl py-7 px-4 cursor-pointer transition-all duration-200"
-        style={{
-          border: `2px dashed ${dragging ? "#2563EB" : "#E2E8F0"}`,
-          background: dragging ? "#EFF6FF" : "#F8FAFC",
-        }}
-      >
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: dragging ? "#BFDBFE" : "#E2E8F0" }}
-        >
-          <Upload className="w-4 h-4" style={{ color: dragging ? "#2563EB" : "#94A3B8" }} />
-        </div>
-        <div className="text-center">
-          <p className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
-            Drag and drop files here
-          </p>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              inputRef.current?.click();
-            }}
-            className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
-            style={{ fontSize: "0.75rem" }}
-          >
-            Browse Files
-          </button>
-        </div>
-        <div className="flex gap-2 flex-wrap justify-center">
-          {["ZIP", "PDF", "DOCX", "PNG", "JPG"].map((ext) => (
-            <span
-              key={ext}
-              className="bg-white border border-slate-200 text-slate-500 font-semibold px-2 py-0.5 rounded-md"
-              style={{ fontSize: "0.58rem" }}
-            >
-              {ext}
-            </span>
-          ))}
-        </div>
-      </motion.div>
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        accept=".pdf,.docx,.png,.jpg,.jpeg,.zip"
-        className="hidden"
-        onChange={(e) => {
-          Array.from(e.target.files ?? []).forEach(handle);
-          e.target.value = "";
-        }}
-      />
-      <AnimatePresence>
-        {files.map((f) => {
-          const ic = fileIcon(f.type);
-          return (
-            <motion.div
-              key={f.name}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm"
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: ic.bg }}
-              >
-                <span
-                  style={{
-                    fontSize: "0.5rem",
-                    fontWeight: 800,
-                    color: ic.color,
-                  }}
-                >
-                  {ic.label}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-900 font-medium truncate" style={{ fontSize: "0.78rem" }}>
-                  {f.name}
-                </p>
-                <p className="text-slate-400" style={{ fontSize: "0.65rem" }}>
-                  {formatSize(f.size)}
-                </p>
-              </div>
-              <button
-                onClick={() => onRemove(f.name)}
-                className="text-slate-400 hover:text-red-400 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
-    </div>
-  );
+function buildStudentProfile(project: Project): ProfileViewProps {
+  return {
+    name: project.student.name,
+    initials: project.student.initials,
+    headline: `${project.category} student contributor`,
+    location: "Kathmandu, Nepal",
+    education: "Bachelor in Computer Applications",
+    university: "Tribhuvan University",
+    bio: `${project.student.name} focuses on practical project delivery, clear communication, and revision-friendly handoff work.`,
+    verified: true,
+    skills: project.skills.map((skill, index) => ({ name: skill, verified: index < 2 })),
+    rating: 4.8,
+    reviewCount: 6,
+    completedProjectsCount: 4,
+    github: "github.com/skillbridge-student",
+    linkedin: "linkedin.com/in/skillbridge-student",
+    portfolio: "student-portfolio.example.com",
+    projects: [
+      {
+        id: `${project.id}-portfolio-1`,
+        title: project.title,
+        category: project.category,
+        description: "Current SkillBridge project workspace reference.",
+        skills: project.skills,
+        rating: project.status === "completed" ? 5 : 4.7,
+      },
+    ],
+    certificates: [
+      {
+        id: `${project.id}-cert-1`,
+        title: `${project.category} Fundamentals`,
+        issuer: "SkillBridge Learning",
+        issuedAt: "2026",
+      },
+    ],
+    reviews: [
+      {
+        id: `${project.id}-review-1`,
+        clientName: project.client.name,
+        clientInitials: project.client.initials,
+        rating: 5,
+        comment: "Clear communication and strong attention to requested changes.",
+        submittedAt: "Jun 2026",
+      },
+    ],
+  };
 }
-
-// Submitted files (read-only)
-
-function SubmittedFiles({ files }: { files: ProjectFile[] }) {
-  return (
-    <div className="flex flex-col gap-2">
-      {files.map((f) => {
-        const ic = fileIcon(f.type);
-        return (
-          <div
-            key={f.name}
-            className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5"
-          >
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: ic.bg }}
-            >
-              <span style={{ fontSize: "0.5rem", fontWeight: 800, color: ic.color }}>
-                {ic.label}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-slate-900 font-medium truncate" style={{ fontSize: "0.78rem" }}>
-                {f.name}
-              </p>
-              <p className="text-slate-400" style={{ fontSize: "0.65rem" }}>
-                {formatSize(f.size)}
-              </p>
-            </div>
-            <button
-              className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-lg hover:bg-blue-50"
-              title="Download"
-            >
-              <Download className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Section label
-
-const inputCls =
-  "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10";
-
-// Main workspace
 
 export default function ProjectWorkspacePage() {
   const { id } = useParams<{ id: string }>();
@@ -420,19 +288,23 @@ export default function ProjectWorkspacePage() {
   const navigate = useNavigate();
   const role: DashboardRole = location.pathname.includes("/student/") ? "student" : "client";
 
-  const projectData = PROJECTS.find((p) => p.id === id);
+  const projectData = PROJECTS.find((project) => project.id === id);
 
+  const [activeTab, setActiveTab] = useState<ProjectWorkspaceTab>("deliverables");
   const [status, setStatus] = useState<ProjectStatus>(projectData?.status ?? "active");
-  const [submissionFiles, setSubmissionFiles] = useState<ProjectFile[]>(
-    projectData?.submissionFiles ?? []
+  const [lastUpdated, setLastUpdated] = useState(projectData?.lastUpdated ?? "");
+  const [submissions, setSubmissions] = useState<ProjectSubmission[]>(
+    projectData?.submissions ?? []
   );
-  const [submissionNotes, setSubmissionNotes] = useState(projectData?.submissionNotes ?? "");
-  const [demoLink, setDemoLink] = useState(projectData?.demoLink ?? "");
-  const [submittedAt, setSubmittedAt] = useState(projectData?.submittedAt ?? "");
+  const [revisionRequests, setRevisionRequests] = useState<RevisionRequest[]>(
+    projectData?.revisionRequests ?? []
+  );
+  const [timeline, setTimeline] = useState<ProjectTimelineItem[]>(projectData?.timeline ?? []);
   const [submitting, setSubmitting] = useState(false);
-  const [, setSubmitted] = useState(!!projectData?.submittedAt);
   const [showApprove, setShowApprove] = useState(false);
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [showStudentProfile, setShowStudentProfile] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   if (!projectData) {
@@ -447,40 +319,383 @@ export default function ProjectWorkspacePage() {
             className="text-blue-600 font-semibold hover:text-blue-700"
             style={{ fontSize: "0.875rem" }}
           >
-            ← Go back
+            Go back
           </button>
         </div>
       </DashboardLayout>
     );
   }
 
-  const cfg = STATUS_CFG[status];
+  const latestSubmission = submissions[0];
+  const olderSubmissions = submissions.slice(1);
+  const latestRevisionRequest = revisionRequests[0];
+  const revisionCount = revisionRequests.length;
+  const readOnly = status === "completed";
+  const studentProfile = buildStudentProfile(projectData);
 
-  const canSubmit = submissionFiles.length > 0 && submissionNotes.trim().length > 0 && !submitting;
+  const tabs: { label: string; value: ProjectWorkspaceTab }[] = [
+    { label: "Overview", value: "overview" },
+    { label: "Deliverables", value: "deliverables" },
+    { label: "Activity", value: "activity" },
+    { label: "Job Details", value: "job" },
+    { label: "Project Proposal", value: "proposal" },
+  ];
 
-  const handleSubmitWork = () => {
-    if (!canSubmit) return;
+  const handleSubmitProject = (formData: ProjectSubmissionFormData) => {
     setSubmitting(true);
+
     setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
+      const submittedAt = nowLabel();
+      const versionNumber = submissions.length + 1;
+      const nextSubmission: ProjectSubmission = {
+        id: `dummy-submission-${Date.now()}`,
+        versionNumber,
+        status: "submitted",
+        submittedAt,
+        notes: formData.notes,
+        demoLink: formData.demoLink,
+        attachments: formData.files.map(uploadedToProjectFile),
+      };
+
+      setSubmissions((current) => [nextSubmission, ...current]);
       setStatus("submitted");
-      setSubmittedAt(
-        new Date().toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-    }, 1400);
+      setLastUpdated(submittedAt);
+      setTimeline((current) => [
+        ...current,
+        {
+          key: `v${versionNumber}-${Date.now()}`,
+          label: `Version ${versionNumber} Submitted`,
+          date: submittedAt,
+          tone: "neutral",
+        },
+      ]);
+      setSubmitting(false);
+    }, 900);
+  };
+
+  const handleRequestRevision = (data: {
+    message: string;
+    files: UploadedFile[];
+    referenceLinks: string[];
+  }) => {
+    const requestedAt = nowLabel();
+    const nextRevisionNumber = revisionRequests.length + 1;
+    const nextRequest: RevisionRequest = {
+      id: `dummy-revision-${Date.now()}`,
+      revisionNumber: nextRevisionNumber,
+      requestedBy: projectData.client,
+      requestedAt,
+      message: data.message,
+      attachments: data.files.map(uploadedToProjectFile),
+      referenceLinks: data.referenceLinks,
+    };
+
+    setRevisionRequests((current) => [nextRequest, ...current]);
+    setSubmissions((current) =>
+      current.map((submission, index) =>
+        index === 0 ? { ...submission, status: "revision_requested" } : submission
+      )
+    );
+    setStatus("revision_requested");
+    setLastUpdated(requestedAt);
+    setTimeline((current) => [
+      ...current,
+      {
+        key: `revision-${Date.now()}`,
+        label: "Revision Requested",
+        date: requestedAt,
+        tone: "danger",
+      },
+    ]);
+    setShowRevisionDialog(false);
   };
 
   const handleApprove = () => {
+    const completedAt = nowLabel();
     setStatus("completed");
+    setLastUpdated(completedAt);
+    setSubmissions((current) =>
+      current.map((submission, index) =>
+        index === 0 ? { ...submission, status: "approved" } : submission
+      )
+    );
+    setTimeline((current) => [
+      ...current,
+      { key: `approved-${Date.now()}`, label: "Approved", date: completedAt, tone: "success" },
+      { key: `completed-${Date.now()}`, label: "Completed", date: completedAt, tone: "success" },
+    ]);
     setShowApprove(false);
     setShowReview(true);
+  };
+
+  const renderOverviewAction = () => {
+    if (role === "student" && status === "active") {
+      return (
+        <button
+          type="button"
+          onClick={() => setActiveTab("deliverables")}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors"
+          style={{ fontSize: "0.82rem" }}
+        >
+          <Upload className="w-4 h-4" /> Submit Deliverables
+        </button>
+      );
+    }
+
+    if (role === "student" && status === "revision_requested") {
+      return (
+        <button
+          type="button"
+          onClick={() => setActiveTab("deliverables")}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors"
+          style={{ fontSize: "0.82rem" }}
+        >
+          <Upload className="w-4 h-4" /> Review Feedback and Resubmit
+        </button>
+      );
+    }
+
+    if (role === "client" && status === "submitted") {
+      return (
+        <button
+          type="button"
+          onClick={() => setActiveTab("deliverables")}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors"
+          style={{ fontSize: "0.82rem" }}
+        >
+          <CheckCircle className="w-4 h-4" /> Review Deliverables
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => setActiveTab("deliverables")}
+        className="w-full flex items-center justify-center gap-2 bg-slate-50 text-slate-600 font-semibold py-2.5 rounded-xl border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+        style={{ fontSize: "0.82rem" }}
+      >
+        <FileText className="w-4 h-4" /> Open Deliverables
+      </button>
+    );
+  };
+
+  const renderDeliverablesTab = () => (
+    <div className="flex flex-col gap-5">
+      {latestRevisionRequest && <RevisionRequestCard request={latestRevisionRequest} />}
+
+      {role === "student" && status === "active" && (
+        <ProjectSubmissionForm
+          title="Submit Deliverables"
+          helperMessage="Upload your files, add a demo link if available, and explain what the client should review."
+          buttonLabel="Submit Project"
+          submitting={submitting}
+          onSubmit={handleSubmitProject}
+        />
+      )}
+
+      {role === "student" && status === "revision_requested" && (
+        <ProjectSubmissionForm
+          title="Resubmit Deliverables"
+          helperMessage="Use the same form to upload your revised files and explain what changed from the previous version."
+          buttonLabel="Resubmit Project"
+          submitting={submitting}
+          onSubmit={handleSubmitProject}
+        />
+      )}
+
+      {role === "student" && status === "submitted" && (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
+          <EmptyState
+            icon={MessageSquare}
+            title="Waiting for Client Review"
+            message="Your latest deliverables are submitted. The client can approve them or request a revision."
+          />
+        </section>
+      )}
+
+      {role === "client" && status === "active" && (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
+          <EmptyState
+            icon={FileText}
+            title="Waiting for Student Submission"
+            message="The student has not submitted deliverables yet."
+          />
+        </section>
+      )}
+
+      {role === "client" && status === "revision_requested" && (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
+          <EmptyState
+            icon={GitPullRequest}
+            title="Waiting for Student Resubmission"
+            message="A revision request has been sent. The student can now resubmit deliverables."
+          />
+        </section>
+      )}
+
+      {role === "client" && status === "submitted" && (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
+          <div>
+            <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+              Review Submission
+            </h2>
+            <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
+              Approve the deliverables or request changes with a clear revision message.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowApprove(true)}
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
+              style={{ fontSize: "0.875rem" }}
+            >
+              <CheckCircle className="w-4 h-4" /> Approve Deliverables
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setShowRevisionDialog(true)}
+              className="flex-1 flex items-center justify-center gap-2 bg-white text-amber-600 font-semibold py-3 rounded-xl border border-amber-200 hover:bg-amber-50 transition-colors"
+              style={{ fontSize: "0.875rem" }}
+            >
+              <GitPullRequest className="w-4 h-4" /> Request Revision
+            </motion.button>
+          </div>
+        </section>
+      )}
+
+      {readOnly && (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
+          <EmptyState
+            icon={Lock}
+            title="Project Completed"
+            message="Deliverables are approved. This workspace is now read-only."
+          />
+          {role === "client" && !reviewSubmitted && (
+            <button
+              type="button"
+              onClick={() => setShowReview(true)}
+              className="w-full mt-3 flex items-center justify-center gap-2 bg-amber-50 text-amber-600 font-semibold py-2.5 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
+              style={{ fontSize: "0.875rem" }}
+            >
+              Leave a Review
+            </button>
+          )}
+        </section>
+      )}
+
+      <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
+        <div>
+          <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+            Deliverables
+          </h2>
+          <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
+            Latest submission is shown first. Older versions stay available for history.
+          </p>
+        </div>
+
+        {latestSubmission ? (
+          <>
+            <div>
+              <p
+                className="text-slate-400 font-semibold mb-2"
+                style={{
+                  fontSize: "0.62rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                }}
+              >
+                Latest Submission
+              </p>
+              <DeliverableVersionCard submission={latestSubmission} />
+            </div>
+
+            {olderSubmissions.length > 0 && (
+              <details className="group">
+                <summary
+                  className="cursor-pointer text-blue-600 font-semibold hover:text-blue-700"
+                  style={{ fontSize: "0.82rem" }}
+                >
+                  Version History ({olderSubmissions.length})
+                </summary>
+                <div className="flex flex-col gap-3 mt-3">
+                  {olderSubmissions.map((submission) => (
+                    <DeliverableVersionCard key={submission.id} submission={submission} />
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
+        ) : (
+          <EmptyState
+            icon={FileText}
+            title="No Deliverables Submitted"
+            message="Submitted files and notes will appear here."
+          />
+        )}
+      </section>
+    </div>
+  );
+
+  const renderTabContent = () => {
+    if (activeTab === "overview") {
+      return (
+        <ProjectOverview
+          project={projectData}
+          status={status}
+          role={role === "client" ? "client" : "student"}
+          revisionCount={revisionCount}
+          lastUpdated={lastUpdated}
+          action={renderOverviewAction()}
+          profileAction={
+            role === "client" ? (
+              <button
+                type="button"
+                onClick={() => setShowStudentProfile(true)}
+                className="w-full flex items-center justify-center gap-2 bg-white text-blue-600 font-semibold py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors"
+                style={{ fontSize: "0.82rem" }}
+              >
+                View Student Profile
+              </button>
+            ) : null
+          }
+        />
+      );
+    }
+
+    if (activeTab === "deliverables") return renderDeliverablesTab();
+
+    if (activeTab === "activity") {
+      return (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
+          <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: "0.95rem" }}>
+            Project Timeline
+          </h2>
+          <Timeline items={timeline} />
+        </section>
+      );
+    }
+
+    if (activeTab === "job") {
+      return (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm overflow-hidden">
+          <SharedJobDetailsContent job={projectData.job} showClientCard={role === "student"} />
+        </section>
+      );
+    }
+
+    if (activeTab === "proposal") {
+      return (
+        <section className="bg-slate-50 rounded-2xl border border-black/[0.05] shadow-sm">
+          <ReadOnlyApplicationView application={projectData.application} />
+        </section>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -491,7 +706,6 @@ export default function ProjectWorkspacePage() {
         transition={{ duration: 0.45 }}
         className="flex flex-col gap-5"
       >
-        {/* Back */}
         <button
           onClick={() => navigate(`/dashboard/${role}/projects`)}
           className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 font-semibold transition-colors w-fit"
@@ -500,501 +714,129 @@ export default function ProjectWorkspacePage() {
           <ArrowLeft className="w-3.5 h-3.5" /> Back to Projects
         </button>
 
-        {/* Card 1 — Project Header */}
-        <div className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex flex-col gap-1.5">
-              <h1
-                className="text-slate-900 tracking-tight"
-                style={{
-                  fontSize: "clamp(1.05rem, 2vw, 1.3rem)",
-                  fontWeight: 800,
-                  lineHeight: 1.2,
-                }}
-              >
-                {projectData.title}
-              </h1>
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-semibold w-fit"
-                style={{
-                  background: cfg.bg,
-                  color: cfg.color,
-                  borderColor: cfg.border,
-                  fontSize: "0.62rem",
-                }}
-              >
-                <span
-                  className="w-1.5 h-1.5 rounded-full animate-pulse"
-                  style={{ background: cfg.color }}
-                />
-                {cfg.label}
-              </span>
-            </div>
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
+          <div>
+            <h1
+              className="text-slate-900 tracking-tight"
+              style={{
+                fontSize: "clamp(1.05rem, 2vw, 1.3rem)",
+                fontWeight: 800,
+                lineHeight: 1.2,
+              }}
+            >
+              {projectData.title}
+            </h1>
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 pt-2 border-t border-black/[0.05]">
+
+          <div className="grid sm:grid-cols-3 gap-3 pt-3 border-t border-black/[0.05]">
             {[
-              {
-                label: "Student",
-                value: projectData.student.name,
-                initials: projectData.student.initials,
-                accent: "#2563EB",
-              },
-              {
-                label: "Client",
-                value: projectData.client.name,
-                initials: projectData.client.initials,
-                accent: "#D97706",
-              },
-            ].map((p) => (
-              <div key={p.label} className="flex items-center gap-2">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center text-white font-bold"
-                  style={{ background: p.accent, fontSize: "0.48rem" }}
-                >
-                  {p.initials}
+              { label: "Started", value: projectData.startDate, icon: Calendar },
+              { label: "Deadline", value: projectData.deadline, icon: Clock },
+              { label: "Budget", value: `Rs. ${projectData.budget}`, icon: Tag },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center gap-2.5 bg-slate-50 rounded-xl p-3 border border-black/[0.04]"
+              >
+                <item.icon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
+                    {item.label}
+                  </p>
+                  <p
+                    className="text-slate-900 font-semibold truncate"
+                    style={{ fontSize: "0.75rem" }}
+                  >
+                    {item.value}
+                  </p>
                 </div>
-                <span className="text-slate-500" style={{ fontSize: "0.75rem" }}>
-                  {p.label}: <span className="font-semibold text-slate-900">{p.value}</span>
-                </span>
               </div>
             ))}
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-slate-500" style={{ fontSize: "0.75rem" }}>
-                Due <span className="font-semibold text-slate-900">{projectData.deadline}</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-slate-900 font-semibold" style={{ fontSize: "0.75rem" }}>
-                Rs. {projectData.budget}
-              </span>
-            </div>
           </div>
+        </section>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {tabs.map((tab) => (
+            <motion.button
+              key={tab.value}
+              type="button"
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab(tab.value)}
+              aria-pressed={activeTab === tab.value}
+              className="px-4 py-2 rounded-xl border font-semibold whitespace-nowrap transition-all duration-200"
+              style={{
+                background: activeTab === tab.value ? "#EFF6FF" : "#F8FAFC",
+                color: activeTab === tab.value ? "#2563EB" : "#64748B",
+                borderColor: activeTab === tab.value ? "#BFDBFE" : "#E2E8F0",
+                fontSize: "0.78rem",
+              }}
+            >
+              {tab.label}
+            </motion.button>
+          ))}
         </div>
 
-        {/* Cards 2+3 side-by-side on desktop */}
-        <div className="grid lg:grid-cols-3 gap-5 items-start">
-          {/* Card 2 — Progress (left, 1/3) */}
-          <ProgressTracker status={status} />
-
-          {/* Card 3 — Requirements (right, 2/3) */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
-            <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
-              Project Requirements
-            </p>
-            <div className="flex flex-col gap-4">
-              <div>
-                <p
-                  className="text-slate-400 font-semibold mb-1.5"
-                  style={{
-                    fontSize: "0.62rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                  }}
-                >
-                  Description
-                </p>
-                <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-                  {projectData.description}
-                </p>
-              </div>
-              <div>
-                <p
-                  className="text-slate-400 font-semibold mb-1.5"
-                  style={{
-                    fontSize: "0.62rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.07em",
-                  }}
-                >
-                  Client Requirements
-                </p>
-                <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-                  {projectData.requirements}
-                </p>
-              </div>
-              {projectData.skills.length > 0 && (
-                <div>
-                  <p
-                    className="text-slate-400 font-semibold mb-1.5"
-                    style={{
-                      fontSize: "0.62rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                    }}
-                  >
-                    Required Skills
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {projectData.skills.map((s) => (
-                      <span
-                        key={s}
-                        className="bg-slate-50 border border-slate-200 text-slate-600 font-medium px-2.5 py-1 rounded-lg"
-                        style={{ fontSize: "0.72rem" }}
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4 — Submission / Review */}
-
-        {/* Student View */}
-        {role === "student" && (
-          <div className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-5">
-            <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
-              Submit Your Work
-            </p>
-
-            {status === "active" && (
-              <>
-                {/* Files */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
-                    Submission Files <span className="text-red-400">*</span>
-                  </label>
-                  <FileUploadArea
-                    files={submissionFiles}
-                    onAdd={(f) => setSubmissionFiles((p) => [...p, f])}
-                    onRemove={(name) => setSubmissionFiles((p) => p.filter((f) => f.name !== name))}
-                  />
-                </div>
-
-                {/* Live Demo Link */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
-                    Live Demo Link <span className="text-slate-400 font-normal">(optional)</span>
-                  </label>
-                  <div className="relative">
-                    <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="url"
-                      value={demoLink}
-                      onChange={(e) => setDemoLink(e.target.value)}
-                      placeholder="https://your-project.vercel.app"
-                      className={`${inputCls} pl-10`}
-                      style={{ fontSize: "0.875rem" }}
-                    />
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
-                    Submission Notes <span className="text-red-400">*</span>
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={submissionNotes}
-                    onChange={(e) => setSubmissionNotes(e.target.value)}
-                    placeholder="Describe what you have completed and any important details for the client."
-                    className={`${inputCls} resize-none`}
-                    style={{ fontSize: "0.875rem" }}
-                  />
-                </div>
-
-                <motion.button
-                  onClick={handleSubmitWork}
-                  disabled={!canSubmit}
-                  whileHover={
-                    canSubmit
-                      ? {
-                          scale: 1.02,
-                          boxShadow: "0 8px 20px rgba(37,99,235,0.25)",
-                        }
-                      : {}
-                  }
-                  whileTap={canSubmit ? { scale: 0.97 } : {}}
-                  className={`w-full flex items-center justify-center gap-2 font-semibold py-3.5 rounded-xl transition-colors ${canSubmit ? "bg-blue-600 text-white shadow-md hover:bg-blue-700" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  {submitting ? (
-                    <>
-                      <motion.span
-                        className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 0.8,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                      />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Submit Work
-                    </>
-                  )}
-                </motion.button>
-              </>
-            )}
-
-            {(status === "submitted" || status === "completed") && (
-              <div className="flex flex-col gap-4">
-                {submittedAt && (
-                  <div className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5">
-                    <CheckCircle className="w-4 h-4 text-violet-600" />
-                    <p className="text-violet-600 font-semibold" style={{ fontSize: "0.78rem" }}>
-                      Submitted on {submittedAt}
-                    </p>
-                  </div>
-                )}
-                {submissionFiles.length > 0 && (
-                  <div>
-                    <p
-                      className="text-slate-400 font-semibold mb-2"
-                      style={{
-                        fontSize: "0.62rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                      }}
-                    >
-                      Submitted Files
-                    </p>
-                    <SubmittedFiles files={submissionFiles} />
-                  </div>
-                )}
-                {demoLink && (
-                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
-                    <Link className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <a
-                      href={demoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 font-medium hover:underline truncate"
-                      style={{ fontSize: "0.78rem" }}
-                    >
-                      {demoLink}
-                    </a>
-                  </div>
-                )}
-                {submissionNotes && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p
-                      className="text-slate-400 font-semibold mb-1"
-                      style={{
-                        fontSize: "0.62rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                      }}
-                    >
-                      Your Notes
-                    </p>
-                    <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-                      {submissionNotes}
-                    </p>
-                  </div>
-                )}
-                {status === "completed" && (
-                  <div className="flex flex-col items-center gap-3 py-4">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center">
-                      <Award className="w-7 h-7 text-emerald-600" />
-                    </div>
-                    <p className="text-emerald-600 font-bold" style={{ fontSize: "0.95rem" }}>
-                      Project Completed!
-                    </p>
-                    <p
-                      className="text-slate-500 text-center leading-relaxed"
-                      style={{ fontSize: "0.82rem" }}
-                    >
-                      The client approved your work. Great job!
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Client View */}
-        {role === "client" && (
-          <div className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-5">
-            <p className="text-slate-900 font-bold" style={{ fontSize: "0.9rem" }}>
-              Review Submission
-            </p>
-
-            {status === "active" && (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-slate-300" />
-                </div>
-                <p className="text-slate-400" style={{ fontSize: "0.85rem" }}>
-                  Waiting for student to submit work.
-                </p>
-              </div>
-            )}
-
-            {(status === "submitted" || status === "completed") && (
-              <div className="flex flex-col gap-4">
-                {submittedAt && (
-                  <p
-                    className="text-slate-400 font-semibold"
-                    style={{
-                      fontSize: "0.62rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                    }}
-                  >
-                    Submitted On: {submittedAt}
-                  </p>
-                )}
-                {submissionFiles.length > 0 && (
-                  <div>
-                    <p
-                      className="text-slate-400 font-semibold mb-2"
-                      style={{
-                        fontSize: "0.62rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                      }}
-                    >
-                      Submitted Files
-                    </p>
-                    <SubmittedFiles files={submissionFiles} />
-                  </div>
-                )}
-                {demoLink && (
-                  <div>
-                    <p
-                      className="text-slate-400 font-semibold mb-1.5"
-                      style={{
-                        fontSize: "0.62rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                      }}
-                    >
-                      Live Demo
-                    </p>
-                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
-                      <Link className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      <a
-                        href={demoLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 font-medium hover:underline truncate"
-                        style={{ fontSize: "0.78rem" }}
-                      >
-                        {demoLink}
-                      </a>
-                    </div>
-                  </div>
-                )}
-                {submissionNotes && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p
-                      className="text-slate-400 font-semibold mb-1"
-                      style={{
-                        fontSize: "0.62rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                      }}
-                    >
-                      Student Notes
-                    </p>
-                    <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-                      {submissionNotes}
-                    </p>
-                  </div>
-                )}
-
-                {status === "submitted" && (
-                  <div className="flex gap-3">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setShowApprove(true)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
-                      style={{ fontSize: "0.875rem" }}
-                    >
-                      <CheckCircle className="w-4 h-4" /> Approve Work
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        setStatus("active");
-                        setSubmitted(false);
-                        setSubmittedAt("");
-                        setSubmissionFiles([]);
-                        setSubmissionNotes("");
-                        setDemoLink("");
-                      }}
-                      className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
-                      style={{ fontSize: "0.875rem" }}
-                    >
-                      <XCircle className="w-4 h-4" /> Reject Work
-                    </motion.button>
-                  </div>
-                )}
-
-                {status === "completed" && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-300 rounded-2xl p-4">
-                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                      <div>
-                        <p className="text-emerald-600 font-bold" style={{ fontSize: "0.875rem" }}>
-                          Work Approved
-                        </p>
-                        <p className="text-emerald-300" style={{ fontSize: "0.72rem" }}>
-                          This project has been completed successfully.
-                        </p>
-                      </div>
-                    </div>
-                    {!reviewSubmitted ? (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setShowReview(true)}
-                        className="w-full flex items-center justify-center gap-2 bg-amber-50 text-amber-600 font-semibold py-2.5 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
-                        style={{ fontSize: "0.875rem" }}
-                      >
-                        ⭐ Leave a Review
-                      </motion.button>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 text-amber-600 bg-amber-50 border border-amber-200 py-2.5 rounded-xl">
-                        <span style={{ fontSize: "0.82rem" }}>⭐ Review Submitted</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderTabContent()}
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
 
-      {/* Modals */}
       <AnimatePresence>
         {showApprove && (
-          <ConfirmModal
-            title="Approve Work"
-            message={`Are you sure you want to approve the submission for "${projectData.title}"?`}
-            confirmLabel="Approve Work"
+          <ConfirmDialog
+            title="Approve Deliverables"
+            body={`Approve the latest deliverables for "${projectData.title}"?`}
+            confirmLabel="Approve"
             confirmColor="#059669"
             onConfirm={handleApprove}
             onClose={() => setShowApprove(false)}
+            icon={CheckCircle}
+            iconBg="#ECFDF5"
+            iconColor="#059669"
           />
         )}
+
+        {showRevisionDialog && (
+          <RevisionRequestDialog
+            onClose={() => setShowRevisionDialog(false)}
+            onSubmit={handleRequestRevision}
+          />
+        )}
+
         {showReview && (
           <ReviewModal
             studentName={projectData.student.name}
             studentInitials={projectData.student.initials}
             projectName={projectData.title}
-            completedAt={projectData.deadline}
+            completedAt={lastUpdated}
             onClose={() => setShowReview(false)}
             onSubmit={() => {
               setReviewSubmitted(true);
               setShowReview(false);
             }}
           />
+        )}
+
+        {showStudentProfile && (
+          <SidePanel
+            title="Student Profile"
+            subtitle={projectData.student.name}
+            onClose={() => setShowStudentProfile(false)}
+            maxWidthClassName="max-w-2xl"
+            zIndexClassName="z-50"
+            bodyClassName="flex-1 overflow-y-auto p-5"
+          >
+            <StudentProfileView profile={studentProfile} />
+          </SidePanel>
         )}
       </AnimatePresence>
     </DashboardLayout>

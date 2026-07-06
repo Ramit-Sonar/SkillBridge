@@ -162,6 +162,8 @@ function mapApplicationDetails(application: ApiApplicationDetails): Application 
       clientInitials: getInitials(client?.fullName),
       clientAvatar: client?.avatar,
       clientLocation: client?.location,
+      clientCompanyName: client?.companyName,
+      clientWebsite: client?.website,
       clientAbout: client?.bio,
       clientVerified: client?.verification.status === "approved",
       clientJobsPosted: client?.statistics.jobsPosted,
@@ -462,7 +464,7 @@ function AppCard({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="group bg-white rounded-2xl border border-black/[0.06] shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 p-5 flex flex-col sm:flex-row sm:items-start gap-4"
+        className="group bg-white rounded-2xl border border-black/[0.06] shadow-sm hover:shadow-xl hover:border-blue-200 hover:-translate-y-0.5 transition-all duration-300 p-5 flex flex-col sm:flex-row sm:items-start gap-4"
       >
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <div className="flex items-start gap-3 flex-wrap">

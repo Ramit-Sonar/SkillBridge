@@ -31,7 +31,7 @@ export function QuickActionCard({
       whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="group text-left bg-white rounded-2xl p-5 border border-black/[0.05] shadow-sm transition-all duration-300 w-full"
+      className="group text-left bg-white rounded-2xl p-5 border border-black/[0.05] hover:border-blue-200 shadow-sm transition-all duration-300 w-full"
     >
       <div
         className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"

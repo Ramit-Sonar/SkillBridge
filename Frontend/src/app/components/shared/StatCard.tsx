@@ -27,7 +27,7 @@ export function StatCard({
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay }}
       whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
       onClick={onClick}
-      className={`bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 flex flex-col gap-3 transition-all duration-300 ${onClick ? "cursor-pointer" : ""}`}
+      className={`bg-white rounded-2xl border border-black/[0.05] hover:border-blue-200 shadow-sm p-4 flex flex-col gap-3 transition-all duration-300 ${onClick ? "cursor-pointer" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div>

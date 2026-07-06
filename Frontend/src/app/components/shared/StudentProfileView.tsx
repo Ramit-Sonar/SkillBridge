@@ -307,7 +307,7 @@ function Portfolio({ projects }: { projects: ProfileProject[] }) {
             <motion.div
               key={project.id}
               whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
-              className="border border-black/[0.06] rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
+              className="border border-black/[0.06] hover:border-blue-200 rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
             >
               <div className="flex items-start justify-between gap-2 flex-wrap">
                 <p
@@ -488,7 +488,7 @@ function Reviews({ reviews }: { reviews: ProfileReview[] }) {
             <motion.div
               key={review.id}
               whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
-              className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
+              className="bg-slate-50 border border-slate-200 hover:border-blue-200 rounded-2xl p-4 flex flex-col gap-2 transition-all duration-200"
             >
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2.5">

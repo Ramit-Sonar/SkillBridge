@@ -339,7 +339,7 @@ export default function AdminJobsPage() {
                     y: -2,
                     boxShadow: "0 6px 20px rgba(0,0,0,0.07)",
                   }}
-                  className="bg-white border border-black/[0.06] rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200"
+                  className="bg-white border border-black/[0.06] hover:border-blue-200 rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
