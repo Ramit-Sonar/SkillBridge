@@ -3,9 +3,14 @@ import validator from "validator";
 import { ClientProfile } from "../models/clientProfile.model.js";
 import { Deliverable } from "../models/deliverable.model.js";
 import { Project } from "../models/project.model.js";
-import { Revision } from "../models/revision.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
+import {
+  appendTimeline,
+  getLatestDeliverable,
+  getOpenRevision,
+  updateProjectActivity,
+} from "../services/project.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
@@ -287,9 +292,8 @@ const submitDeliverable = asyncHandler(async (req, res) => {
 
     await session.withTransaction(async () => {
       const currentProject = await Project.findById(projectId)
-        .select("student status startedAt completedAt lastActivityAt")
-        .session(session)
-        .lean();
+        .select("student status startedAt completedAt lastActivityAt timeline")
+        .session(session);
 
       if (!currentProject) {
         throw new ApiError(404, "Project not found");
@@ -320,13 +324,10 @@ const submitDeliverable = asyncHandler(async (req, res) => {
         );
       }
 
-      const latestDeliverable = await Deliverable.findOne({
-        project: currentProject._id,
-      })
-        .select("versionNumber")
-        .sort({ versionNumber: -1 })
-        .session(session)
-        .lean();
+      const latestDeliverable = await getLatestDeliverable(
+        currentProject._id,
+        session
+      );
       const nextVersionNumber = (latestDeliverable?.versionNumber || 0) + 1;
       const submittedAt = new Date();
       const isResubmission = currentProject.status === "revision_requested";
@@ -349,30 +350,22 @@ const submitDeliverable = asyncHandler(async (req, res) => {
       );
 
       if (isResubmission) {
-        const resolvedRevision = await Revision.findOneAndUpdate(
-          {
-            project: currentProject._id,
-            resolved: false,
-          },
-          {
-            $set: {
-              resolved: true,
-              resolvedAt: submittedAt,
-              resolvedByDeliverable: deliverable._id,
-            },
-          },
-          {
-            new: true,
-            session,
-            sort: { requestedAt: -1 },
-          }
-        )
-          .select("_id")
-          .lean();
+        const resolvedRevision = await getOpenRevision(
+          currentProject._id,
+          session
+        );
 
         if (!resolvedRevision) {
           throw new ApiError(400, "Open revision request not found");
         }
+
+        resolvedRevision.set({
+          resolved: true,
+          resolvedAt: submittedAt,
+          resolvedByDeliverable: deliverable._id,
+        });
+
+        await resolvedRevision.save({ session });
       }
 
       const timelineType = isResubmission
@@ -381,36 +374,25 @@ const submitDeliverable = asyncHandler(async (req, res) => {
       const timelineMessage = isResubmission
         ? `Student resubmitted Version ${nextVersionNumber} after requested revisions.`
         : `Student submitted Version ${nextVersionNumber}.`;
-      const updatedProject = await Project.findOneAndUpdate(
+      await appendTimeline(
+        currentProject,
         {
-          _id: currentProject._id,
-          status: currentProject.status,
+          type: timelineType,
+          actor: req.user._id,
+          message: timelineMessage,
+          createdAt: submittedAt,
         },
-        {
-          $set: {
-            status: "submitted",
-            lastActivityAt: submittedAt,
-          },
-          $push: {
-            timeline: {
-              type: timelineType,
-              actor: req.user._id,
-              message: timelineMessage,
-              createdAt: submittedAt,
-            },
-          },
-        },
-        {
-          new: true,
-          session,
-        }
-      )
-        .select("status startedAt completedAt lastActivityAt")
-        .lean();
+        session
+      );
 
-      if (!updatedProject) {
-        throw new ApiError(409, "Project status changed. Please try again");
-      }
+      const updatedProject = await updateProjectActivity(
+        currentProject,
+        {
+          status: "submitted",
+          lastActivityAt: submittedAt,
+        },
+        session
+      );
 
       responseData = buildSubmitDeliverableResponse({
         project: updatedProject,

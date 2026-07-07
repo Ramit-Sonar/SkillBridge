@@ -1,9 +1,58 @@
 import { Project } from "../models/project.model.js";
+import { Deliverable } from "../models/deliverable.model.js";
+import { Revision } from "../models/revision.model.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const PROJECT_CREATED_MESSAGE = "Project created after application acceptance.";
 
 const getDocumentId = (document) => document?._id || document;
+
+export const getLatestDeliverable = async (projectId, session = null) => {
+  const query = Deliverable.findOne({ project: projectId }).sort({
+    versionNumber: -1,
+  });
+
+  if (session) {
+    query.session(session);
+  }
+
+  return query;
+};
+
+export const getOpenRevision = async (projectId, session = null) => {
+  const query = Revision.findOne({
+    project: projectId,
+    resolved: false,
+  }).sort({ revisionNumber: -1 });
+
+  if (session) {
+    query.session(session);
+  }
+
+  return query;
+};
+
+export const appendTimeline = async (project, event, session = null) => {
+  project.timeline.push({
+    ...event,
+    createdAt: event.createdAt || new Date(),
+  });
+
+  return project.save(session ? { session } : {});
+};
+
+export const updateProjectActivity = async (
+  project,
+  updates = {},
+  session = null
+) => {
+  project.set({
+    ...updates,
+    lastActivityAt: updates.lastActivityAt || new Date(),
+  });
+
+  return project.save(session ? { session } : {});
+};
 
 export const createProjectFromAcceptedApplication = async ({
   application,
