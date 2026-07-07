@@ -16,6 +16,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
+  buildDeliverablesSummary,
   buildProjectSummary,
   buildProjectWorkspace,
   buildSubmitDeliverableResponse,
@@ -227,6 +228,62 @@ const getProjectById = asyncHandler(async (req, res) => {
     );
 });
 
+const getProjectDeliverables = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (!["student", "client"].includes(req.user.role)) {
+    throw new ApiError(403, "Only students and clients can view deliverables");
+  }
+
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ApiError(400, "Invalid project id");
+  }
+
+  const project = await Project.findById(projectId)
+    .select("student client status")
+    .lean();
+
+  if (!project) {
+    throw new ApiError(404, "Project not found");
+  }
+
+  const userId = req.user._id.toString();
+
+  if (req.user.role === "student" && project.student.toString() !== userId) {
+    throw new ApiError(403, "You can view only your own project deliverables");
+  }
+
+  if (req.user.role === "client" && project.client.toString() !== userId) {
+    throw new ApiError(403, "You can view only your own project deliverables");
+  }
+
+  const deliverables = await Deliverable.find({ project: project._id })
+    .select(
+      "_id versionNumber notes demoLink repositoryLink liveUrl attachments submittedAt submittedBy status approvedAt"
+    )
+    .sort({ versionNumber: -1 })
+    .lean();
+
+  const deliverablesSummary = buildDeliverablesSummary({
+    project,
+    deliverables,
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        deliverablesSummary,
+        "Project deliverables fetched successfully"
+      )
+    );
+});
+
 const submitDeliverable = asyncHandler(async (req, res) => {
   const uploadedFiles = req.files;
   const { projectId } = req.params;
@@ -424,4 +481,9 @@ const submitDeliverable = asyncHandler(async (req, res) => {
   }
 });
 
-export { getMyProjects, getProjectById, submitDeliverable };
+export {
+  getMyProjects,
+  getProjectById,
+  getProjectDeliverables,
+  submitDeliverable,
+};

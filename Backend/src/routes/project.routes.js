@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getMyProjects,
   getProjectById,
+  getProjectDeliverables,
   submitDeliverable,
 } from "../controllers/project.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -27,6 +28,7 @@ const deliverableAttachmentUpload = (req, res, next) => {
 router.route("/my-projects").get(verifyJWT, projectRoles, getMyProjects);
 router
   .route("/:projectId/deliverables")
+  .get(verifyJWT, projectRoles, getProjectDeliverables)
   .post(
     verifyJWT,
     studentRoles,

@@ -3,6 +3,8 @@ const SUBMISSION_STATUS_LABELS = {
   approved: "Approved",
 };
 
+const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
+
 const getCurrentAction = (status, viewerRole, latestSubmission) => {
   if (status === "completed") return "Project completed";
 
@@ -141,6 +143,39 @@ export const buildProjectWorkspace = ({
         }
       : null,
     partner: partnerSummary,
+  };
+};
+
+export const buildDeliverablesSummary = ({ project, deliverables }) => {
+  const latestSubmission = deliverables[0] || null;
+
+  return {
+    project: {
+      projectId: project._id,
+      status: project.status,
+      canSubmit: SUBMITTABLE_PROJECT_STATUSES.includes(project.status),
+    },
+    latestSubmission: latestSubmission
+      ? {
+          deliverableId: latestSubmission._id,
+          versionNumber: latestSubmission.versionNumber,
+          notes: latestSubmission.notes,
+          demoLink: latestSubmission.demoLink,
+          repositoryLink: latestSubmission.repositoryLink,
+          liveUrl: latestSubmission.liveUrl,
+          attachments: latestSubmission.attachments || [],
+          submittedAt: latestSubmission.submittedAt,
+          submittedBy: latestSubmission.submittedBy,
+          status: latestSubmission.status,
+          approvedAt: latestSubmission.approvedAt,
+        }
+      : null,
+    versionHistory: deliverables.map((deliverable) => ({
+      deliverableId: deliverable._id,
+      versionNumber: deliverable.versionNumber,
+      submittedAt: deliverable.submittedAt,
+      status: deliverable.status,
+    })),
   };
 };
 
