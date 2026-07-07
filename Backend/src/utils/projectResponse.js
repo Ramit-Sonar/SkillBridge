@@ -77,3 +77,69 @@ export const buildProjectSummary = ({
       : null,
   };
 };
+
+export const buildProjectWorkspace = ({
+  project,
+  viewerRole,
+  partnerProfile,
+  partnerVerification,
+}) => {
+  const partner = viewerRole === "student" ? project.client : project.student;
+  const partnerRole = viewerRole === "student" ? "client" : "student";
+
+  const projectSummary = {
+    projectId: project._id,
+    status: project.status,
+    startedAt: project.startedAt,
+    completedAt: project.completedAt,
+    lastActivityAt: project.lastActivityAt,
+  };
+
+  const partnerSummary = partner
+    ? {
+        userId: partner._id,
+        role: partnerRole,
+        fullName: partner.fullName,
+        avatar: partner.avatar || "",
+      }
+    : null;
+
+  if (partnerSummary && viewerRole === "student") {
+    partnerSummary.companyName = partnerProfile?.companyName || "";
+  }
+
+  if (partnerSummary && viewerRole === "client") {
+    partnerSummary.headline =
+      partnerProfile?.education || partnerProfile?.university || "";
+    partnerSummary.verifiedBadge = partnerVerification?.status === "approved";
+  }
+
+  return {
+    project: projectSummary,
+    overview: {
+      ...projectSummary,
+      partner: partnerSummary,
+    },
+    job: project.job
+      ? {
+          jobId: project.job._id,
+          title: project.job.title,
+          category: project.job.category,
+          budget: project.job.budget,
+          deadline: project.job.deadline,
+          verificationRequirement: project.job.verificationRequirement,
+        }
+      : null,
+    application: project.application
+      ? {
+          applicationId: project.application._id,
+          coverMessage: project.application.coverMessage,
+          estimatedCompletionTime: project.application.estimatedCompletionTime,
+          whySuitable: project.application.whySuitable,
+          attachments: project.application.attachments || [],
+          appliedAt: project.application.appliedAt,
+        }
+      : null,
+    partner: partnerSummary,
+  };
+};
