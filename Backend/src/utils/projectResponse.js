@@ -238,6 +238,32 @@ export const buildRevisionSummary = ({
   })),
 });
 
+export const buildProjectTimeline = ({ timeline }) => ({
+  timeline: [...(timeline || [])]
+    .sort((firstEvent, secondEvent) => {
+      const firstCreatedAt = new Date(firstEvent.createdAt).getTime();
+      const secondCreatedAt = new Date(secondEvent.createdAt).getTime();
+
+      return secondCreatedAt - firstCreatedAt;
+    })
+    .map((event) => {
+      const actor =
+        event.actor && typeof event.actor === "object"
+          ? {
+              name: event.actor.fullName || "",
+              avatar: event.actor.avatar || "",
+            }
+          : null;
+
+      return {
+        type: event.type,
+        message: event.message,
+        actor,
+        createdAt: event.createdAt,
+      };
+    }),
+});
+
 export const buildSubmitDeliverableResponse = ({ project, deliverable }) => ({
   project: {
     projectId: project._id,

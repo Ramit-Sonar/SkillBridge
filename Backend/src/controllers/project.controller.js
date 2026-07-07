@@ -20,6 +20,7 @@ import {
   buildApproveDeliverableResponse,
   buildDeliverablesSummary,
   buildProjectSummary,
+  buildProjectTimeline,
   buildProjectWorkspace,
   buildRequestRevisionResponse,
   buildRevisionSummary,
@@ -399,6 +400,58 @@ const getProjectRevisions = asyncHandler(async (req, res) => {
         200,
         revisionSummary,
         "Project revisions fetched successfully"
+      )
+    );
+});
+
+const getProjectTimeline = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (!["student", "client"].includes(req.user.role)) {
+    throw new ApiError(403, "Only students and clients can view timeline");
+  }
+
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ApiError(400, "Invalid project id");
+  }
+
+  const project = await Project.findById(projectId)
+    .select("student client timeline")
+    .populate({
+      path: "timeline.actor",
+      select: "fullName avatar",
+    })
+    .lean();
+
+  if (!project) {
+    throw new ApiError(404, "Project not found");
+  }
+
+  const userId = req.user._id.toString();
+
+  if (req.user.role === "student" && project.student.toString() !== userId) {
+    throw new ApiError(403, "You can view only your own project timeline");
+  }
+
+  if (req.user.role === "client" && project.client.toString() !== userId) {
+    throw new ApiError(403, "You can view only your own project timeline");
+  }
+
+  const projectTimeline = buildProjectTimeline({
+    timeline: project.timeline,
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        projectTimeline,
+        "Project timeline fetched successfully"
       )
     );
 });
@@ -917,6 +970,7 @@ export {
   getProjectById,
   getProjectDeliverables,
   getProjectRevisions,
+  getProjectTimeline,
   requestRevision,
   submitDeliverable,
 };

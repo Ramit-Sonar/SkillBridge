@@ -5,6 +5,7 @@ import {
   getProjectById,
   getProjectDeliverables,
   getProjectRevisions,
+  getProjectTimeline,
   requestRevision,
   submitDeliverable,
 } from "../controllers/project.controller.js";
@@ -48,6 +49,9 @@ router
 router
   .route("/:projectId/revisions")
   .get(verifyJWT, projectRoles, getProjectRevisions);
+router
+  .route("/:projectId/timeline")
+  .get(verifyJWT, projectRoles, getProjectTimeline);
 router.route("/:projectId").get(verifyJWT, projectRoles, getProjectById);
 
 export default router;
