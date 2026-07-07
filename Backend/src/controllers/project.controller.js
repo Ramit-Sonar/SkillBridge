@@ -3,6 +3,7 @@ import validator from "validator";
 import { ClientProfile } from "../models/clientProfile.model.js";
 import { Deliverable } from "../models/deliverable.model.js";
 import { Project } from "../models/project.model.js";
+import { Revision } from "../models/revision.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
 import {
@@ -20,6 +21,7 @@ import {
   buildDeliverablesSummary,
   buildProjectSummary,
   buildProjectWorkspace,
+  buildRequestRevisionResponse,
   buildSubmitDeliverableResponse,
 } from "../utils/projectResponse.js";
 import { removeTempFiles } from "../utils/tempFile.js";
@@ -47,6 +49,55 @@ const validateOptionalUrl = (value, fieldName) => {
   }
 
   return trimmedValue;
+};
+
+const normalizeReferenceLinks = (referenceLinks) => {
+  if (referenceLinks === undefined || referenceLinks === null) return [];
+
+  let links = referenceLinks;
+
+  if (typeof referenceLinks === "string") {
+    const trimmedLinks = referenceLinks.trim();
+
+    if (!trimmedLinks) return [];
+
+    if (trimmedLinks.startsWith("[")) {
+      try {
+        links = JSON.parse(trimmedLinks);
+      } catch {
+        throw new ApiError(400, "Reference links must be valid URLs");
+      }
+    } else {
+      links = trimmedLinks.split(/\r?\n|,/);
+    }
+  }
+
+  if (!Array.isArray(links)) {
+    throw new ApiError(400, "Reference links must be valid URLs");
+  }
+
+  return links
+    .map((link) => {
+      if (typeof link !== "string") {
+        throw new ApiError(400, "Reference links must be valid URLs");
+      }
+
+      const trimmedLink = link.trim();
+
+      if (!trimmedLink) return null;
+
+      if (
+        !validator.isURL(trimmedLink, {
+          protocols: ["http", "https"],
+          require_protocol: true,
+        })
+      ) {
+        throw new ApiError(400, "Reference links must be valid URLs");
+      }
+
+      return trimmedLink;
+    })
+    .filter(Boolean);
 };
 
 const getLatestDeliverableMap = async (projectIds) => {
@@ -422,6 +473,180 @@ const approveDeliverable = asyncHandler(async (req, res) => {
   }
 });
 
+const requestRevision = asyncHandler(async (req, res) => {
+  const uploadedFiles = req.files;
+  const { projectId } = req.params;
+  const { message, referenceLinks } = req.body || {};
+  let uploadedAttachments = [];
+  let session;
+
+  try {
+    if (!req.user) {
+      throw new ApiError(401, "User not authenticated");
+    }
+
+    if (req.user.role !== "client") {
+      throw new ApiError(403, "Only clients can request revisions");
+    }
+
+    if (!mongoose.isValidObjectId(projectId)) {
+      throw new ApiError(400, "Invalid project id");
+    }
+
+    if (typeof message !== "string" || !message.trim()) {
+      throw new ApiError(400, "Revision message is required");
+    }
+
+    const trimmedMessage = message.trim();
+    const normalizedReferenceLinks = normalizeReferenceLinks(referenceLinks);
+
+    const project = await Project.findById(projectId)
+      .select("client status")
+      .lean();
+
+    if (!project) {
+      throw new ApiError(404, "Project not found");
+    }
+
+    if (project.client.toString() !== req.user._id.toString()) {
+      throw new ApiError(
+        403,
+        "You can request revisions only for your own project"
+      );
+    }
+
+    if (project.status !== "submitted") {
+      if (project.status === "completed") {
+        throw new ApiError(
+          400,
+          "Completed projects cannot receive revision requests"
+        );
+      }
+
+      throw new ApiError(400, "Project is not awaiting revision review");
+    }
+
+    uploadedAttachments = await uploadAttachments(uploadedFiles);
+    session = await mongoose.startSession();
+    let responseData;
+
+    await session.withTransaction(async () => {
+      const currentProject = await Project.findById(projectId)
+        .select("client status startedAt completedAt lastActivityAt timeline")
+        .session(session);
+
+      if (!currentProject) {
+        throw new ApiError(404, "Project not found");
+      }
+
+      if (currentProject.client.toString() !== req.user._id.toString()) {
+        throw new ApiError(
+          403,
+          "You can request revisions only for your own project"
+        );
+      }
+
+      if (currentProject.status !== "submitted") {
+        if (currentProject.status === "completed") {
+          throw new ApiError(
+            400,
+            "Completed projects cannot receive revision requests"
+          );
+        }
+
+        throw new ApiError(400, "Project is not awaiting revision review");
+      }
+
+      const latestDeliverable = await getLatestDeliverable(
+        currentProject._id,
+        session,
+        "status versionNumber"
+      );
+
+      if (!latestDeliverable) {
+        throw new ApiError(400, "Latest deliverable not found");
+      }
+
+      if (latestDeliverable.status !== "submitted") {
+        throw new ApiError(400, "Latest deliverable is not awaiting review");
+      }
+
+      const latestRevision = await Revision.findOne({
+        project: currentProject._id,
+      })
+        .select("revisionNumber")
+        .sort({ revisionNumber: -1 })
+        .session(session)
+        .lean();
+      const nextRevisionNumber = (latestRevision?.revisionNumber || 0) + 1;
+      const requestedAt = new Date();
+
+      const [revision] = await Revision.create(
+        [
+          {
+            project: currentProject._id,
+            deliverable: latestDeliverable._id,
+            revisionNumber: nextRevisionNumber,
+            requestedBy: req.user._id,
+            requestedAt,
+            message: trimmedMessage,
+            attachments: uploadedAttachments,
+            referenceLinks: normalizedReferenceLinks,
+          },
+        ],
+        { session }
+      );
+
+      let updatedProject = await updateProjectActivity(
+        currentProject,
+        {
+          status: "revision_requested",
+          lastActivityAt: requestedAt,
+        },
+        session
+      );
+
+      updatedProject = await appendTimeline(
+        updatedProject,
+        {
+          type: "revision_requested",
+          actor: req.user._id,
+          message: `Revision requested for Version ${latestDeliverable.versionNumber}.`,
+          createdAt: requestedAt,
+        },
+        session
+      );
+
+      responseData = buildRequestRevisionResponse({
+        project: updatedProject,
+        revision,
+      });
+    });
+
+    uploadedAttachments = [];
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(201, responseData, "Revision requested successfully")
+      );
+  } catch (error) {
+    await deleteAttachments(uploadedAttachments);
+
+    if (error?.code === 11000) {
+      throw new ApiError(409, "Revision request already exists");
+    }
+
+    throw error;
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
+
+    removeTempFiles(uploadedFiles);
+  }
+});
+
 const submitDeliverable = asyncHandler(async (req, res) => {
   const uploadedFiles = req.files;
   const { projectId } = req.params;
@@ -624,5 +849,6 @@ export {
   getMyProjects,
   getProjectById,
   getProjectDeliverables,
+  requestRevision,
   submitDeliverable,
 };

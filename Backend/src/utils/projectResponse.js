@@ -189,6 +189,23 @@ export const buildApproveDeliverableResponse = ({ project }) => ({
   completedAt: project.completedAt,
 });
 
+export const buildRequestRevisionResponse = ({ project, revision }) => ({
+  project: {
+    projectId: project._id,
+    status: project.status,
+    lastActivityAt: project.lastActivityAt,
+  },
+  revision: {
+    revisionId: revision._id,
+    revisionNumber: revision.revisionNumber,
+    requestedAt: revision.requestedAt,
+    message: revision.message,
+    attachments: revision.attachments || [],
+    referenceLinks: revision.referenceLinks || [],
+    resolved: revision.resolved,
+  },
+});
+
 export const buildSubmitDeliverableResponse = ({ project, deliverable }) => ({
   project: {
     projectId: project._id,

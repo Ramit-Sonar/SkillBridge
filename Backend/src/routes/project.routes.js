@@ -4,6 +4,7 @@ import {
   getMyProjects,
   getProjectById,
   getProjectDeliverables,
+  requestRevision,
   submitDeliverable,
 } from "../controllers/project.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -31,6 +32,9 @@ router.route("/my-projects").get(verifyJWT, projectRoles, getMyProjects);
 router
   .route("/:projectId/deliverables/approve")
   .patch(verifyJWT, clientRoles, approveDeliverable);
+router
+  .route("/:projectId/deliverables/request-revision")
+  .post(verifyJWT, clientRoles, deliverableAttachmentUpload, requestRevision);
 router
   .route("/:projectId/deliverables")
   .get(verifyJWT, projectRoles, getProjectDeliverables)
