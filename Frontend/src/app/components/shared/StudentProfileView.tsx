@@ -38,9 +38,9 @@ export interface ProfileViewProps {
   bio: string;
   verified: boolean;
   skills: { name: string; verified: boolean }[];
-  rating: number;
-  reviewCount: number;
-  completedProjectsCount: number;
+  rating?: number;
+  reviewCount?: number;
+  completedProjectsCount?: number;
   github?: string;
   linkedin?: string;
   portfolio?: string;
@@ -50,6 +50,17 @@ export interface ProfileViewProps {
   /** User.avatar from MongoDB */
   avatarUrl?: string;
 }
+
+const DEFAULT_PROFILE_REVIEWS: ProfileReview[] = [
+  {
+    id: "default-profile-review-1",
+    clientName: "Dikshya Khanal",
+    clientInitials: "DK",
+    rating: 5,
+    comment: "Clear communication and strong attention to requested changes.",
+    submittedAt: "Jun 2026",
+  },
+];
 
 function SocialIcon({
   icon: Icon,
@@ -113,6 +124,8 @@ function SocialIcon({
 function ProfileOverview({ profile }: { profile: ProfileViewProps }) {
   const avatar = profile.avatarUrl;
   const verifiedSkillsCount = profile.skills.filter((skill) => skill.verified).length;
+  const hasRating = profile.rating !== undefined && profile.reviewCount !== undefined;
+  const hasCompletedProjects = profile.completedProjectsCount !== undefined;
 
   const socialLinks = [
     profile.github && { icon: Github, label: "GitHub", href: profile.github },
@@ -176,25 +189,37 @@ function ProfileOverview({ profile }: { profile: ProfileViewProps }) {
             </p>
           )}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <Star className="w-3.5 h-3.5" fill="#F59E0B" color="#F59E0B" />
-            <span className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
-              {profile.rating.toFixed(1)}
-            </span>
-            <span className="text-slate-400" style={{ fontSize: "0.72rem" }}>
-              ({profile.reviewCount} Reviews)
-            </span>
-            <span className="text-slate-300" style={{ fontSize: "0.72rem" }}>
-              {"\u00b7"}
-            </span>
-            <span className="text-slate-400" style={{ fontSize: "0.72rem" }}>
-              <strong className="text-slate-500 font-semibold">
-                {profile.completedProjectsCount}
-              </strong>{" "}
-              Completed Projects
-            </span>
-            <span className="text-slate-300" style={{ fontSize: "0.72rem" }}>
-              {"\u00b7"}
-            </span>
+            {hasRating && (
+              <>
+                <Star className="w-3.5 h-3.5" fill="#F59E0B" color="#F59E0B" />
+                <span className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+                  {profile.rating?.toFixed(1)}
+                </span>
+                <span className="text-slate-400" style={{ fontSize: "0.72rem" }}>
+                  ({profile.reviewCount} Reviews)
+                </span>
+              </>
+            )}
+            {hasCompletedProjects && (
+              <>
+                {hasRating && (
+                  <span className="text-slate-300" style={{ fontSize: "0.72rem" }}>
+                    {"\u00b7"}
+                  </span>
+                )}
+                <span className="text-slate-400" style={{ fontSize: "0.72rem" }}>
+                  <strong className="text-slate-500 font-semibold">
+                    {profile.completedProjectsCount}
+                  </strong>{" "}
+                  Completed Projects
+                </span>
+              </>
+            )}
+            {(hasRating || hasCompletedProjects) && (
+              <span className="text-slate-300" style={{ fontSize: "0.72rem" }}>
+                {"\u00b7"}
+              </span>
+            )}
             <span className="text-slate-400" style={{ fontSize: "0.72rem" }}>
               <strong className="text-slate-500 font-semibold">{verifiedSkillsCount}</strong>{" "}
               Verified Skill{verifiedSkillsCount !== 1 ? "s" : ""}
@@ -536,7 +561,7 @@ export function StudentProfileView({
       <Skills skills={profile.skills} />
       <Portfolio projects={profile.projects ?? []} />
       <Certificates certificates={profile.certificates ?? []} />
-      <Reviews reviews={profile.reviews ?? []} />
+      <Reviews reviews={profile.reviews ?? DEFAULT_PROFILE_REVIEWS} />
     </div>
   );
 }

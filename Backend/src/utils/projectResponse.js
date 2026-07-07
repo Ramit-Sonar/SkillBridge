@@ -1,9 +1,121 @@
-const SUBMISSION_STATUS_LABELS = {
-  submitted: "Submitted",
-  approved: "Approved",
+const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
+
+const getInitials = (name = "") =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+const formatCardDate = (date) => {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
+  return parsedDate.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 };
 
-const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
+const formatCardBudget = (budget) => {
+  if (budget === undefined || budget === null) return "";
+
+  return new Intl.NumberFormat("en-US").format(Number(budget));
+};
+
+const buildProjectPerson = (user) => {
+  if (!user?.fullName) return null;
+
+  return {
+    name: user.fullName,
+    initials: getInitials(user.fullName),
+    avatar: user.avatar || "",
+  };
+};
+
+const buildProjectStatus = (project) => ({
+  id: project._id?.toString(),
+  status: project.status,
+  startedAt: project.startedAt,
+  completedAt: project.completedAt,
+  lastActivityAt: project.lastActivityAt,
+});
+
+const buildDetailedSubmission = (submission) => {
+  if (!submission) return null;
+
+  return {
+    id: submission._id?.toString(),
+    versionNumber: submission.versionNumber,
+    label: `Version ${submission.versionNumber}`,
+    notes: submission.notes,
+    demoLink: submission.demoLink,
+    repositoryLink: submission.repositoryLink,
+    liveUrl: submission.liveUrl,
+    attachments: submission.attachments || [],
+    submittedAt: submission.submittedAt,
+    status: submission.status,
+    approvedAt: submission.approvedAt,
+  };
+};
+
+const buildSubmissionHistoryItem = (submission) => ({
+  id: submission._id?.toString(),
+  versionNumber: submission.versionNumber,
+  label: `Version ${submission.versionNumber}`,
+  status: submission.status,
+  submittedAt: submission.submittedAt,
+});
+
+const buildRevisionRequest = (revision) => {
+  if (!revision) return null;
+
+  return {
+    id: revision._id?.toString(),
+    revisionNumber: revision.revisionNumber,
+    requestedBy: buildProjectPerson(revision.requestedBy),
+    requestedAt: revision.requestedAt,
+    message: revision.message,
+    attachments: revision.attachments || [],
+    referenceLinks: revision.referenceLinks || [],
+    resolved: revision.resolved,
+    resolvedAt: revision.resolvedAt,
+  };
+};
+
+const buildWorkspaceStudentProfile = ({
+  student,
+  studentProfile,
+  studentVerification,
+}) => {
+  if (!student) return null;
+
+  const skills = studentProfile?.skills || [];
+
+  return {
+    id: student._id?.toString(),
+    name: student.fullName,
+    initials: getInitials(student.fullName),
+    headline: studentProfile?.education || studentProfile?.university || "",
+    education: studentProfile?.education || "",
+    university: studentProfile?.university || "",
+    bio: studentProfile?.bio || "",
+    verified: studentVerification?.status === "approved",
+    skills: skills.map((skill) => ({
+      name: skill,
+      verified: false,
+    })),
+    github: studentProfile?.github || "",
+    linkedin: studentProfile?.linkedin || "",
+    portfolio: studentProfile?.portfolio || "",
+    avatarUrl: student.avatar || "",
+  };
+};
 
 const getCurrentAction = (status, viewerRole, latestSubmission) => {
   if (status === "completed") return "Project completed";
@@ -33,50 +145,33 @@ export const buildProjectSummary = ({
   project,
   viewerRole,
   latestSubmission,
+  revisionCount = 0,
 }) => {
-  const partner = viewerRole === "student" ? project.client : project.student;
-  const partnerRole = viewerRole === "student" ? "client" : "student";
+  const latestSubmissionSummary = latestSubmission
+    ? {
+        versionNumber: latestSubmission.versionNumber,
+        submittedAt: latestSubmission.submittedAt,
+        status: latestSubmission.status,
+      }
+    : null;
 
   return {
-    project: {
-      projectId: project._id,
-      status: project.status,
-      startedAt: project.startedAt,
-      completedAt: project.completedAt,
-      lastActivityAt: project.lastActivityAt,
-      currentAction: getCurrentAction(
-        project.status,
-        viewerRole,
-        latestSubmission
-      ),
-    },
-    partner: partner
-      ? {
-          userId: partner._id,
-          role: partnerRole,
-          fullName: partner.fullName,
-          avatar: partner.avatar || "",
-        }
-      : null,
-    job: project.job
-      ? {
-          jobId: project.job._id,
-          title: project.job.title,
-          category: project.job.category,
-          budget: project.job.budget,
-          deadline: project.job.deadline,
-        }
-      : null,
-    latestSubmission: latestSubmission
-      ? {
-          versionNumber: latestSubmission.versionNumber,
-          submittedAt: latestSubmission.submittedAt,
-          status: latestSubmission.status,
-          statusLabel:
-            SUBMISSION_STATUS_LABELS[latestSubmission.status] ||
-            latestSubmission.status,
-        }
-      : null,
+    id: project._id?.toString(),
+    title: project.job?.title || "",
+    status: project.status,
+    category: project.job?.category || "",
+    student: buildProjectPerson(project.student),
+    client: buildProjectPerson(project.client),
+    deadline: formatCardDate(project.job?.deadline),
+    budget: formatCardBudget(project.job?.budget),
+    revisionCount,
+    lastUpdated: project.lastActivityAt,
+    currentAction: getCurrentAction(
+      project.status,
+      viewerRole,
+      latestSubmission
+    ),
+    submissions: latestSubmissionSummary ? [latestSubmissionSummary] : [],
   };
 };
 
@@ -89,17 +184,11 @@ export const buildProjectWorkspace = ({
   const partner = viewerRole === "student" ? project.client : project.student;
   const partnerRole = viewerRole === "student" ? "client" : "student";
 
-  const projectSummary = {
-    projectId: project._id,
-    status: project.status,
-    startedAt: project.startedAt,
-    completedAt: project.completedAt,
-    lastActivityAt: project.lastActivityAt,
-  };
+  const projectSummary = buildProjectStatus(project);
 
   const partnerSummary = partner
     ? {
-        userId: partner._id,
+        id: partner._id?.toString(),
         role: partnerRole,
         fullName: partner.fullName,
         avatar: partner.avatar || "",
@@ -124,87 +213,120 @@ export const buildProjectWorkspace = ({
     },
     job: project.job
       ? {
-          jobId: project.job._id,
+          id: project.job._id?.toString(),
           title: project.job.title,
           category: project.job.category,
+          status: project.job.status,
+          description: project.job.description,
+          requirements: project.job.requirements,
+          skills: project.job.skills || [],
           budget: project.job.budget,
+          duration: project.job.duration,
           deadline: project.job.deadline,
-          verificationRequirement: project.job.verificationRequirement,
+          complexity: project.job.complexity,
+          postedAt: project.job.createdAt,
+          attachedFiles: project.job.attachments || [],
+          ...(viewerRole === "student" && project.client
+            ? {
+                clientName: project.client.fullName,
+                clientInitials: getInitials(project.client.fullName),
+                clientAvatar: project.client.avatar || "",
+                clientCompanyName: partnerProfile?.companyName || "",
+              }
+            : {}),
         }
       : null,
     application: project.application
       ? {
-          applicationId: project.application._id,
+          id: project.application._id?.toString(),
+          status: project.application.status,
           coverMessage: project.application.coverMessage,
-          estimatedCompletionTime: project.application.estimatedCompletionTime,
+          estimatedTime: project.application.estimatedCompletionTime,
           whySuitable: project.application.whySuitable,
           attachments: project.application.attachments || [],
           appliedAt: project.application.appliedAt,
+          acceptedAt: project.application.acceptedAt,
+          rejectedAt: project.application.rejectedAt,
+          withdrawnAt: project.application.withdrawnAt,
+          updatedAt: project.application.updatedAt,
         }
       : null,
-    partner: partnerSummary,
+    studentProfile:
+      viewerRole === "client"
+        ? buildWorkspaceStudentProfile({
+            student: project.student,
+            studentProfile: partnerProfile,
+            studentVerification: partnerVerification,
+          })
+        : null,
   };
 };
 
-export const buildDeliverablesSummary = ({ project, deliverables }) => {
-  const latestSubmission = deliverables[0] || null;
+const buildRelatedRevisionSummary = (revision) => {
+  if (!revision) return null;
+
+  return {
+    id: revision._id?.toString(),
+    revisionNumber: revision.revisionNumber,
+    requestedAt: revision.requestedAt,
+    resolved: revision.resolved,
+    resolvedAt: revision.resolvedAt,
+  };
+};
+
+export const buildDeliverablesSummary = ({
+  project,
+  currentDeliverable,
+  historyDeliverables = [],
+  relatedRevision,
+}) => {
+  const currentDeliverableSummary = buildDetailedSubmission(currentDeliverable);
+
+  if (currentDeliverableSummary) {
+    currentDeliverableSummary.relatedRevision =
+      buildRelatedRevisionSummary(relatedRevision);
+  }
 
   return {
     project: {
-      projectId: project._id,
+      id: project._id?.toString(),
       status: project.status,
       canSubmit: SUBMITTABLE_PROJECT_STATUSES.includes(project.status),
     },
-    latestSubmission: latestSubmission
-      ? {
-          deliverableId: latestSubmission._id,
-          versionNumber: latestSubmission.versionNumber,
-          notes: latestSubmission.notes,
-          demoLink: latestSubmission.demoLink,
-          repositoryLink: latestSubmission.repositoryLink,
-          liveUrl: latestSubmission.liveUrl,
-          attachments: latestSubmission.attachments || [],
-          submittedAt: latestSubmission.submittedAt,
-          submittedBy: latestSubmission.submittedBy,
-          status: latestSubmission.status,
-          approvedAt: latestSubmission.approvedAt,
-        }
-      : null,
-    versionHistory: deliverables.map((deliverable) => ({
-      deliverableId: deliverable._id,
-      versionNumber: deliverable.versionNumber,
-      submittedAt: deliverable.submittedAt,
-      status: deliverable.status,
-    })),
+    currentDeliverable: currentDeliverableSummary,
+    history: historyDeliverables.map(buildSubmissionHistoryItem),
   };
 };
 
 export const buildApproveDeliverableResponse = ({ project }) => ({
   project: {
-    projectId: project._id,
+    id: project._id?.toString(),
     status: project.status,
     completedAt: project.completedAt,
     lastActivityAt: project.lastActivityAt,
   },
-  completedAt: project.completedAt,
 });
 
-export const buildRequestRevisionResponse = ({ project, revision }) => ({
-  project: {
-    projectId: project._id,
-    status: project.status,
-    lastActivityAt: project.lastActivityAt,
-  },
-  revision: {
-    revisionId: revision._id,
-    revisionNumber: revision.revisionNumber,
-    requestedAt: revision.requestedAt,
-    message: revision.message,
-    attachments: revision.attachments || [],
-    referenceLinks: revision.referenceLinks || [],
-    resolved: revision.resolved,
-  },
-});
+export const buildRequestRevisionResponse = ({
+  project,
+  revision,
+  requestedBy,
+}) => {
+  const revisionObject =
+    typeof revision.toObject === "function" ? revision.toObject() : revision;
+
+  return {
+    project: {
+      id: project._id?.toString(),
+      status: project.status,
+      lastActivityAt: project.lastActivityAt,
+    },
+    revision: buildRevisionRequest({
+      ...revisionObject,
+      requestedBy: requestedBy || revisionObject.requestedBy,
+    }),
+  };
+};
 
 export const buildRevisionSummary = ({
   project,
@@ -212,31 +334,35 @@ export const buildRevisionSummary = ({
   revisions,
 }) => ({
   project: {
-    projectId: project._id,
+    id: project._id?.toString(),
     status: project.status,
     hasOpenRevision: Boolean(currentOpenRevision),
   },
-  currentOpenRevision: currentOpenRevision
-    ? {
-        revisionId: currentOpenRevision._id,
-        revisionNumber: currentOpenRevision.revisionNumber,
-        message: currentOpenRevision.message,
-        attachments: currentOpenRevision.attachments || [],
-        referenceLinks: currentOpenRevision.referenceLinks || [],
-        requestedAt: currentOpenRevision.requestedAt,
-        requestedBy: currentOpenRevision.requestedBy,
-        resolved: currentOpenRevision.resolved,
-        resolvedAt: currentOpenRevision.resolvedAt,
-      }
-    : null,
+  currentOpenRevision: buildRevisionRequest(currentOpenRevision),
   revisionHistory: revisions.map((revision) => ({
-    revisionId: revision._id,
+    id: revision._id?.toString(),
     revisionNumber: revision.revisionNumber,
     requestedAt: revision.requestedAt,
     resolved: revision.resolved,
     resolvedAt: revision.resolvedAt,
   })),
 });
+
+const buildTimelineActor = (actor) => {
+  if (!actor) return null;
+
+  if (typeof actor !== "object") {
+    return {
+      id: actor.toString(),
+    };
+  }
+
+  return {
+    id: actor._id?.toString() || actor.id?.toString(),
+    fullName: actor.fullName || "",
+    avatar: actor.avatar || "",
+  };
+};
 
 export const buildProjectTimeline = ({ timeline }) => ({
   timeline: [...(timeline || [])]
@@ -247,40 +373,27 @@ export const buildProjectTimeline = ({ timeline }) => ({
       return secondCreatedAt - firstCreatedAt;
     })
     .map((event) => {
-      const actor =
-        event.actor && typeof event.actor === "object"
-          ? {
-              name: event.actor.fullName || "",
-              avatar: event.actor.avatar || "",
-            }
-          : null;
-
-      return {
+      const createdAt = event.createdAt;
+      const timelineEvent = {
         type: event.type,
         message: event.message,
-        actor,
-        createdAt: event.createdAt,
+        actor: buildTimelineActor(event.actor),
+        createdAt,
       };
+
+      if (event.referenceType) {
+        timelineEvent.referenceType = event.referenceType;
+      }
+
+      if (event.referenceId) {
+        timelineEvent.referenceId = event.referenceId.toString();
+      }
+
+      return timelineEvent;
     }),
 });
 
 export const buildSubmitDeliverableResponse = ({ project, deliverable }) => ({
-  project: {
-    projectId: project._id,
-    status: project.status,
-    startedAt: project.startedAt,
-    completedAt: project.completedAt,
-    lastActivityAt: project.lastActivityAt,
-  },
-  latestDeliverable: {
-    deliverableId: deliverable._id,
-    versionNumber: deliverable.versionNumber,
-    submittedAt: deliverable.submittedAt,
-    status: deliverable.status,
-    notes: deliverable.notes,
-    demoLink: deliverable.demoLink,
-    repositoryLink: deliverable.repositoryLink,
-    liveUrl: deliverable.liveUrl,
-    attachments: deliverable.attachments || [],
-  },
+  project: buildProjectStatus(project),
+  latestSubmission: buildDetailedSubmission(deliverable),
 });

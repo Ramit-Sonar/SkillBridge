@@ -140,6 +140,31 @@ const getLatestDeliverableMap = async (projectIds) => {
   );
 };
 
+const getRevisionCountMap = async (projectIds) => {
+  if (projectIds.length === 0) return new Map();
+
+  const revisionCounts = await Revision.aggregate([
+    {
+      $match: {
+        project: { $in: projectIds },
+      },
+    },
+    {
+      $group: {
+        _id: "$project",
+        revisionCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return new Map(
+    revisionCounts.map((revision) => [
+      revision._id.toString(),
+      revision.revisionCount,
+    ])
+  );
+};
+
 const getMyProjects = asyncHandler(async (req, res) => {
   if (!req.user) {
     throw new ApiError(401, "User not authenticated");
@@ -156,9 +181,7 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const partnerField = req.user.role === "student" ? "client" : "student";
 
   const projects = await Project.find({ [ownerField]: req.user._id })
-    .select(
-      "_id job student client status startedAt completedAt lastActivityAt"
-    )
+    .select("_id job student client status lastActivityAt")
     .populate({
       path: "job",
       select: "_id title category budget deadline",
@@ -171,7 +194,10 @@ const getMyProjects = asyncHandler(async (req, res) => {
     .lean();
 
   const projectIds = projects.map((project) => project._id);
-  const latestDeliverableMap = await getLatestDeliverableMap(projectIds);
+  const [latestDeliverableMap, revisionCountMap] = await Promise.all([
+    getLatestDeliverableMap(projectIds),
+    getRevisionCountMap(projectIds),
+  ]);
 
   const projectSummaries = projects.map((project) =>
     buildProjectSummary({
@@ -179,6 +205,7 @@ const getMyProjects = asyncHandler(async (req, res) => {
       viewerRole: req.user.role,
       latestSubmission:
         latestDeliverableMap.get(project._id.toString()) || null,
+      revisionCount: revisionCountMap.get(project._id.toString()) || 0,
     })
   );
 
@@ -215,12 +242,13 @@ const getProjectById = asyncHandler(async (req, res) => {
     )
     .populate({
       path: "job",
-      select: "_id title category budget deadline verificationRequirement",
+      select:
+        "_id title category status description requirements skills budget duration deadline complexity attachments createdAt",
     })
     .populate({
       path: "application",
       select:
-        "_id coverMessage estimatedCompletionTime whySuitable attachments appliedAt",
+        "_id status coverMessage estimatedCompletionTime whySuitable attachments appliedAt acceptedAt rejectedAt withdrawnAt updatedAt",
     })
     .populate({
       path: "student",
@@ -258,14 +286,17 @@ const getProjectById = asyncHandler(async (req, res) => {
   }
 
   if (req.user.role === "client" && studentId) {
-    [partnerProfile, partnerVerification] = await Promise.all([
+    const [studentProfile, verification] = await Promise.all([
       StudentProfile.findOne({ user: studentId })
-        .select("education university")
+        .select("bio education university skills github linkedin portfolio")
         .lean(),
       Verification.findOne({ user: studentId, type: "student" })
-        .select("status")
+        .select("status verifiedAt")
         .lean(),
     ]);
+
+    partnerProfile = studentProfile;
+    partnerVerification = verification;
   }
 
   const projectWorkspace = buildProjectWorkspace({
@@ -315,16 +346,39 @@ const getProjectDeliverables = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You can view only your own project deliverables");
   }
 
-  const deliverables = await Deliverable.find({ project: project._id })
+  const currentDeliverable = await Deliverable.findOne({ project: project._id })
     .select(
-      "_id versionNumber notes demoLink repositoryLink liveUrl attachments submittedAt submittedBy status approvedAt"
+      "_id versionNumber notes demoLink repositoryLink liveUrl attachments submittedAt status approvedAt"
     )
     .sort({ versionNumber: -1 })
     .lean();
 
+  const [historyDeliverables, relatedRevision] = currentDeliverable
+    ? await Promise.all([
+        Deliverable.find({
+          project: project._id,
+          _id: { $ne: currentDeliverable._id },
+        })
+          .select("_id versionNumber submittedAt status")
+          .sort({ versionNumber: -1 })
+          .lean(),
+        Revision.findOne({
+          $or: [
+            { deliverable: currentDeliverable._id },
+            { resolvedByDeliverable: currentDeliverable._id },
+          ],
+        })
+          .select("_id revisionNumber requestedAt resolved resolvedAt")
+          .sort({ revisionNumber: -1 })
+          .lean(),
+      ])
+    : [[], null];
+
   const deliverablesSummary = buildDeliverablesSummary({
     project,
-    deliverables,
+    currentDeliverable,
+    historyDeliverables,
+    relatedRevision,
   });
 
   return res
@@ -379,6 +433,10 @@ const getProjectRevisions = asyncHandler(async (req, res) => {
       .select(
         "_id revisionNumber message attachments referenceLinks requestedAt requestedBy resolved resolvedAt"
       )
+      .populate({
+        path: "requestedBy",
+        select: "_id fullName avatar",
+      })
       .sort({ revisionNumber: -1 })
       .lean(),
     Revision.find({ project: project._id })
@@ -423,7 +481,7 @@ const getProjectTimeline = asyncHandler(async (req, res) => {
     .select("student client timeline")
     .populate({
       path: "timeline.actor",
-      select: "fullName avatar",
+      select: "_id fullName avatar",
     })
     .lean();
 
@@ -561,6 +619,8 @@ const approveDeliverable = asyncHandler(async (req, res) => {
           actor: req.user._id,
           message: `Client approved Deliverable Version ${latestDeliverable.versionNumber}.`,
           createdAt: approvedAt,
+          referenceType: "deliverable",
+          referenceId: latestDeliverable._id,
         },
         session
       );
@@ -572,6 +632,8 @@ const approveDeliverable = asyncHandler(async (req, res) => {
           actor: req.user._id,
           message: "Project completed successfully.",
           createdAt: approvedAt,
+          referenceType: "project",
+          referenceId: currentProject._id,
         },
         session
       );
@@ -733,6 +795,8 @@ const requestRevision = asyncHandler(async (req, res) => {
           actor: req.user._id,
           message: `Revision requested for Version ${latestDeliverable.versionNumber}.`,
           createdAt: requestedAt,
+          referenceType: "revision",
+          referenceId: revision._id,
         },
         session
       );
@@ -740,6 +804,7 @@ const requestRevision = asyncHandler(async (req, res) => {
       responseData = buildRequestRevisionResponse({
         project: updatedProject,
         revision,
+        requestedBy: req.user,
       });
     });
 
@@ -866,7 +931,8 @@ const submitDeliverable = asyncHandler(async (req, res) => {
 
       const latestDeliverable = await getLatestDeliverable(
         currentProject._id,
-        session
+        session,
+        "versionNumber"
       );
       const nextVersionNumber = (latestDeliverable?.versionNumber || 0) + 1;
       const submittedAt = new Date();
@@ -921,6 +987,8 @@ const submitDeliverable = asyncHandler(async (req, res) => {
           actor: req.user._id,
           message: timelineMessage,
           createdAt: submittedAt,
+          referenceType: "deliverable",
+          referenceId: deliverable._id,
         },
         session
       );

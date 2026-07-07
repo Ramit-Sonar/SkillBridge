@@ -4,15 +4,8 @@ export const timelineSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: [
-        "project_created",
-        "deliverable_submitted",
-        "revision_requested",
-        "deliverable_resubmitted",
-        "deliverable_approved",
-        "project_completed",
-      ],
       required: true,
+      trim: true,
     },
 
     actor: {
@@ -30,6 +23,17 @@ export const timelineSchema = new mongoose.Schema(
     createdAt: {
       type: Date,
       default: Date.now,
+    },
+
+    referenceType: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    referenceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
   },
   { _id: false }

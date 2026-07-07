@@ -1,5 +1,7 @@
 // Shared project dummy data - replace with API responses when the backend is ready.
 
+import type { ProfileViewProps } from "../components/shared/StudentProfileView";
+
 export type ProjectStatus = "active" | "submitted" | "revision_requested" | "completed";
 
 export type ProjectSubmissionStatus = "submitted" | "revision_requested" | "approved";
@@ -108,6 +110,7 @@ export interface Project {
   timeline: ProjectTimelineItem[];
   job: ProjectJobDetails;
   application: ProjectApplicationDetails;
+  studentProfile?: ProfileViewProps | null;
 }
 
 export const PROJECT_STATUS_CFG: Record<

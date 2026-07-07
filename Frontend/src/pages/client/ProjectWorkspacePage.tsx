@@ -8,8 +8,6 @@ import {
   Clock,
   FileText,
   GitPullRequest,
-  Lock,
-  MessageSquare,
   Tag,
   Upload,
   X,
@@ -26,14 +24,12 @@ import {
 } from "../../app/components/shared/ProjectSubmissionForm";
 import { RevisionRequestCard } from "../../app/components/shared/RevisionRequestCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
-import {
-  StudentProfileView,
-  type ProfileViewProps,
-} from "../../app/components/shared/StudentProfileView";
+import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { Timeline } from "../../app/components/shared/Timeline";
-import { ConfirmDialog, SidePanel } from "../../app/components/shared/ui";
+import { ConfirmDialog, SidePanel, StatusBadge } from "../../app/components/shared/ui";
 import {
   PROJECTS,
+  PROJECT_STATUS_CFG,
   type Project,
   type ProjectFile,
   type ProjectStatus,
@@ -41,8 +37,18 @@ import {
   type ProjectTimelineItem,
   type RevisionRequest,
 } from "../../app/data/projects";
+import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 
 type ProjectWorkspaceTab = "overview" | "deliverables" | "activity" | "job" | "proposal";
+
+const CATEGORY_BADGE_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  "web-dev": { bg: "#EFF6FF", color: "#2563EB", border: "#BFDBFE" },
+  "ui-ux": { bg: "#F0FDFA", color: "#0D9488", border: "#99F6E4" },
+  graphic: { bg: "#F5F3FF", color: "#7C3AED", border: "#DDD6FE" },
+  documentation: { bg: "#ECFDF5", color: "#059669", border: "#6EE7B7" },
+  presentation: { bg: "#FFFBEB", color: "#D97706", border: "#FDE68A" },
+  other: { bg: "#F8FAFC", color: "#64748B", border: "#CBD5E1" },
+};
 
 const nowLabel = () =>
   new Date().toLocaleString("en-US", {
@@ -52,6 +58,23 @@ const nowLabel = () =>
     hour: "2-digit",
     minute: "2-digit",
   });
+
+function getProjectStateText(status: ProjectStatus) {
+  if (status === "submitted") return "Waiting for Client Review";
+  if (status === "revision_requested") return "Revision Requested";
+  if (status === "completed") return "Project Completed";
+
+  return "In Progress";
+}
+
+function getCategoryBadge(project: Project) {
+  const categoryKey = project.job.category;
+  const label =
+    JOB_CATEGORY_LABELS[categoryKey as keyof typeof JOB_CATEGORY_LABELS] ?? project.category;
+  const style = CATEGORY_BADGE_STYLES[categoryKey] ?? CATEGORY_BADGE_STYLES.other;
+
+  return { label, style };
+}
 
 function uploadedToProjectFile(file: UploadedFile): ProjectFile {
   return {
@@ -234,54 +257,6 @@ function RevisionRequestDialog({
   );
 }
 
-function buildStudentProfile(project: Project): ProfileViewProps {
-  return {
-    name: project.student.name,
-    initials: project.student.initials,
-    headline: `${project.category} student contributor`,
-    location: "Kathmandu, Nepal",
-    education: "Bachelor in Computer Applications",
-    university: "Tribhuvan University",
-    bio: `${project.student.name} focuses on practical project delivery, clear communication, and revision-friendly handoff work.`,
-    verified: true,
-    skills: project.skills.map((skill, index) => ({ name: skill, verified: index < 2 })),
-    rating: 4.8,
-    reviewCount: 6,
-    completedProjectsCount: 4,
-    github: "github.com/skillbridge-student",
-    linkedin: "linkedin.com/in/skillbridge-student",
-    portfolio: "student-portfolio.example.com",
-    projects: [
-      {
-        id: `${project.id}-portfolio-1`,
-        title: project.title,
-        category: project.category,
-        description: "Current SkillBridge project workspace reference.",
-        skills: project.skills,
-        rating: project.status === "completed" ? 5 : 4.7,
-      },
-    ],
-    certificates: [
-      {
-        id: `${project.id}-cert-1`,
-        title: `${project.category} Fundamentals`,
-        issuer: "SkillBridge Learning",
-        issuedAt: "2026",
-      },
-    ],
-    reviews: [
-      {
-        id: `${project.id}-review-1`,
-        clientName: project.client.name,
-        clientInitials: project.client.initials,
-        rating: 5,
-        comment: "Clear communication and strong attention to requested changes.",
-        submittedAt: "Jun 2026",
-      },
-    ],
-  };
-}
-
 export default function ProjectWorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
@@ -305,7 +280,6 @@ export default function ProjectWorkspacePage() {
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showStudentProfile, setShowStudentProfile] = useState(false);
-  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   if (!projectData) {
     return (
@@ -330,8 +304,9 @@ export default function ProjectWorkspacePage() {
   const olderSubmissions = submissions.slice(1);
   const latestRevisionRequest = revisionRequests[0];
   const revisionCount = revisionRequests.length;
-  const readOnly = status === "completed";
-  const studentProfile = buildStudentProfile(projectData);
+  const studentProfile = projectData.studentProfile ?? null;
+  const categoryBadge = getCategoryBadge(projectData);
+  const projectStateText = getProjectStateText(status);
 
   const tabs: { label: string; value: ProjectWorkspaceTab }[] = [
     { label: "Overview", value: "overview" },
@@ -482,7 +457,9 @@ export default function ProjectWorkspacePage() {
 
   const renderDeliverablesTab = () => (
     <div className="flex flex-col gap-5">
-      {latestRevisionRequest && <RevisionRequestCard request={latestRevisionRequest} />}
+      {latestRevisionRequest && (
+        <RevisionRequestCard request={latestRevisionRequest} viewerRole={role} />
+      )}
 
       {role === "student" && status === "active" && (
         <ProjectSubmissionForm
@@ -502,36 +479,6 @@ export default function ProjectWorkspacePage() {
           submitting={submitting}
           onSubmit={handleSubmitProject}
         />
-      )}
-
-      {role === "student" && status === "submitted" && (
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
-          <EmptyState
-            icon={MessageSquare}
-            title="Waiting for Client Review"
-            message="Your latest deliverables are submitted. The client can approve them or request a revision."
-          />
-        </section>
-      )}
-
-      {role === "client" && status === "active" && (
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
-          <EmptyState
-            icon={FileText}
-            title="Waiting for Student Submission"
-            message="The student has not submitted deliverables yet."
-          />
-        </section>
-      )}
-
-      {role === "client" && status === "revision_requested" && (
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
-          <EmptyState
-            icon={GitPullRequest}
-            title="Waiting for Student Resubmission"
-            message="A revision request has been sent. The student can now resubmit deliverables."
-          />
-        </section>
       )}
 
       {role === "client" && status === "submitted" && (
@@ -564,26 +511,6 @@ export default function ProjectWorkspacePage() {
               <GitPullRequest className="w-4 h-4" /> Request Revision
             </motion.button>
           </div>
-        </section>
-      )}
-
-      {readOnly && (
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
-          <EmptyState
-            icon={Lock}
-            title="Project Completed"
-            message="Deliverables are approved. This workspace is now read-only."
-          />
-          {role === "client" && !reviewSubmitted && (
-            <button
-              type="button"
-              onClick={() => setShowReview(true)}
-              className="w-full mt-3 flex items-center justify-center gap-2 bg-amber-50 text-amber-600 font-semibold py-2.5 rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors"
-              style={{ fontSize: "0.875rem" }}
-            >
-              Leave a Review
-            </button>
-          )}
         </section>
       )}
 
@@ -651,7 +578,7 @@ export default function ProjectWorkspacePage() {
           lastUpdated={lastUpdated}
           action={renderOverviewAction()}
           profileAction={
-            role === "client" ? (
+            role === "client" && studentProfile ? (
               <button
                 type="button"
                 onClick={() => setShowStudentProfile(true)}
@@ -715,7 +642,22 @@ export default function ProjectWorkspacePage() {
         </button>
 
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
-          <div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <span
+              className="inline-flex items-center rounded-full border px-3 py-1 font-bold"
+              style={{
+                background: categoryBadge.style.bg,
+                color: categoryBadge.style.color,
+                borderColor: categoryBadge.style.border,
+                fontSize: "0.68rem",
+              }}
+            >
+              {categoryBadge.label}
+            </span>
+            <StatusBadge config={PROJECT_STATUS_CFG[status]} />
+          </div>
+
+          <div className="border-t border-black/[0.05] pt-4">
             <h1
               className="text-slate-900 tracking-tight"
               style={{
@@ -726,9 +668,12 @@ export default function ProjectWorkspacePage() {
             >
               {projectData.title}
             </h1>
+            <p className="text-slate-500 font-semibold mt-1.5" style={{ fontSize: "0.82rem" }}>
+              {projectStateText}
+            </p>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-3 pt-3 border-t border-black/[0.05]">
+          <div className="grid sm:grid-cols-3 gap-3">
             {[
               { label: "Started", value: projectData.startDate, icon: Calendar },
               { label: "Deadline", value: projectData.deadline, icon: Clock },
@@ -820,13 +765,12 @@ export default function ProjectWorkspacePage() {
             completedAt={lastUpdated}
             onClose={() => setShowReview(false)}
             onSubmit={() => {
-              setReviewSubmitted(true);
               setShowReview(false);
             }}
           />
         )}
 
-        {showStudentProfile && (
+        {showStudentProfile && studentProfile && (
           <SidePanel
             title="Student Profile"
             subtitle={projectData.student.name}

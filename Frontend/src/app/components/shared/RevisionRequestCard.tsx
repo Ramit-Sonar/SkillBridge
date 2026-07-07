@@ -4,9 +4,12 @@ import { FileAttachmentCard } from "./FileAttachmentCard";
 
 type RevisionRequestCardProps = {
   request: RevisionRequest;
+  viewerRole?: "student" | "client";
 };
 
-export function RevisionRequestCard({ request }: RevisionRequestCardProps) {
+export function RevisionRequestCard({ request, viewerRole = "student" }: RevisionRequestCardProps) {
+  const showRequestedBy = viewerRole !== "client";
+
   return (
     <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -25,15 +28,17 @@ export function RevisionRequestCard({ request }: RevisionRequestCardProps) {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div className="bg-white border border-amber-200 rounded-xl p-3">
-          <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
-            Requested By
-          </p>
-          <p className="text-slate-900 font-semibold mt-0.5" style={{ fontSize: "0.78rem" }}>
-            {request.requestedBy.name}
-          </p>
-        </div>
+      <div className={showRequestedBy ? "grid sm:grid-cols-2 gap-3" : "grid gap-3"}>
+        {showRequestedBy && (
+          <div className="bg-white border border-amber-200 rounded-xl p-3">
+            <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
+              Requested By
+            </p>
+            <p className="text-slate-900 font-semibold mt-0.5" style={{ fontSize: "0.78rem" }}>
+              {request.requestedBy.name}
+            </p>
+          </div>
+        )}
         <div className="bg-white border border-amber-200 rounded-xl p-3">
           <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
             Requested On

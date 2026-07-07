@@ -14,6 +14,7 @@ import { buildClientSummary } from "../utils/buildClientSummary.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
+import { createProjectFromAcceptedApplication } from "../services/project.service.js";
 
 const submitApplication = asyncHandler(async (req, res) => {
   const uploadedFiles = req.files;
@@ -561,7 +562,12 @@ const acceptApplication = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Only open jobs can accept applications");
       }
 
-      // Phase 8: create a Project from the accepted application here.
+      const project = await createProjectFromAcceptedApplication({
+        application: acceptedApplication,
+        job,
+        session,
+      });
+
       responseData = {
         applicationId: acceptedApplication._id,
         status: acceptedApplication.status,
@@ -572,6 +578,11 @@ const acceptApplication = asyncHandler(async (req, res) => {
         job: {
           jobId: closedJob._id,
           status: closedJob.status,
+        },
+        project: {
+          projectId: project._id,
+          status: project.status,
+          startedAt: project.startedAt,
         },
       };
     });
