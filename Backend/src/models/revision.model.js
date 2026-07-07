@@ -64,6 +64,12 @@ const revisionSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    resolvedByDeliverable: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Deliverable",
+      default: null,
+    },
   },
   {
     timestamps: true,

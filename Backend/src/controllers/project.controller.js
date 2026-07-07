@@ -1,16 +1,46 @@
 import mongoose from "mongoose";
+import validator from "validator";
 import { ClientProfile } from "../models/clientProfile.model.js";
 import { Deliverable } from "../models/deliverable.model.js";
 import { Project } from "../models/project.model.js";
+import { Revision } from "../models/revision.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   buildProjectSummary,
   buildProjectWorkspace,
+  buildSubmitDeliverableResponse,
 } from "../utils/projectResponse.js";
+import { removeTempFiles } from "../utils/tempFile.js";
+
+const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
+
+const validateOptionalUrl = (value, fieldName) => {
+  if (value === undefined || value === null) return "";
+
+  if (typeof value !== "string") {
+    throw new ApiError(400, `${fieldName} must be a valid URL`);
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) return "";
+
+  if (
+    !validator.isURL(trimmedValue, {
+      protocols: ["http", "https"],
+      require_protocol: true,
+    })
+  ) {
+    throw new ApiError(400, `${fieldName} must be a valid URL`);
+  }
+
+  return trimmedValue;
+};
 
 const getLatestDeliverableMap = async (projectIds) => {
   if (projectIds.length === 0) return new Map();
@@ -192,4 +222,224 @@ const getProjectById = asyncHandler(async (req, res) => {
     );
 });
 
-export { getMyProjects, getProjectById };
+const submitDeliverable = asyncHandler(async (req, res) => {
+  const uploadedFiles = req.files;
+  const { projectId } = req.params;
+  const { notes, demoLink, repositoryLink, liveUrl } = req.body || {};
+  let uploadedAttachments = [];
+  let session;
+
+  try {
+    if (!req.user) {
+      throw new ApiError(401, "User not authenticated");
+    }
+
+    if (req.user.role !== "student") {
+      throw new ApiError(403, "Only students can submit deliverables");
+    }
+
+    if (!mongoose.isValidObjectId(projectId)) {
+      throw new ApiError(400, "Invalid project id");
+    }
+
+    if (typeof notes !== "string" || !notes.trim()) {
+      throw new ApiError(400, "Submission notes are required");
+    }
+
+    const trimmedNotes = notes.trim();
+    const trimmedDemoLink = validateOptionalUrl(demoLink, "Demo link");
+    const trimmedRepositoryLink = validateOptionalUrl(
+      repositoryLink,
+      "Repository link"
+    );
+    const trimmedLiveUrl = validateOptionalUrl(liveUrl, "Live URL");
+
+    const project = await Project.findById(projectId)
+      .select("student status")
+      .lean();
+
+    if (!project) {
+      throw new ApiError(404, "Project not found");
+    }
+
+    if (project.student.toString() !== req.user._id.toString()) {
+      throw new ApiError(403, "You can submit only for your own project");
+    }
+
+    if (!SUBMITTABLE_PROJECT_STATUSES.includes(project.status)) {
+      if (project.status === "submitted") {
+        throw new ApiError(
+          400,
+          "This project is already submitted and awaiting client review"
+        );
+      }
+
+      if (project.status === "completed") {
+        throw new ApiError(400, "Completed projects cannot be submitted again");
+      }
+
+      throw new ApiError(400, "Project is not open for deliverable submission");
+    }
+
+    uploadedAttachments = await uploadAttachments(uploadedFiles);
+    session = await mongoose.startSession();
+    let responseData;
+
+    await session.withTransaction(async () => {
+      const currentProject = await Project.findById(projectId)
+        .select("student status startedAt completedAt lastActivityAt")
+        .session(session)
+        .lean();
+
+      if (!currentProject) {
+        throw new ApiError(404, "Project not found");
+      }
+
+      if (currentProject.student.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You can submit only for your own project");
+      }
+
+      if (!SUBMITTABLE_PROJECT_STATUSES.includes(currentProject.status)) {
+        if (currentProject.status === "submitted") {
+          throw new ApiError(
+            400,
+            "This project is already submitted and awaiting client review"
+          );
+        }
+
+        if (currentProject.status === "completed") {
+          throw new ApiError(
+            400,
+            "Completed projects cannot be submitted again"
+          );
+        }
+
+        throw new ApiError(
+          400,
+          "Project is not open for deliverable submission"
+        );
+      }
+
+      const latestDeliverable = await Deliverable.findOne({
+        project: currentProject._id,
+      })
+        .select("versionNumber")
+        .sort({ versionNumber: -1 })
+        .session(session)
+        .lean();
+      const nextVersionNumber = (latestDeliverable?.versionNumber || 0) + 1;
+      const submittedAt = new Date();
+      const isResubmission = currentProject.status === "revision_requested";
+      const [deliverable] = await Deliverable.create(
+        [
+          {
+            project: currentProject._id,
+            versionNumber: nextVersionNumber,
+            submittedBy: req.user._id,
+            submittedAt,
+            notes: trimmedNotes,
+            demoLink: trimmedDemoLink,
+            repositoryLink: trimmedRepositoryLink,
+            liveUrl: trimmedLiveUrl,
+            attachments: uploadedAttachments,
+            status: "submitted",
+          },
+        ],
+        { session }
+      );
+
+      if (isResubmission) {
+        const resolvedRevision = await Revision.findOneAndUpdate(
+          {
+            project: currentProject._id,
+            resolved: false,
+          },
+          {
+            $set: {
+              resolved: true,
+              resolvedAt: submittedAt,
+              resolvedByDeliverable: deliverable._id,
+            },
+          },
+          {
+            new: true,
+            session,
+            sort: { requestedAt: -1 },
+          }
+        )
+          .select("_id")
+          .lean();
+
+        if (!resolvedRevision) {
+          throw new ApiError(400, "Open revision request not found");
+        }
+      }
+
+      const timelineType = isResubmission
+        ? "deliverable_resubmitted"
+        : "deliverable_submitted";
+      const timelineMessage = isResubmission
+        ? `Student resubmitted Version ${nextVersionNumber} after requested revisions.`
+        : `Student submitted Version ${nextVersionNumber}.`;
+      const updatedProject = await Project.findOneAndUpdate(
+        {
+          _id: currentProject._id,
+          status: currentProject.status,
+        },
+        {
+          $set: {
+            status: "submitted",
+            lastActivityAt: submittedAt,
+          },
+          $push: {
+            timeline: {
+              type: timelineType,
+              actor: req.user._id,
+              message: timelineMessage,
+              createdAt: submittedAt,
+            },
+          },
+        },
+        {
+          new: true,
+          session,
+        }
+      )
+        .select("status startedAt completedAt lastActivityAt")
+        .lean();
+
+      if (!updatedProject) {
+        throw new ApiError(409, "Project status changed. Please try again");
+      }
+
+      responseData = buildSubmitDeliverableResponse({
+        project: updatedProject,
+        deliverable,
+      });
+    });
+
+    uploadedAttachments = [];
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(201, responseData, "Deliverable submitted successfully")
+      );
+  } catch (error) {
+    await deleteAttachments(uploadedAttachments);
+
+    if (error?.code === 11000) {
+      throw new ApiError(409, "Deliverable version already exists");
+    }
+
+    throw error;
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
+
+    removeTempFiles(uploadedFiles);
+  }
+});
+
+export { getMyProjects, getProjectById, submitDeliverable };

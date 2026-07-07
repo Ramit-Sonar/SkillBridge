@@ -143,3 +143,24 @@ export const buildProjectWorkspace = ({
     partner: partnerSummary,
   };
 };
+
+export const buildSubmitDeliverableResponse = ({ project, deliverable }) => ({
+  project: {
+    projectId: project._id,
+    status: project.status,
+    startedAt: project.startedAt,
+    completedAt: project.completedAt,
+    lastActivityAt: project.lastActivityAt,
+  },
+  latestDeliverable: {
+    deliverableId: deliverable._id,
+    versionNumber: deliverable.versionNumber,
+    submittedAt: deliverable.submittedAt,
+    status: deliverable.status,
+    notes: deliverable.notes,
+    demoLink: deliverable.demoLink,
+    repositoryLink: deliverable.repositoryLink,
+    liveUrl: deliverable.liveUrl,
+    attachments: deliverable.attachments || [],
+  },
+});
