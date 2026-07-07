@@ -22,6 +22,7 @@ import {
   buildProjectSummary,
   buildProjectWorkspace,
   buildRequestRevisionResponse,
+  buildRevisionSummary,
   buildSubmitDeliverableResponse,
 } from "../utils/projectResponse.js";
 import { removeTempFiles } from "../utils/tempFile.js";
@@ -332,6 +333,72 @@ const getProjectDeliverables = asyncHandler(async (req, res) => {
         200,
         deliverablesSummary,
         "Project deliverables fetched successfully"
+      )
+    );
+});
+
+const getProjectRevisions = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (!["student", "client"].includes(req.user.role)) {
+    throw new ApiError(403, "Only students and clients can view revisions");
+  }
+
+  if (!mongoose.isValidObjectId(projectId)) {
+    throw new ApiError(400, "Invalid project id");
+  }
+
+  const project = await Project.findById(projectId)
+    .select("student client status")
+    .lean();
+
+  if (!project) {
+    throw new ApiError(404, "Project not found");
+  }
+
+  const userId = req.user._id.toString();
+
+  if (req.user.role === "student" && project.student.toString() !== userId) {
+    throw new ApiError(403, "You can view only your own project revisions");
+  }
+
+  if (req.user.role === "client" && project.client.toString() !== userId) {
+    throw new ApiError(403, "You can view only your own project revisions");
+  }
+
+  const [currentOpenRevision, revisions] = await Promise.all([
+    Revision.findOne({
+      project: project._id,
+      resolved: false,
+    })
+      .select(
+        "_id revisionNumber message attachments referenceLinks requestedAt requestedBy resolved resolvedAt"
+      )
+      .sort({ revisionNumber: -1 })
+      .lean(),
+    Revision.find({ project: project._id })
+      .select("_id revisionNumber requestedAt resolved resolvedAt")
+      .sort({ revisionNumber: -1 })
+      .lean(),
+  ]);
+
+  const revisionSummary = buildRevisionSummary({
+    project,
+    currentOpenRevision,
+    revisions,
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        revisionSummary,
+        "Project revisions fetched successfully"
       )
     );
 });
@@ -849,6 +916,7 @@ export {
   getMyProjects,
   getProjectById,
   getProjectDeliverables,
+  getProjectRevisions,
   requestRevision,
   submitDeliverable,
 };

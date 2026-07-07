@@ -206,6 +206,38 @@ export const buildRequestRevisionResponse = ({ project, revision }) => ({
   },
 });
 
+export const buildRevisionSummary = ({
+  project,
+  currentOpenRevision,
+  revisions,
+}) => ({
+  project: {
+    projectId: project._id,
+    status: project.status,
+    hasOpenRevision: Boolean(currentOpenRevision),
+  },
+  currentOpenRevision: currentOpenRevision
+    ? {
+        revisionId: currentOpenRevision._id,
+        revisionNumber: currentOpenRevision.revisionNumber,
+        message: currentOpenRevision.message,
+        attachments: currentOpenRevision.attachments || [],
+        referenceLinks: currentOpenRevision.referenceLinks || [],
+        requestedAt: currentOpenRevision.requestedAt,
+        requestedBy: currentOpenRevision.requestedBy,
+        resolved: currentOpenRevision.resolved,
+        resolvedAt: currentOpenRevision.resolvedAt,
+      }
+    : null,
+  revisionHistory: revisions.map((revision) => ({
+    revisionId: revision._id,
+    revisionNumber: revision.revisionNumber,
+    requestedAt: revision.requestedAt,
+    resolved: revision.resolved,
+    resolvedAt: revision.resolvedAt,
+  })),
+});
+
 export const buildSubmitDeliverableResponse = ({ project, deliverable }) => ({
   project: {
     projectId: project._id,

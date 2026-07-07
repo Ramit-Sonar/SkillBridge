@@ -4,6 +4,7 @@ import {
   getMyProjects,
   getProjectById,
   getProjectDeliverables,
+  getProjectRevisions,
   requestRevision,
   submitDeliverable,
 } from "../controllers/project.controller.js";
@@ -44,6 +45,9 @@ router
     deliverableAttachmentUpload,
     submitDeliverable
   );
+router
+  .route("/:projectId/revisions")
+  .get(verifyJWT, projectRoles, getProjectRevisions);
 router.route("/:projectId").get(verifyJWT, projectRoles, getProjectById);
 
 export default router;
