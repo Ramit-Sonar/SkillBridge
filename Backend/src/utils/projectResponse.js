@@ -179,6 +179,16 @@ export const buildDeliverablesSummary = ({ project, deliverables }) => {
   };
 };
 
+export const buildApproveDeliverableResponse = ({ project }) => ({
+  project: {
+    projectId: project._id,
+    status: project.status,
+    completedAt: project.completedAt,
+    lastActivityAt: project.lastActivityAt,
+  },
+  completedAt: project.completedAt,
+});
+
 export const buildSubmitDeliverableResponse = ({ project, deliverable }) => ({
   project: {
     projectId: project._id,

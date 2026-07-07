@@ -7,10 +7,18 @@ const PROJECT_CREATED_MESSAGE = "Project created after application acceptance.";
 
 const getDocumentId = (document) => document?._id || document;
 
-export const getLatestDeliverable = async (projectId, session = null) => {
+export const getLatestDeliverable = async (
+  projectId,
+  session = null,
+  selectFields = ""
+) => {
   const query = Deliverable.findOne({ project: projectId }).sort({
     versionNumber: -1,
   });
+
+  if (selectFields) {
+    query.select(selectFields);
+  }
 
   if (session) {
     query.session(session);
@@ -60,11 +68,17 @@ export const createProjectFromAcceptedApplication = async ({
   session,
 }) => {
   if (!session) {
-    throw new ApiError(500, "Project creation requires an active database session");
+    throw new ApiError(
+      500,
+      "Project creation requires an active database session"
+    );
   }
 
   if (!application) {
-    throw new ApiError(400, "Accepted application is required to create project");
+    throw new ApiError(
+      400,
+      "Accepted application is required to create project"
+    );
   }
 
   if (!job) {
@@ -81,7 +95,10 @@ export const createProjectFromAcceptedApplication = async ({
   const clientId = getDocumentId(job.client);
 
   if (!applicationId || !jobId || !studentId || !clientId) {
-    throw new ApiError(400, "Application and job must include project relationships");
+    throw new ApiError(
+      400,
+      "Application and job must include project relationships"
+    );
   }
 
   const existingApplicationProject = await Project.exists({
@@ -92,7 +109,9 @@ export const createProjectFromAcceptedApplication = async ({
     throw new ApiError(409, "Application is already linked to a project");
   }
 
-  const existingJobProject = await Project.exists({ job: jobId }).session(session);
+  const existingJobProject = await Project.exists({ job: jobId }).session(
+    session
+  );
 
   if (existingJobProject) {
     throw new ApiError(409, "Job is already linked to a project");
@@ -127,7 +146,10 @@ export const createProjectFromAcceptedApplication = async ({
     return project;
   } catch (error) {
     if (error?.code === 11000) {
-      throw new ApiError(409, "Project already exists for this application or job");
+      throw new ApiError(
+        409,
+        "Project already exists for this application or job"
+      );
     }
 
     throw error;

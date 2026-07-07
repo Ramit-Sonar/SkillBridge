@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  approveDeliverable,
   getMyProjects,
   getProjectById,
   getProjectDeliverables,
@@ -12,6 +13,7 @@ import { removeTempFiles } from "../utils/tempFile.js";
 
 const router = Router();
 const projectRoles = authorizeRoles("student", "client");
+const clientRoles = authorizeRoles("client");
 const studentRoles = authorizeRoles("student");
 const deliverableAttachmentUpload = (req, res, next) => {
   jobAttachmentUpload.array("attachments", 3)(req, res, (error) => {
@@ -26,6 +28,9 @@ const deliverableAttachmentUpload = (req, res, next) => {
 };
 
 router.route("/my-projects").get(verifyJWT, projectRoles, getMyProjects);
+router
+  .route("/:projectId/deliverables/approve")
+  .patch(verifyJWT, clientRoles, approveDeliverable);
 router
   .route("/:projectId/deliverables")
   .get(verifyJWT, projectRoles, getProjectDeliverables)

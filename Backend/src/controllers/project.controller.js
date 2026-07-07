@@ -16,6 +16,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
+  buildApproveDeliverableResponse,
   buildDeliverablesSummary,
   buildProjectSummary,
   buildProjectWorkspace,
@@ -284,6 +285,143 @@ const getProjectDeliverables = asyncHandler(async (req, res) => {
     );
 });
 
+const approveDeliverable = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+  let session;
+
+  try {
+    if (!req.user) {
+      throw new ApiError(401, "User not authenticated");
+    }
+
+    if (req.user.role !== "client") {
+      throw new ApiError(403, "Only clients can approve deliverables");
+    }
+
+    if (!mongoose.isValidObjectId(projectId)) {
+      throw new ApiError(400, "Invalid project id");
+    }
+
+    const project = await Project.findById(projectId)
+      .select("client status")
+      .lean();
+
+    if (!project) {
+      throw new ApiError(404, "Project not found");
+    }
+
+    if (project.client.toString() !== req.user._id.toString()) {
+      throw new ApiError(403, "You can approve only your own project");
+    }
+
+    if (project.status !== "submitted") {
+      if (project.status === "completed") {
+        throw new ApiError(400, "Completed projects cannot be approved again");
+      }
+
+      throw new ApiError(400, "Project is not awaiting deliverable approval");
+    }
+
+    session = await mongoose.startSession();
+    let responseData;
+
+    await session.withTransaction(async () => {
+      const currentProject = await Project.findById(projectId)
+        .select("client status startedAt completedAt lastActivityAt timeline")
+        .session(session);
+
+      if (!currentProject) {
+        throw new ApiError(404, "Project not found");
+      }
+
+      if (currentProject.client.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You can approve only your own project");
+      }
+
+      if (currentProject.status !== "submitted") {
+        if (currentProject.status === "completed") {
+          throw new ApiError(
+            400,
+            "Completed projects cannot be approved again"
+          );
+        }
+
+        throw new ApiError(400, "Project is not awaiting deliverable approval");
+      }
+
+      const latestDeliverable = await getLatestDeliverable(
+        currentProject._id,
+        session,
+        "status versionNumber approvedBy approvedAt"
+      );
+
+      if (!latestDeliverable) {
+        throw new ApiError(400, "Latest deliverable not found");
+      }
+
+      if (latestDeliverable.status !== "submitted") {
+        throw new ApiError(400, "Latest deliverable is not awaiting approval");
+      }
+
+      const approvedAt = new Date();
+
+      latestDeliverable.set({
+        status: "approved",
+        approvedBy: req.user._id,
+        approvedAt,
+      });
+
+      await latestDeliverable.save({ session });
+
+      let updatedProject = await updateProjectActivity(
+        currentProject,
+        {
+          status: "completed",
+          completedAt: approvedAt,
+          lastActivityAt: approvedAt,
+        },
+        session
+      );
+
+      updatedProject = await appendTimeline(
+        updatedProject,
+        {
+          type: "deliverable_approved",
+          actor: req.user._id,
+          message: `Client approved Deliverable Version ${latestDeliverable.versionNumber}.`,
+          createdAt: approvedAt,
+        },
+        session
+      );
+
+      updatedProject = await appendTimeline(
+        updatedProject,
+        {
+          type: "project_completed",
+          actor: req.user._id,
+          message: "Project completed successfully.",
+          createdAt: approvedAt,
+        },
+        session
+      );
+
+      responseData = buildApproveDeliverableResponse({
+        project: updatedProject,
+      });
+    });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, responseData, "Deliverable approved successfully")
+      );
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
+  }
+});
+
 const submitDeliverable = asyncHandler(async (req, res) => {
   const uploadedFiles = req.files;
   const { projectId } = req.params;
@@ -482,6 +620,7 @@ const submitDeliverable = asyncHandler(async (req, res) => {
 });
 
 export {
+  approveDeliverable,
   getMyProjects,
   getProjectById,
   getProjectDeliverables,
