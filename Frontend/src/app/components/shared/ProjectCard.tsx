@@ -1,62 +1,18 @@
 import { Calendar, ChevronRight, Clock, GitPullRequest, Tag } from "lucide-react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
+import { PROJECT_STATUS_CFG, type Project, type ProjectSubmission } from "../../data/projects";
 import {
-  PROJECT_STATUS_CFG,
-  type Project,
-  type ProjectSubmission,
-  type ProjectSubmissionStatus,
-} from "../../data/projects";
+  formatProjectRelativeDate,
+  getProjectCardAction,
+  getProjectSubmissionStatusTitleLabel,
+} from "./projectPresentation";
 import { StatusBadge } from "./ui";
 
 type ProjectCardProps = {
   project: Project;
   role: "student" | "client";
 };
-
-const SUBMISSION_STATUS_LABELS: Record<ProjectSubmissionStatus, string> = {
-  submitted: "Submitted",
-  revision_requested: "Needs Revision",
-  approved: "Approved",
-};
-
-function getCurrentAction(project: Project, role: ProjectCardProps["role"]) {
-  if (project.status === "completed") return "Project completed";
-
-  if (project.status === "submitted") {
-    return role === "client" ? "Review latest submission" : "Waiting for client review";
-  }
-
-  if (project.status === "revision_requested") {
-    return role === "student" ? "Client requested revisions" : "Waiting for student resubmission";
-  }
-
-  if (role === "student") {
-    return project.submissions.length > 0 ? "Continue project work" : "Submit first deliverables";
-  }
-
-  return "Waiting for student submission";
-}
-
-function formatRelativeDate(date: string) {
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) return date;
-
-  const today = new Date();
-  const diffMs = today.getTime() - parsedDate.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 30) return `${diffDays} days ago`;
-
-  return parsedDate.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function getLatestSubmissionSummary(submission?: ProjectSubmission) {
   if (!submission) {
@@ -68,7 +24,7 @@ function getLatestSubmissionSummary(submission?: ProjectSubmission) {
 
   return {
     version: `Version ${submission.versionNumber}`,
-    detail: `${SUBMISSION_STATUS_LABELS[submission.status]} ${formatRelativeDate(
+    detail: `${getProjectSubmissionStatusTitleLabel(submission.status)} ${formatProjectRelativeDate(
       submission.submittedAt
     )}`,
   };
@@ -78,7 +34,7 @@ export function ProjectCard({ project, role }: ProjectCardProps) {
   const navigate = useNavigate();
   const person = role === "student" ? project.client : project.student;
   const personLabel = role === "student" ? "Client" : "Student";
-  const currentAction = getCurrentAction(project, role);
+  const currentAction = getProjectCardAction(project.status, role, project.submissions.length > 0);
   const latestSubmission = getLatestSubmissionSummary(project.submissions[0]);
 
   return (
@@ -156,7 +112,7 @@ export function ProjectCard({ project, role }: ProjectCardProps) {
             icon: GitPullRequest,
             label: `${project.revisionCount} revision${project.revisionCount === 1 ? "" : "s"}`,
           },
-          { icon: Clock, label: formatRelativeDate(project.lastUpdated) },
+          { icon: Clock, label: formatProjectRelativeDate(project.lastUpdated) },
         ].map((item) => (
           <div key={item.label} className="flex items-center gap-1.5 min-w-0">
             <item.icon className="w-3.5 h-3.5 text-slate-400 shrink-0" />

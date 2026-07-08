@@ -1,25 +1,26 @@
 import { Link } from "lucide-react";
 import type { ProjectSubmission } from "../../data/projects";
 import { FileAttachmentCard } from "./FileAttachmentCard";
+import { getProjectSubmissionStatusBadgeLabel } from "./projectPresentation";
 import { StatusBadge, type StatusBadgeConfig } from "./ui";
 
 const SUBMISSION_STATUS_CFG: Record<ProjectSubmission["status"], StatusBadgeConfig> = {
   submitted: {
-    label: "Submitted",
+    label: getProjectSubmissionStatusBadgeLabel("submitted"),
     color: "#7C3AED",
     bg: "#F5F3FF",
     border: "#DDD6FE",
     dot: "#8B5CF6",
   },
   revision_requested: {
-    label: "Revision Requested",
+    label: getProjectSubmissionStatusBadgeLabel("revision_requested"),
     color: "#D97706",
     bg: "#FFFBEB",
     border: "#FDE68A",
     dot: "#F59E0B",
   },
   approved: {
-    label: "Approved",
+    label: getProjectSubmissionStatusBadgeLabel("approved"),
     color: "#059669",
     bg: "#ECFDF5",
     border: "#6EE7B7",

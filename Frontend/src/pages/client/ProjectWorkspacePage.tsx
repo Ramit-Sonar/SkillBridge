@@ -18,6 +18,7 @@ import { ReadOnlyApplicationView } from "../../app/components/shared/Application
 import { DeliverableVersionCard } from "../../app/components/shared/DeliverableVersionCard";
 import { FileUploadArea, type UploadedFile } from "../../app/components/shared/FileUploadArea";
 import { ProjectOverview } from "../../app/components/shared/ProjectOverview";
+import { getProjectStateText } from "../../app/components/shared/projectPresentation";
 import {
   ProjectSubmissionForm,
   type ProjectSubmissionFormData,
@@ -58,14 +59,6 @@ const nowLabel = () =>
     hour: "2-digit",
     minute: "2-digit",
   });
-
-function getProjectStateText(status: ProjectStatus) {
-  if (status === "submitted") return "Waiting for Client Review";
-  if (status === "revision_requested") return "Revision Requested";
-  if (status === "completed") return "Project Completed";
-
-  return "In Progress";
-}
 
 function getCategoryBadge(project: Project) {
   const categoryKey = project.job.category;

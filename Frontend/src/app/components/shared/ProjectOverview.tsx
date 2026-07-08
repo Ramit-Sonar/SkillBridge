@@ -4,8 +4,12 @@ import {
   type Project,
   type ProjectStatus,
   type ProjectSubmission,
-  type ProjectSubmissionStatus,
 } from "../../data/projects";
+import {
+  formatProjectRelativeDate,
+  getProjectOverviewAction,
+  getProjectSubmissionStatusLabel,
+} from "./projectPresentation";
 import { StatusBadge } from "./ui";
 
 type ProjectOverviewProps = {
@@ -18,48 +22,6 @@ type ProjectOverviewProps = {
   profileAction?: React.ReactNode;
 };
 
-const SUBMISSION_STATUS_LABELS: Record<ProjectSubmissionStatus, string> = {
-  submitted: "Submitted",
-  revision_requested: "Needs revision",
-  approved: "Approved",
-};
-
-function formatRelativeDate(date: string) {
-  const parsedDate = new Date(date);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return date;
-  }
-
-  const today = new Date();
-  const diffMs = today.getTime() - parsedDate.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 30) return `${diffDays} days ago`;
-
-  return parsedDate.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getCurrentAction(status: ProjectStatus, role: ProjectOverviewProps["role"]) {
-  if (status === "completed") return "Project Completed";
-
-  if (status === "submitted") {
-    return role === "client" ? "Review Deliverables" : "Waiting for Client Review";
-  }
-
-  if (status === "revision_requested") {
-    return role === "student" ? "Revision Requested" : "Waiting for Student Resubmission";
-  }
-
-  return role === "student" ? "Submit Deliverables" : "Waiting for Student Submission";
-}
-
 function getLatestSubmission(submission?: ProjectSubmission) {
   if (!submission) {
     return {
@@ -71,7 +33,7 @@ function getLatestSubmission(submission?: ProjectSubmission) {
 
   return {
     title: `Version ${submission.versionNumber}`,
-    detail: `${SUBMISSION_STATUS_LABELS[submission.status]} - ${formatRelativeDate(
+    detail: `${getProjectSubmissionStatusLabel(submission.status)} - ${formatProjectRelativeDate(
       submission.submittedAt
     )}`,
     titleDate: submission.submittedAt,
@@ -99,10 +61,10 @@ export function ProjectOverview({
   profileAction,
 }: ProjectOverviewProps) {
   const latestSubmission = getLatestSubmission(project.submissions[0]);
-  const currentAction = getCurrentAction(status, role);
+  const currentAction = getProjectOverviewAction(status, role);
   const partner = role === "student" ? project.client : project.student;
   const partnerRole = role === "student" ? "Client" : "Student";
-  const lastActivity = formatRelativeDate(lastUpdated);
+  const lastActivity = formatProjectRelativeDate(lastUpdated);
 
   return (
     <div className="grid lg:grid-cols-3 gap-4 items-start">
