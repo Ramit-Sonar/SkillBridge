@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { ProjectCard } from "../../app/components/shared/ProjectCard";
+import { ProjectListContent } from "../../app/components/shared/ProjectListContent";
 import { FilterChipGroup, SearchInput } from "../../app/components/shared/ui";
 import { Folder } from "lucide-react";
 import { PROJECT_STATUS_CFG, type ProjectStatus } from "../../app/data/projects";
@@ -101,64 +101,14 @@ export default function StudentProjectsPage() {
           onChange={setFilter}
         />
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-            <motion.span
-              className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-            />
-            <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>
-              Loading projects...
-            </p>
-          </div>
-        ) : loadError ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
-              <Folder className="w-9 h-9 text-slate-300" />
-            </div>
-            <div>
-              <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
-                Could not load projects
-              </p>
-              <p className="text-slate-500 mt-1" style={{ fontSize: "0.85rem" }}>
-                {loadError}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={loadProjects}
-              className="inline-flex items-center justify-center bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-colors"
-              style={{ fontSize: "0.82rem" }}
-            >
-              Try Again
-            </button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-20 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
-              <Folder className="w-9 h-9 text-slate-300" />
-            </div>
-            <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
-              No Projects Found
-            </p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <AnimatePresence>
-              {filtered.map((project, index) => (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.06 }}
-                >
-                  <ProjectCard project={project} role="student" />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+        <ProjectListContent
+          loading={loading}
+          loadError={loadError}
+          projects={filtered}
+          role="student"
+          EmptyIcon={Folder}
+          onRetry={loadProjects}
+        />
       </motion.div>
     </DashboardLayout>
   );
