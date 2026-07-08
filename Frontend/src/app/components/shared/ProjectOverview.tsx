@@ -1,44 +1,31 @@
-import { Clock, GitPullRequest, MessageSquare } from "lucide-react";
-import {
-  PROJECT_STATUS_CFG,
-  type Project,
-  type ProjectStatus,
-  type ProjectSubmission,
-} from "../../data/projects";
-import {
-  formatProjectRelativeDate,
-  getProjectOverviewAction,
-  getProjectSubmissionStatusLabel,
-} from "./projectPresentation";
+import { Calendar, Clock, MessageSquare, Tag } from "lucide-react";
+import { PROJECT_STATUS_CFG, type ProjectStatus } from "../../data/projects";
+import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
 import { StatusBadge } from "./ui";
 
+type ProjectOverviewPerson = {
+  name: string;
+  initials: string;
+  avatar?: string;
+};
+
+export type ProjectOverviewData = {
+  status: ProjectStatus;
+  startedAt: string;
+  completedAt?: string;
+  deadline: string;
+  budget: string;
+  partner: ProjectOverviewPerson | null;
+};
+
 type ProjectOverviewProps = {
-  project: Project;
+  project: ProjectOverviewData;
   status: ProjectStatus;
   role: "student" | "client";
-  revisionCount: number;
   lastUpdated: string;
   action?: React.ReactNode;
   profileAction?: React.ReactNode;
 };
-
-function getLatestSubmission(submission?: ProjectSubmission) {
-  if (!submission) {
-    return {
-      title: "None",
-      detail: "No submission yet",
-      titleDate: "",
-    };
-  }
-
-  return {
-    title: `Version ${submission.versionNumber}`,
-    detail: `${getProjectSubmissionStatusLabel(submission.status)} - ${formatProjectRelativeDate(
-      submission.submittedAt
-    )}`,
-    titleDate: submission.submittedAt,
-  };
-}
 
 function StateItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -55,14 +42,12 @@ export function ProjectOverview({
   project,
   status,
   role,
-  revisionCount,
   lastUpdated,
   action,
   profileAction,
 }: ProjectOverviewProps) {
-  const latestSubmission = getLatestSubmission(project.submissions[0]);
   const currentAction = getProjectOverviewAction(status, role);
-  const partner = role === "student" ? project.client : project.student;
+  const partner = project.partner;
   const partnerRole = role === "student" ? "Client" : "Student";
   const lastActivity = formatProjectRelativeDate(lastUpdated);
 
@@ -76,20 +61,24 @@ export function ProjectOverview({
           <StateItem label="Current Status">
             <StatusBadge config={PROJECT_STATUS_CFG[status]} />
           </StateItem>
-          <StateItem label="Latest Submission">
-            <div title={latestSubmission.titleDate}>
-              <p className="text-slate-900 font-semibold truncate" style={{ fontSize: "0.76rem" }}>
-                {latestSubmission.title}
-              </p>
-              <p className="text-slate-500 mt-0.5 truncate" style={{ fontSize: "0.7rem" }}>
-                {latestSubmission.detail}
-              </p>
+          <StateItem label="Started">
+            <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span style={{ fontSize: "0.76rem" }}>{project.startedAt}</span>
             </div>
           </StateItem>
-          <StateItem label="Revisions">
+          <StateItem label={status === "completed" ? "Completed" : "Deadline"}>
             <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
-              <GitPullRequest className="w-3.5 h-3.5 text-slate-400" />
-              <span style={{ fontSize: "0.76rem" }}>{revisionCount}</span>
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span style={{ fontSize: "0.76rem" }}>
+                {status === "completed" ? project.completedAt : project.deadline}
+              </span>
+            </div>
+          </StateItem>
+          <StateItem label="Budget">
+            <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
+              <Tag className="w-3.5 h-3.5 text-slate-400" />
+              <span style={{ fontSize: "0.76rem" }}>Rs. {project.budget}</span>
             </div>
           </StateItem>
         </div>
@@ -116,23 +105,35 @@ export function ProjectOverview({
         <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
           Project Partner
         </h2>
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0 overflow-hidden">
-            {partner.avatar ? (
-              <img src={partner.avatar} alt={partner.name} className="w-full h-full object-cover" />
-            ) : (
-              <span style={{ fontSize: "0.78rem" }}>{partner.initials}</span>
-            )}
+        {partner ? (
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0 overflow-hidden">
+              {partner.avatar ? (
+                <img
+                  src={partner.avatar}
+                  alt={partner.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span style={{ fontSize: "0.78rem" }}>{partner.initials}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-slate-900 font-semibold truncate" style={{ fontSize: "0.86rem" }}>
+                {partner.name}
+              </p>
+              <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                {partnerRole}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-slate-900 font-semibold truncate" style={{ fontSize: "0.86rem" }}>
-              {partner.name}
-            </p>
-            <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-              {partnerRole}
+        ) : (
+          <div className="bg-slate-50 border border-black/[0.04] rounded-xl p-3">
+            <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
+              Partner information is unavailable.
             </p>
           </div>
-        </div>
+        )}
         <div
           title={lastUpdated}
           className="flex items-center gap-2 text-slate-500 bg-slate-50 rounded-xl p-3 border border-black/[0.04]"

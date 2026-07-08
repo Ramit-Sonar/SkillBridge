@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 import { DashboardLayout, type DashboardRole } from "../../app/components/layout/DashboardLayout";
 import { ReviewModal } from "../../app/components/ReviewModal";
-import { ReadOnlyApplicationView } from "../../app/components/shared/ApplicationDetailsContent";
+import {
+  ReadOnlyApplicationView,
+  type ApplicationDetailsData,
+} from "../../app/components/shared/ApplicationDetailsContent";
 import { DeliverableVersionCard } from "../../app/components/shared/DeliverableVersionCard";
 import { FileUploadArea, type UploadedFile } from "../../app/components/shared/FileUploadArea";
 import { ProjectOverview } from "../../app/components/shared/ProjectOverview";
@@ -24,15 +27,18 @@ import {
   type ProjectSubmissionFormData,
 } from "../../app/components/shared/ProjectSubmissionForm";
 import { RevisionRequestCard } from "../../app/components/shared/RevisionRequestCard";
-import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
-import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
+import {
+  SharedJobDetailsContent,
+  type JobDetailData,
+} from "../../app/components/shared/SharedJobDetailsContent";
+import {
+  StudentProfileView,
+  type ProfileViewProps,
+} from "../../app/components/shared/StudentProfileView";
 import { Timeline } from "../../app/components/shared/Timeline";
 import { ConfirmDialog, SidePanel, StatusBadge } from "../../app/components/shared/ui";
 import {
-  PROJECTS,
   PROJECT_STATUS_CFG,
-  type Project,
-  type ProjectFile,
   type ProjectStatus,
   type ProjectSubmission,
   type ProjectTimelineItem,
@@ -41,10 +47,9 @@ import {
 import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 import {
   getProjectById,
-  getProjectDeliverables,
-  getProjectTimeline,
-  type ProjectDeliverablesResponse,
-  type ProjectTimelineResponse,
+  approveDeliverable,
+  requestRevision,
+  submitDeliverable,
   type ProjectWorkspace,
 } from "../../services/projectService";
 
@@ -58,15 +63,6 @@ const CATEGORY_BADGE_STYLES: Record<string, { bg: string; color: string; border:
   presentation: { bg: "#FFFBEB", color: "#D97706", border: "#FDE68A" },
   other: { bg: "#F8FAFC", color: "#64748B", border: "#CBD5E1" },
 };
-
-const nowLabel = () =>
-  new Date().toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 function formatWorkspaceDate(date?: string | null) {
   if (!date) return "";
@@ -91,72 +87,49 @@ function getInitials(name = "") {
     .join("");
 }
 
-function getTimelineTone(type: string): ProjectTimelineItem["tone"] {
-  if (type.includes("revision")) return "danger";
-  if (type.includes("approved") || type.includes("completed") || type.includes("created")) {
-    return "success";
-  }
-
-  return "neutral";
-}
-
 function getJobStatus(status?: string): "open" | "closed" | "cancelled" {
   if (status === "closed" || status === "cancelled") return status;
 
   return "open";
 }
 
-function getProjectPerson(name?: string, avatar = "") {
-  const displayName = name || "SkillBridge User";
+type WorkspacePerson = {
+  name: string;
+  initials: string;
+  avatar?: string;
+};
+
+type WorkspaceProject = {
+  id: string;
+  title: string;
+  status: ProjectStatus;
+  category: string;
+  startDate: string;
+  deadline: string;
+  budget: string;
+  completedAt: string;
+  lastUpdated: string;
+  student: WorkspacePerson | null;
+  client: WorkspacePerson | null;
+  job: JobDetailData;
+  application: ApplicationDetailsData;
+  studentProfile: ProfileViewProps | null;
+};
+
+function getProjectPerson(name?: string, avatar = ""): WorkspacePerson | null {
+  if (!name) return null;
 
   return {
-    name: displayName,
-    initials: getInitials(displayName),
+    name,
+    initials: getInitials(name),
     avatar,
   };
 }
 
-function mapDeliverablesToSubmissions(
-  deliverables: ProjectDeliverablesResponse | null,
-  status: ProjectStatus
-): ProjectSubmission[] {
-  const currentDeliverable = deliverables?.currentDeliverable;
-
-  if (!currentDeliverable) return [];
-
-  return [
-    {
-      id: currentDeliverable.id,
-      versionNumber: currentDeliverable.versionNumber,
-      status:
-        status === "revision_requested" && currentDeliverable.status === "submitted"
-          ? "revision_requested"
-          : currentDeliverable.status,
-      submittedAt: formatWorkspaceDate(currentDeliverable.submittedAt),
-      notes: currentDeliverable.notes,
-      demoLink: currentDeliverable.demoLink,
-      attachments: currentDeliverable.attachments,
-    },
-  ];
-}
-
-function mapTimelineItems(timeline: ProjectTimelineResponse | null): ProjectTimelineItem[] {
-  return (
-    timeline?.timeline.map((event) => ({
-      key: `${event.type}-${event.referenceId ?? event.createdAt}`,
-      label: event.message,
-      date: formatWorkspaceDate(event.createdAt),
-      tone: getTimelineTone(event.type),
-    })) ?? []
-  );
-}
-
 function mapWorkspaceProject(
   workspace: ProjectWorkspace,
-  deliverables: ProjectDeliverablesResponse | null,
-  timeline: ProjectTimelineResponse | null,
   role: DashboardRole
-): Project | null {
+): WorkspaceProject | null {
   if (!workspace.job || !workspace.application) return null;
 
   const status = workspace.project.status;
@@ -169,9 +142,8 @@ function mapWorkspaceProject(
           workspace.studentProfile?.name || partnerName,
           workspace.studentProfile?.avatarUrl
         )
-      : getProjectPerson("You");
-  const client =
-    role === "student" ? getProjectPerson(partnerName, partnerAvatar) : getProjectPerson("You");
+      : null;
+  const client = role === "student" ? getProjectPerson(partnerName, partnerAvatar) : null;
   const budget = Number(workspace.job.budget);
   const budgetLabel = Number.isNaN(budget) ? String(workspace.job.budget) : budget.toLocaleString();
 
@@ -187,19 +159,8 @@ function mapWorkspaceProject(
     startDate: formatWorkspaceDate(workspace.project.startedAt),
     deadline: formatWorkspaceDate(workspace.job.deadline),
     budget: budgetLabel,
-    description: workspace.job.description,
-    requirements: workspace.job.requirements,
-    skills: workspace.job.skills,
-    progress: status === "completed" ? 100 : status === "active" ? 35 : 70,
-    currentStage: getProjectStateText(status),
-    deliverableStatus: deliverables?.currentDeliverable?.label ?? "No deliverables submitted",
-    actionRequired: getProjectStateText(status),
-    revisionCount: 0,
     lastUpdated: formatWorkspaceDate(workspace.project.lastActivityAt),
     completedAt: formatWorkspaceDate(workspace.project.completedAt),
-    submissions: mapDeliverablesToSubmissions(deliverables, status),
-    revisionRequests: [],
-    timeline: mapTimelineItems(timeline),
     job: {
       title: workspace.job.title,
       category: workspace.job.category,
@@ -210,27 +171,22 @@ function mapWorkspaceProject(
       budget: budgetLabel,
       duration: workspace.job.duration,
       deadline: formatWorkspaceDate(workspace.job.deadline),
-      complexity: workspace.job.complexity ?? "medium",
+      complexity: workspace.job.complexity,
       postedAt: formatWorkspaceDate(workspace.job.postedAt),
       attachedFiles: workspace.job.attachedFiles,
-      clientName: workspace.job.clientName ?? client.name,
-      clientInitials: workspace.job.clientInitials ?? client.initials,
-      clientLocation: "",
-      clientCompanyName: workspace.job.clientCompanyName ?? "",
-      clientWebsite: "",
-      clientAbout: "",
-      clientVerified: false,
-      clientJobsPosted: 0,
-      clientProjectsCompleted: 0,
-      clientJoinedDate: "",
-      clientRating: 0,
+      clientName: workspace.job.clientName,
+      clientInitials: workspace.job.clientInitials,
+      clientAvatar: workspace.job.clientAvatar,
+      clientCompanyName: workspace.job.clientCompanyName,
     },
     application: {
       id: workspace.application.id,
-      status: "accepted",
+      status: workspace.application.status as ApplicationDetailsData["status"],
       appliedAt: formatWorkspaceDate(workspace.application.appliedAt),
       updatedAt: formatWorkspaceDate(workspace.application.updatedAt),
       acceptedAt: formatWorkspaceDate(workspace.application.acceptedAt),
+      rejectedAt: formatWorkspaceDate(workspace.application.rejectedAt),
+      withdrawnAt: formatWorkspaceDate(workspace.application.withdrawnAt),
       estimatedTime: workspace.application.estimatedTime,
       coverMessage: workspace.application.coverMessage,
       whySuitable: workspace.application.whySuitable,
@@ -256,23 +212,13 @@ function mapWorkspaceProject(
   };
 }
 
-function getCategoryBadge(project: Project) {
+function getCategoryBadge(project: WorkspaceProject) {
   const categoryKey = project.job.category;
   const label =
     JOB_CATEGORY_LABELS[categoryKey as keyof typeof JOB_CATEGORY_LABELS] ?? project.category;
   const style = CATEGORY_BADGE_STYLES[categoryKey] ?? CATEGORY_BADGE_STYLES.other;
 
   return { label, style };
-}
-
-function uploadedToProjectFile(file: UploadedFile): ProjectFile {
-  return {
-    url: "#",
-    publicId: "",
-    originalName: file.name,
-    mimeType: file.type,
-    size: file.size,
-  };
 }
 
 function EmptyState({
@@ -452,20 +398,14 @@ export default function ProjectWorkspacePage() {
   const navigate = useNavigate();
   const role: DashboardRole = location.pathname.includes("/student/") ? "student" : "client";
 
-  const demoProject = PROJECTS.find((project) => project.id === id);
-
   const [activeTab, setActiveTab] = useState<ProjectWorkspaceTab>("deliverables");
-  const [projectData, setProjectData] = useState<Project | null>(demoProject ?? null);
-  const [status, setStatus] = useState<ProjectStatus>(demoProject?.status ?? "active");
-  const [lastUpdated, setLastUpdated] = useState(demoProject?.lastUpdated ?? "");
-  const [submissions, setSubmissions] = useState<ProjectSubmission[]>(
-    demoProject?.submissions ?? []
-  );
-  const [revisionRequests, setRevisionRequests] = useState<RevisionRequest[]>(
-    demoProject?.revisionRequests ?? []
-  );
-  const [timeline, setTimeline] = useState<ProjectTimelineItem[]>(demoProject?.timeline ?? []);
-  const [loadingProject, setLoadingProject] = useState(!demoProject);
+  const [projectData, setProjectData] = useState<WorkspaceProject | null>(null);
+  const [status, setStatus] = useState<ProjectStatus>("active");
+  const [lastUpdated, setLastUpdated] = useState("");
+  const [submissions, setSubmissions] = useState<ProjectSubmission[]>([]);
+  const [revisionRequests, setRevisionRequests] = useState<RevisionRequest[]>([]);
+  const [timeline, setTimeline] = useState<ProjectTimelineItem[]>([]);
+  const [loadingProject, setLoadingProject] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
@@ -474,20 +414,6 @@ export default function ProjectWorkspacePage() {
   const [showStudentProfile, setShowStudentProfile] = useState(false);
 
   const loadProjectWorkspace = async () => {
-    const currentDemoProject = PROJECTS.find((project) => project.id === id);
-
-    if (currentDemoProject) {
-      setProjectData(currentDemoProject);
-      setStatus(currentDemoProject.status);
-      setLastUpdated(currentDemoProject.lastUpdated);
-      setSubmissions(currentDemoProject.submissions);
-      setRevisionRequests(currentDemoProject.revisionRequests);
-      setTimeline(currentDemoProject.timeline);
-      setLoadError("");
-      setLoadingProject(false);
-      return;
-    }
-
     if (!id) {
       setProjectData(null);
       setLoadingProject(false);
@@ -498,17 +424,8 @@ export default function ProjectWorkspacePage() {
     setLoadError("");
 
     try {
-      const [workspaceResponse, deliverablesResponse, timelineResponse] = await Promise.all([
-        getProjectById(id),
-        getProjectDeliverables(id),
-        getProjectTimeline(id),
-      ]);
-      const nextProject = mapWorkspaceProject(
-        workspaceResponse.data,
-        deliverablesResponse.data,
-        timelineResponse.data,
-        role
-      );
+      const workspaceResponse = await getProjectById(id);
+      const nextProject = mapWorkspaceProject(workspaceResponse.data, role);
 
       if (!nextProject) {
         throw new Error("Project details are incomplete.");
@@ -517,9 +434,9 @@ export default function ProjectWorkspacePage() {
       setProjectData(nextProject);
       setStatus(nextProject.status);
       setLastUpdated(nextProject.lastUpdated);
-      setSubmissions(nextProject.submissions);
-      setRevisionRequests(nextProject.revisionRequests);
-      setTimeline(nextProject.timeline);
+      setSubmissions([]);
+      setRevisionRequests([]);
+      setTimeline([]);
     } catch (error) {
       setProjectData(null);
       setLoadError(error instanceof Error ? error.message : "Project could not be loaded.");
@@ -594,7 +511,6 @@ export default function ProjectWorkspacePage() {
   const latestSubmission = submissions[0];
   const olderSubmissions = submissions.slice(1);
   const latestRevisionRequest = revisionRequests[0];
-  const revisionCount = revisionRequests.length;
   const studentProfile = projectData.studentProfile ?? null;
   const categoryBadge = getCategoryBadge(projectData);
   const projectStateText = getProjectStateText(status);
@@ -607,91 +523,59 @@ export default function ProjectWorkspacePage() {
     { label: "Project Proposal", value: "proposal" },
   ];
 
-  const handleSubmitProject = (formData: ProjectSubmissionFormData) => {
-    setSubmitting(true);
+  const handleSubmitProject = async (formData: ProjectSubmissionFormData) => {
+    if (!id) return;
 
-    setTimeout(() => {
-      const submittedAt = nowLabel();
-      const versionNumber = submissions.length + 1;
-      const nextSubmission: ProjectSubmission = {
-        id: `dummy-submission-${Date.now()}`,
-        versionNumber,
-        status: "submitted",
-        submittedAt,
+    setSubmitting(true);
+    setLoadError("");
+
+    try {
+      await submitDeliverable(id, {
         notes: formData.notes,
         demoLink: formData.demoLink,
-        attachments: formData.files.map(uploadedToProjectFile),
-      };
-
-      setSubmissions((current) => [nextSubmission, ...current]);
-      setStatus("submitted");
-      setLastUpdated(submittedAt);
-      setTimeline((current) => [
-        ...current,
-        {
-          key: `v${versionNumber}-${Date.now()}`,
-          label: `Version ${versionNumber} Submitted`,
-          date: submittedAt,
-          tone: "neutral",
-        },
-      ]);
+        files: formData.files.map((file) => file.file),
+      });
+      await loadProjectWorkspace();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Project could not be submitted.");
+    } finally {
       setSubmitting(false);
-    }, 900);
+    }
   };
 
-  const handleRequestRevision = (data: {
+  const handleRequestRevision = async (data: {
     message: string;
     files: UploadedFile[];
     referenceLinks: string[];
   }) => {
-    const requestedAt = nowLabel();
-    const nextRevisionNumber = revisionRequests.length + 1;
-    const nextRequest: RevisionRequest = {
-      id: `dummy-revision-${Date.now()}`,
-      revisionNumber: nextRevisionNumber,
-      requestedBy: projectData.client,
-      requestedAt,
-      message: data.message,
-      attachments: data.files.map(uploadedToProjectFile),
-      referenceLinks: data.referenceLinks,
-    };
+    if (!id) return;
 
-    setRevisionRequests((current) => [nextRequest, ...current]);
-    setSubmissions((current) =>
-      current.map((submission, index) =>
-        index === 0 ? { ...submission, status: "revision_requested" } : submission
-      )
-    );
-    setStatus("revision_requested");
-    setLastUpdated(requestedAt);
-    setTimeline((current) => [
-      ...current,
-      {
-        key: `revision-${Date.now()}`,
-        label: "Revision Requested",
-        date: requestedAt,
-        tone: "danger",
-      },
-    ]);
-    setShowRevisionDialog(false);
+    try {
+      await requestRevision(id, {
+        message: data.message,
+        referenceLinks: data.referenceLinks,
+        files: data.files.map((file) => file.file),
+      });
+      setShowRevisionDialog(false);
+      await loadProjectWorkspace();
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Revision request could not be sent.");
+      setShowRevisionDialog(false);
+    }
   };
 
-  const handleApprove = () => {
-    const completedAt = nowLabel();
-    setStatus("completed");
-    setLastUpdated(completedAt);
-    setSubmissions((current) =>
-      current.map((submission, index) =>
-        index === 0 ? { ...submission, status: "approved" } : submission
-      )
-    );
-    setTimeline((current) => [
-      ...current,
-      { key: `approved-${Date.now()}`, label: "Approved", date: completedAt, tone: "success" },
-      { key: `completed-${Date.now()}`, label: "Completed", date: completedAt, tone: "success" },
-    ]);
-    setShowApprove(false);
-    setShowReview(true);
+  const handleApprove = async () => {
+    if (!id) return;
+
+    try {
+      await approveDeliverable(id);
+      setShowApprove(false);
+      await loadProjectWorkspace();
+      setShowReview(true);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Deliverables could not be approved.");
+      setShowApprove(false);
+    }
   };
 
   const renderOverviewAction = () => {
@@ -862,10 +746,16 @@ export default function ProjectWorkspacePage() {
     if (activeTab === "overview") {
       return (
         <ProjectOverview
-          project={projectData}
+          project={{
+            status,
+            startedAt: projectData.startDate,
+            completedAt: projectData.completedAt,
+            deadline: projectData.deadline,
+            budget: projectData.budget,
+            partner: role === "student" ? projectData.client : projectData.student,
+          }}
           status={status}
           role={role === "client" ? "client" : "student"}
-          revisionCount={revisionCount}
           lastUpdated={lastUpdated}
           action={renderOverviewAction()}
           profileAction={
@@ -1048,7 +938,7 @@ export default function ProjectWorkspacePage() {
           />
         )}
 
-        {showReview && (
+        {showReview && projectData.student && (
           <ReviewModal
             studentName={projectData.student.name}
             studentInitials={projectData.student.initials}
@@ -1064,7 +954,7 @@ export default function ProjectWorkspacePage() {
         {showStudentProfile && studentProfile && (
           <SidePanel
             title="Student Profile"
-            subtitle={projectData.student.name}
+            subtitle={studentProfile.name}
             onClose={() => setShowStudentProfile(false)}
             maxWidthClassName="max-w-2xl"
             zIndexClassName="z-50"

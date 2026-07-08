@@ -51,17 +51,6 @@ export interface ProfileViewProps {
   avatarUrl?: string;
 }
 
-const DEFAULT_PROFILE_REVIEWS: ProfileReview[] = [
-  {
-    id: "default-profile-review-1",
-    clientName: "Dikshya Khanal",
-    clientInitials: "DK",
-    rating: 5,
-    comment: "Clear communication and strong attention to requested changes.",
-    submittedAt: "Jun 2026",
-  },
-];
-
 function SocialIcon({
   icon: Icon,
   label,
@@ -561,7 +550,7 @@ export function StudentProfileView({
       <Skills skills={profile.skills} />
       <Portfolio projects={profile.projects ?? []} />
       <Certificates certificates={profile.certificates ?? []} />
-      <Reviews reviews={profile.reviews ?? DEFAULT_PROFILE_REVIEWS} />
+      <Reviews reviews={profile.reviews ?? []} />
     </div>
   );
 }
