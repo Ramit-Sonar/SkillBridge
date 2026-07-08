@@ -67,7 +67,7 @@ projectSchema.index({ student: 1, status: 1 });
 projectSchema.index({ client: 1, status: 1 });
 projectSchema.index({ status: 1 });
 
-projectSchema.pre("save", function (next) {
+projectSchema.pre("save", function () {
   if (
     this.isNew ||
     this.isModified("status") ||
@@ -76,11 +76,9 @@ projectSchema.pre("save", function (next) {
   ) {
     this.lastActivityAt = new Date();
   }
-
-  next();
 });
 
-function updateLastActivityAt(next) {
+function updateLastActivityAt() {
   const update = this.getUpdate() || {};
   const setUpdate = update.$set || {};
   const hasActivityChange =
@@ -96,8 +94,6 @@ function updateLastActivityAt(next) {
   if (hasActivityChange) {
     this.set({ lastActivityAt: new Date() });
   }
-
-  next();
 }
 
 projectSchema.pre("findOneAndUpdate", updateLastActivityAt);

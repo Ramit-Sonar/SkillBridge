@@ -1,4 +1,4 @@
-import { useState, type ElementType } from "react";
+import { useEffect, useState, type ElementType } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -39,6 +39,14 @@ import {
   type RevisionRequest,
 } from "../../app/data/projects";
 import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
+import {
+  getProjectById,
+  getProjectDeliverables,
+  getProjectTimeline,
+  type ProjectDeliverablesResponse,
+  type ProjectTimelineResponse,
+  type ProjectWorkspace,
+} from "../../services/projectService";
 
 type ProjectWorkspaceTab = "overview" | "deliverables" | "activity" | "job" | "proposal";
 
@@ -59,6 +67,194 @@ const nowLabel = () =>
     hour: "2-digit",
     minute: "2-digit",
   });
+
+function formatWorkspaceDate(date?: string | null) {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return date;
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+function getTimelineTone(type: string): ProjectTimelineItem["tone"] {
+  if (type.includes("revision")) return "danger";
+  if (type.includes("approved") || type.includes("completed") || type.includes("created")) {
+    return "success";
+  }
+
+  return "neutral";
+}
+
+function getJobStatus(status?: string): "open" | "closed" | "cancelled" {
+  if (status === "closed" || status === "cancelled") return status;
+
+  return "open";
+}
+
+function getProjectPerson(name?: string, avatar = "") {
+  const displayName = name || "SkillBridge User";
+
+  return {
+    name: displayName,
+    initials: getInitials(displayName),
+    avatar,
+  };
+}
+
+function mapDeliverablesToSubmissions(
+  deliverables: ProjectDeliverablesResponse | null,
+  status: ProjectStatus
+): ProjectSubmission[] {
+  const currentDeliverable = deliverables?.currentDeliverable;
+
+  if (!currentDeliverable) return [];
+
+  return [
+    {
+      id: currentDeliverable.id,
+      versionNumber: currentDeliverable.versionNumber,
+      status:
+        status === "revision_requested" && currentDeliverable.status === "submitted"
+          ? "revision_requested"
+          : currentDeliverable.status,
+      submittedAt: formatWorkspaceDate(currentDeliverable.submittedAt),
+      notes: currentDeliverable.notes,
+      demoLink: currentDeliverable.demoLink,
+      attachments: currentDeliverable.attachments,
+    },
+  ];
+}
+
+function mapTimelineItems(timeline: ProjectTimelineResponse | null): ProjectTimelineItem[] {
+  return (
+    timeline?.timeline.map((event) => ({
+      key: `${event.type}-${event.referenceId ?? event.createdAt}`,
+      label: event.message,
+      date: formatWorkspaceDate(event.createdAt),
+      tone: getTimelineTone(event.type),
+    })) ?? []
+  );
+}
+
+function mapWorkspaceProject(
+  workspace: ProjectWorkspace,
+  deliverables: ProjectDeliverablesResponse | null,
+  timeline: ProjectTimelineResponse | null,
+  role: DashboardRole
+): Project | null {
+  if (!workspace.job || !workspace.application) return null;
+
+  const status = workspace.project.status;
+  const partner = workspace.overview.partner;
+  const partnerName = partner?.fullName || "";
+  const partnerAvatar = partner?.avatar || "";
+  const student =
+    role === "client"
+      ? getProjectPerson(
+          workspace.studentProfile?.name || partnerName,
+          workspace.studentProfile?.avatarUrl
+        )
+      : getProjectPerson("You");
+  const client =
+    role === "student" ? getProjectPerson(partnerName, partnerAvatar) : getProjectPerson("You");
+  const budget = Number(workspace.job.budget);
+  const budgetLabel = Number.isNaN(budget) ? String(workspace.job.budget) : budget.toLocaleString();
+
+  return {
+    id: workspace.project.id,
+    title: workspace.job.title,
+    status,
+    category:
+      JOB_CATEGORY_LABELS[workspace.job.category as keyof typeof JOB_CATEGORY_LABELS] ??
+      workspace.job.category,
+    student,
+    client,
+    startDate: formatWorkspaceDate(workspace.project.startedAt),
+    deadline: formatWorkspaceDate(workspace.job.deadline),
+    budget: budgetLabel,
+    description: workspace.job.description,
+    requirements: workspace.job.requirements,
+    skills: workspace.job.skills,
+    progress: status === "completed" ? 100 : status === "active" ? 35 : 70,
+    currentStage: getProjectStateText(status),
+    deliverableStatus: deliverables?.currentDeliverable?.label ?? "No deliverables submitted",
+    actionRequired: getProjectStateText(status),
+    revisionCount: 0,
+    lastUpdated: formatWorkspaceDate(workspace.project.lastActivityAt),
+    completedAt: formatWorkspaceDate(workspace.project.completedAt),
+    submissions: mapDeliverablesToSubmissions(deliverables, status),
+    revisionRequests: [],
+    timeline: mapTimelineItems(timeline),
+    job: {
+      title: workspace.job.title,
+      category: workspace.job.category,
+      status: getJobStatus(workspace.job.status),
+      description: workspace.job.description,
+      requirements: workspace.job.requirements,
+      skills: workspace.job.skills,
+      budget: budgetLabel,
+      duration: workspace.job.duration,
+      deadline: formatWorkspaceDate(workspace.job.deadline),
+      complexity: workspace.job.complexity ?? "medium",
+      postedAt: formatWorkspaceDate(workspace.job.postedAt),
+      attachedFiles: workspace.job.attachedFiles,
+      clientName: workspace.job.clientName ?? client.name,
+      clientInitials: workspace.job.clientInitials ?? client.initials,
+      clientLocation: "",
+      clientCompanyName: workspace.job.clientCompanyName ?? "",
+      clientWebsite: "",
+      clientAbout: "",
+      clientVerified: false,
+      clientJobsPosted: 0,
+      clientProjectsCompleted: 0,
+      clientJoinedDate: "",
+      clientRating: 0,
+    },
+    application: {
+      id: workspace.application.id,
+      status: "accepted",
+      appliedAt: formatWorkspaceDate(workspace.application.appliedAt),
+      updatedAt: formatWorkspaceDate(workspace.application.updatedAt),
+      acceptedAt: formatWorkspaceDate(workspace.application.acceptedAt),
+      estimatedTime: workspace.application.estimatedTime,
+      coverMessage: workspace.application.coverMessage,
+      whySuitable: workspace.application.whySuitable,
+      attachments: workspace.application.attachments,
+    },
+    studentProfile:
+      role === "client" && workspace.studentProfile
+        ? {
+            name: workspace.studentProfile.name,
+            initials: workspace.studentProfile.initials,
+            headline: workspace.studentProfile.headline,
+            education: workspace.studentProfile.education,
+            university: workspace.studentProfile.university,
+            bio: workspace.studentProfile.bio,
+            verified: workspace.studentProfile.verified,
+            skills: workspace.studentProfile.skills,
+            github: workspace.studentProfile.github,
+            linkedin: workspace.studentProfile.linkedin,
+            portfolio: workspace.studentProfile.portfolio,
+            avatarUrl: workspace.studentProfile.avatarUrl,
+          }
+        : null,
+  };
+}
 
 function getCategoryBadge(project: Project) {
   const categoryKey = project.job.category;
@@ -256,23 +452,125 @@ export default function ProjectWorkspacePage() {
   const navigate = useNavigate();
   const role: DashboardRole = location.pathname.includes("/student/") ? "student" : "client";
 
-  const projectData = PROJECTS.find((project) => project.id === id);
+  const demoProject = PROJECTS.find((project) => project.id === id);
 
   const [activeTab, setActiveTab] = useState<ProjectWorkspaceTab>("deliverables");
-  const [status, setStatus] = useState<ProjectStatus>(projectData?.status ?? "active");
-  const [lastUpdated, setLastUpdated] = useState(projectData?.lastUpdated ?? "");
+  const [projectData, setProjectData] = useState<Project | null>(demoProject ?? null);
+  const [status, setStatus] = useState<ProjectStatus>(demoProject?.status ?? "active");
+  const [lastUpdated, setLastUpdated] = useState(demoProject?.lastUpdated ?? "");
   const [submissions, setSubmissions] = useState<ProjectSubmission[]>(
-    projectData?.submissions ?? []
+    demoProject?.submissions ?? []
   );
   const [revisionRequests, setRevisionRequests] = useState<RevisionRequest[]>(
-    projectData?.revisionRequests ?? []
+    demoProject?.revisionRequests ?? []
   );
-  const [timeline, setTimeline] = useState<ProjectTimelineItem[]>(projectData?.timeline ?? []);
+  const [timeline, setTimeline] = useState<ProjectTimelineItem[]>(demoProject?.timeline ?? []);
+  const [loadingProject, setLoadingProject] = useState(!demoProject);
+  const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showStudentProfile, setShowStudentProfile] = useState(false);
+
+  const loadProjectWorkspace = async () => {
+    const currentDemoProject = PROJECTS.find((project) => project.id === id);
+
+    if (currentDemoProject) {
+      setProjectData(currentDemoProject);
+      setStatus(currentDemoProject.status);
+      setLastUpdated(currentDemoProject.lastUpdated);
+      setSubmissions(currentDemoProject.submissions);
+      setRevisionRequests(currentDemoProject.revisionRequests);
+      setTimeline(currentDemoProject.timeline);
+      setLoadError("");
+      setLoadingProject(false);
+      return;
+    }
+
+    if (!id) {
+      setProjectData(null);
+      setLoadingProject(false);
+      return;
+    }
+
+    setLoadingProject(true);
+    setLoadError("");
+
+    try {
+      const [workspaceResponse, deliverablesResponse, timelineResponse] = await Promise.all([
+        getProjectById(id),
+        getProjectDeliverables(id),
+        getProjectTimeline(id),
+      ]);
+      const nextProject = mapWorkspaceProject(
+        workspaceResponse.data,
+        deliverablesResponse.data,
+        timelineResponse.data,
+        role
+      );
+
+      if (!nextProject) {
+        throw new Error("Project details are incomplete.");
+      }
+
+      setProjectData(nextProject);
+      setStatus(nextProject.status);
+      setLastUpdated(nextProject.lastUpdated);
+      setSubmissions(nextProject.submissions);
+      setRevisionRequests(nextProject.revisionRequests);
+      setTimeline(nextProject.timeline);
+    } catch (error) {
+      setProjectData(null);
+      setLoadError(error instanceof Error ? error.message : "Project could not be loaded.");
+    } finally {
+      setLoadingProject(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProjectWorkspace();
+  }, [id, role]);
+
+  if (loadingProject) {
+    return (
+      <DashboardLayout role={role} title="Project" activeNav="projects">
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <motion.span
+            className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-slate-500" style={{ fontSize: "0.85rem" }}>
+            Loading project...
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <DashboardLayout role={role} title="Project" activeNav="projects">
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
+            Could not load project
+          </p>
+          <p className="text-slate-500 max-w-sm" style={{ fontSize: "0.85rem" }}>
+            {loadError}
+          </p>
+          <button
+            type="button"
+            onClick={loadProjectWorkspace}
+            className="text-blue-600 font-semibold hover:text-blue-700"
+            style={{ fontSize: "0.875rem" }}
+          >
+            Try again
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!projectData) {
     return (

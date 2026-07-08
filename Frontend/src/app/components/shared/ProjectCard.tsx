@@ -1,7 +1,11 @@
 import { Calendar, ChevronRight, Clock, GitPullRequest, Tag } from "lucide-react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { PROJECT_STATUS_CFG, type Project, type ProjectSubmission } from "../../data/projects";
+import {
+  PROJECT_STATUS_CFG,
+  type ProjectStatus,
+  type ProjectSubmissionStatus,
+} from "../../data/projects";
 import {
   formatProjectRelativeDate,
   getProjectCardAction,
@@ -9,12 +13,39 @@ import {
 } from "./projectPresentation";
 import { StatusBadge } from "./ui";
 
+type ProjectCardPerson = {
+  name: string;
+  initials: string;
+  avatar?: string;
+};
+
+type ProjectCardSubmission = {
+  versionNumber: number;
+  submittedAt: string;
+  status: ProjectSubmissionStatus;
+};
+
+export type ProjectCardData = {
+  id: string;
+  title: string;
+  status: ProjectStatus;
+  category: string;
+  student: ProjectCardPerson | null;
+  client: ProjectCardPerson | null;
+  deadline: string;
+  budget: string;
+  revisionCount: number;
+  lastUpdated: string;
+  currentAction?: string;
+  submissions: ProjectCardSubmission[];
+};
+
 type ProjectCardProps = {
-  project: Project;
+  project: ProjectCardData;
   role: "student" | "client";
 };
 
-function getLatestSubmissionSummary(submission?: ProjectSubmission) {
+function getLatestSubmissionSummary(submission?: ProjectCardSubmission) {
   if (!submission) {
     return {
       version: "None",
@@ -32,9 +63,11 @@ function getLatestSubmissionSummary(submission?: ProjectSubmission) {
 
 export function ProjectCard({ project, role }: ProjectCardProps) {
   const navigate = useNavigate();
-  const person = role === "student" ? project.client : project.student;
+  const person = role === "student" ? project.client! : project.student!;
   const personLabel = role === "student" ? "Client" : "Student";
-  const currentAction = getProjectCardAction(project.status, role, project.submissions.length > 0);
+  const currentAction =
+    project.currentAction ||
+    getProjectCardAction(project.status, role, project.submissions.length > 0);
   const latestSubmission = getLatestSubmissionSummary(project.submissions[0]);
 
   return (
