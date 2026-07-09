@@ -353,32 +353,49 @@ const getProjectDeliverables = asyncHandler(async (req, res) => {
     .sort({ versionNumber: -1 })
     .lean();
 
-  const [historyDeliverables, relatedRevision] = currentDeliverable
-    ? await Promise.all([
-        Deliverable.find({
-          project: project._id,
-          _id: { $ne: currentDeliverable._id },
-        })
-          .select("_id versionNumber submittedAt status")
-          .sort({ versionNumber: -1 })
-          .lean(),
-        Revision.findOne({
-          $or: [
-            { deliverable: currentDeliverable._id },
-            { resolvedByDeliverable: currentDeliverable._id },
-          ],
-        })
-          .select("_id revisionNumber requestedAt resolved resolvedAt")
-          .sort({ revisionNumber: -1 })
-          .lean(),
-      ])
-    : [[], null];
+  const [historyDeliverables, relatedRevision, currentOpenRevision] =
+    currentDeliverable
+      ? await Promise.all([
+          Deliverable.find({
+            project: project._id,
+            _id: { $ne: currentDeliverable._id },
+          })
+            .select("_id versionNumber submittedAt status")
+            .sort({ versionNumber: -1 })
+            .lean(),
+          Revision.findOne({
+            $or: [
+              { deliverable: currentDeliverable._id },
+              { resolvedByDeliverable: currentDeliverable._id },
+            ],
+          })
+            .select("_id revisionNumber requestedAt resolved resolvedAt")
+            .sort({ revisionNumber: -1 })
+            .lean(),
+          project.status === "revision_requested"
+            ? Revision.findOne({
+                project: project._id,
+                resolved: false,
+              })
+                .select(
+                  "_id revisionNumber message attachments referenceLinks requestedAt requestedBy resolved resolvedAt"
+                )
+                .populate({
+                  path: "requestedBy",
+                  select: "_id fullName avatar",
+                })
+                .sort({ revisionNumber: -1 })
+                .lean()
+            : null,
+        ])
+      : [[], null, null];
 
   const deliverablesSummary = buildDeliverablesSummary({
     project,
     currentDeliverable,
     historyDeliverables,
     relatedRevision,
+    currentOpenRevision,
   });
 
   return res

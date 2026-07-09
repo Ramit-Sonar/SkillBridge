@@ -160,6 +160,7 @@ export type ProjectDeliverablesResponse = {
   };
   currentDeliverable: ProjectDeliverable | null;
   history: ProjectDeliverableHistoryItem[];
+  currentRevisionRequest: ProjectRevisionRequest | null;
 };
 
 export type ProjectTimelineActor = {

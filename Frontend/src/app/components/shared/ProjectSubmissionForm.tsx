@@ -6,6 +6,8 @@ import { FileUploadArea, type UploadedFile } from "./FileUploadArea";
 export type ProjectSubmissionFormData = {
   notes: string;
   demoLink: string;
+  repositoryLink: string;
+  liveUrl: string;
   files: UploadedFile[];
 };
 
@@ -29,6 +31,8 @@ export function ProjectSubmissionForm({
 }: ProjectSubmissionFormProps) {
   const [notes, setNotes] = useState("");
   const [demoLink, setDemoLink] = useState("");
+  const [repositoryLink, setRepositoryLink] = useState("");
+  const [liveUrl, setLiveUrl] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
 
   const canSubmit = files.length > 0 && notes.trim().length > 0 && !submitting;
@@ -77,6 +81,40 @@ export function ProjectSubmissionForm({
 
       <div className="flex flex-col gap-1.5">
         <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+          Repository Link <span className="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <div className="relative">
+          <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="url"
+            value={repositoryLink}
+            onChange={(event) => setRepositoryLink(event.target.value)}
+            placeholder="https://github.com/username/project"
+            className={`${inputCls} pl-10`}
+            style={{ fontSize: "0.875rem" }}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+          Live URL <span className="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <div className="relative">
+          <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="url"
+            value={liveUrl}
+            onChange={(event) => setLiveUrl(event.target.value)}
+            placeholder="https://your-project.vercel.app"
+            className={`${inputCls} pl-10`}
+            style={{ fontSize: "0.875rem" }}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
           Attachments <span className="text-red-400">*</span>
         </label>
         <FileUploadArea
@@ -91,7 +129,7 @@ export function ProjectSubmissionForm({
         type="button"
         onClick={() => {
           if (!canSubmit) return;
-          onSubmit({ notes, demoLink, files });
+          onSubmit({ notes, demoLink, repositoryLink, liveUrl, files });
         }}
         disabled={!canSubmit}
         whileHover={canSubmit ? { scale: 1.02, boxShadow: "0 8px 20px rgba(37,99,235,0.25)" } : {}}

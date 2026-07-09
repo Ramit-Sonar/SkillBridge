@@ -279,6 +279,7 @@ export const buildDeliverablesSummary = ({
   currentDeliverable,
   historyDeliverables = [],
   relatedRevision,
+  currentOpenRevision,
 }) => {
   const currentDeliverableSummary = buildDetailedSubmission(currentDeliverable);
 
@@ -295,6 +296,7 @@ export const buildDeliverablesSummary = ({
     },
     currentDeliverable: currentDeliverableSummary,
     history: historyDeliverables.map(buildSubmissionHistoryItem),
+    currentRevisionRequest: buildRevisionRequest(currentOpenRevision),
   };
 };
 

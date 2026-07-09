@@ -33,12 +33,21 @@ type DeliverableVersionCardProps = {
 };
 
 export function DeliverableVersionCard({ submission }: DeliverableVersionCardProps) {
+  const attachments = submission.attachments ?? [];
+  const deliverableLinks = [
+    { label: "Demo Link", url: submission.demoLink },
+    { label: "Repository Link", url: submission.repositoryLink },
+    { label: "Live URL", url: submission.liveUrl },
+  ].filter((item): item is { label: string; url: string } => Boolean(item.url));
+  const hasFullDetails =
+    Boolean(submission.notes) || deliverableLinks.length > 0 || attachments.length > 0;
+
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-slate-900 font-bold" style={{ fontSize: "0.85rem" }}>
-            Version {submission.versionNumber}
+            {submission.label ?? `Version ${submission.versionNumber}`}
           </p>
           <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
             Submitted on {submission.submittedAt}
@@ -47,53 +56,81 @@ export function DeliverableVersionCard({ submission }: DeliverableVersionCardPro
         <StatusBadge config={SUBMISSION_STATUS_CFG[submission.status]} />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-3">
-        <p
-          className="text-slate-400 font-semibold mb-1"
-          style={{ fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.07em" }}
-        >
-          Submission Notes
-        </p>
-        <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
-          {submission.notes}
-        </p>
-      </div>
-
-      {submission.demoLink && (
-        <div className="flex items-center gap-2 bg-white border border-blue-200 rounded-xl px-3 py-2.5">
-          <Link className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-          <a
-            href={submission.demoLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 font-medium hover:underline truncate"
-            style={{ fontSize: "0.78rem" }}
-          >
-            {submission.demoLink}
-          </a>
+      {submission.approvedAt && (
+        <div className="bg-white border border-emerald-200 rounded-xl p-3">
+          <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
+            Approved On
+          </p>
+          <p className="text-slate-900 font-semibold mt-0.5" style={{ fontSize: "0.78rem" }}>
+            {submission.approvedAt}
+          </p>
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <p
-          className="text-slate-400 font-semibold"
-          style={{ fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.07em" }}
-        >
-          Attachments
-        </p>
-        {submission.attachments.length > 0 ? (
-          submission.attachments.map((attachment) => (
-            <FileAttachmentCard
-              key={`${submission.id}-${attachment.originalName}`}
-              attachment={attachment}
-            />
-          ))
-        ) : (
-          <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-            No files attached.
+      {submission.notes ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
+          <p
+            className="text-slate-400 font-semibold mb-1"
+            style={{ fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.07em" }}
+          >
+            Submission Notes
           </p>
-        )}
-      </div>
+          <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
+            {submission.notes}
+          </p>
+        </div>
+      ) : (
+        <p className="text-slate-500" style={{ fontSize: "0.78rem" }}>
+          {submission.label ?? `Version ${submission.versionNumber}`} was submitted on{" "}
+          {submission.submittedAt}.
+        </p>
+      )}
+
+      {deliverableLinks.map((item) => (
+        <div
+          key={`${submission.id}-${item.label}`}
+          className="flex items-center gap-2 bg-white border border-blue-200 rounded-xl px-3 py-2.5"
+        >
+          <Link className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
+              {item.label}
+            </p>
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 font-medium hover:underline truncate block"
+              style={{ fontSize: "0.78rem" }}
+            >
+              {item.url}
+            </a>
+          </div>
+        </div>
+      ))}
+
+      {hasFullDetails && (
+        <div className="flex flex-col gap-2">
+          <p
+            className="text-slate-400 font-semibold"
+            style={{ fontSize: "0.62rem", textTransform: "uppercase", letterSpacing: "0.07em" }}
+          >
+            Attachments
+          </p>
+          {attachments.length > 0 ? (
+            attachments.map((attachment) => (
+              <FileAttachmentCard
+                key={`${submission.id}-${attachment.originalName}`}
+                attachment={attachment}
+              />
+            ))
+          ) : (
+            <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
+              No files attached.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

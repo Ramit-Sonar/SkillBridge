@@ -23,17 +23,21 @@ export interface ProjectPerson {
 export interface ProjectSubmission {
   id: string;
   versionNumber: number;
+  label?: string;
   status: ProjectSubmissionStatus;
   submittedAt: string;
-  notes: string;
+  notes?: string;
   demoLink?: string;
-  attachments: ProjectFile[];
+  repositoryLink?: string;
+  liveUrl?: string;
+  attachments?: ProjectFile[];
+  approvedAt?: string | null;
 }
 
 export interface RevisionRequest {
   id: string;
   revisionNumber: number;
-  requestedBy: ProjectPerson;
+  requestedBy: ProjectPerson | null;
   requestedAt: string;
   message: string;
   attachments: ProjectFile[];
@@ -206,27 +210,9 @@ export const PROJECTS: Project[] = [
     actionRequired: "Client review needed",
     revisionCount: 0,
     lastUpdated: "11 Jun 2026, 3:42 PM",
-    submissions: [
-      {
-        id: "sub-p1-v1",
-        versionNumber: 1,
-        status: "submitted",
-        submittedAt: "11 Jun 2026, 3:42 PM",
-        notes:
-          "Completed all responsive screens and exported the key assets. Please review the first version.",
-        demoLink: "https://edtech-landing.vercel.app",
-        attachments: [
-          file("landing-page-v1.fig", 4200000, "application/figma"),
-          file("exported-assets.zip", 8100000, "application/zip"),
-        ],
-      },
-    ],
+    submissions: [],
     revisionRequests: [],
-    timeline: [
-      { key: "accepted", label: "Application Accepted", date: "3 Jun 2026", tone: "success" },
-      { key: "created", label: "Project Created", date: "8 Jun 2026", tone: "success" },
-      { key: "v1", label: "Version 1 Submitted", date: "11 Jun 2026", tone: "neutral" },
-    ],
+    timeline: [],
     job: {
       ...baseJob,
       title: "EdTech Landing Page Design",
@@ -270,10 +256,7 @@ export const PROJECTS: Project[] = [
     lastUpdated: "12 Jun 2026, 10:15 AM",
     submissions: [],
     revisionRequests: [],
-    timeline: [
-      { key: "accepted", label: "Application Accepted", date: "9 Jun 2026", tone: "success" },
-      { key: "created", label: "Project Created", date: "10 Jun 2026", tone: "success" },
-    ],
+    timeline: [],
     job: {
       ...baseJob,
       title: "React Portfolio Website",
@@ -316,39 +299,9 @@ export const PROJECTS: Project[] = [
     actionRequired: "Student resubmission needed",
     revisionCount: 1,
     lastUpdated: "13 Jun 2026, 5:20 PM",
-    submissions: [
-      {
-        id: "sub-p3-v1",
-        versionNumber: 1,
-        status: "revision_requested",
-        submittedAt: "12 Jun 2026, 4:10 PM",
-        notes:
-          "Submitted the first complete mobile flow with customer onboarding, menu browsing, cart, and checkout screens.",
-        demoLink: "https://figma.com/proto/food-app-v1",
-        attachments: [
-          file("food-app-ui-v1.fig", 6800000, "application/figma"),
-          file("screen-previews.zip", 5400000, "application/zip"),
-        ],
-      },
-    ],
-    revisionRequests: [
-      {
-        id: "rev-p3-1",
-        revisionNumber: 1,
-        requestedBy: { name: "Suman Karki", initials: "SK" },
-        requestedAt: "13 Jun 2026, 5:20 PM",
-        message:
-          "Please improve the checkout flow by reducing the number of steps, update the restaurant card spacing, and add empty states for cart and search results.",
-        attachments: [file("checkout-feedback.pdf", 450000, "application/pdf")],
-        referenceLinks: ["https://mobbin.com/browse/ios/apps/food-delivery"],
-      },
-    ],
-    timeline: [
-      { key: "accepted", label: "Application Accepted", date: "4 Jun 2026", tone: "success" },
-      { key: "created", label: "Project Created", date: "5 Jun 2026", tone: "success" },
-      { key: "v1", label: "Version 1 Submitted", date: "12 Jun 2026", tone: "neutral" },
-      { key: "rev1", label: "Revision Requested", date: "13 Jun 2026", tone: "danger" },
-    ],
+    submissions: [],
+    revisionRequests: [],
+    timeline: [],
     job: {
       ...baseJob,
       title: "Food Delivery App UI Revision",
@@ -392,47 +345,9 @@ export const PROJECTS: Project[] = [
     revisionCount: 1,
     lastUpdated: "6 Jun 2026, 11:30 AM",
     completedAt: "6 Jun 2026, 11:30 AM",
-    submissions: [
-      {
-        id: "sub-p4-v2",
-        versionNumber: 2,
-        status: "approved",
-        submittedAt: "6 Jun 2026, 10:40 AM",
-        notes:
-          "Updated brand colors, added missing LinkedIn sizes, and included editable Canva links.",
-        demoLink: "https://canva.com/design/social-kit-final",
-        attachments: [file("social-media-kit-final.zip", 15800000, "application/zip")],
-      },
-      {
-        id: "sub-p4-v1",
-        versionNumber: 1,
-        status: "revision_requested",
-        submittedAt: "5 Jun 2026, 9:00 AM",
-        notes: "Delivered the first set of 20 templates with PNG exports.",
-        attachments: [file("social-media-kit-v1.zip", 15200000, "application/zip")],
-      },
-    ],
-    revisionRequests: [
-      {
-        id: "rev-p4-1",
-        revisionNumber: 1,
-        requestedBy: { name: "Dikshya Khanal", initials: "DK" },
-        requestedAt: "5 Jun 2026, 2:15 PM",
-        message:
-          "Please adjust the blue tone to match the brand guide and add the missing LinkedIn banner template.",
-        attachments: [file("brand-color-note.pdf", 300000, "application/pdf")],
-        referenceLinks: ["https://canva.com/brand-guidelines-example"],
-      },
-    ],
-    timeline: [
-      { key: "accepted", label: "Application Accepted", date: "31 May 2026", tone: "success" },
-      { key: "created", label: "Project Created", date: "1 Jun 2026", tone: "success" },
-      { key: "v1", label: "Version 1 Submitted", date: "5 Jun 2026", tone: "neutral" },
-      { key: "rev1", label: "Revision Requested", date: "5 Jun 2026", tone: "danger" },
-      { key: "v2", label: "Version 2 Submitted", date: "6 Jun 2026", tone: "neutral" },
-      { key: "approved", label: "Approved", date: "6 Jun 2026", tone: "success" },
-      { key: "completed", label: "Completed", date: "6 Jun 2026", tone: "success" },
-    ],
+    submissions: [],
+    revisionRequests: [],
+    timeline: [],
     job: {
       ...baseJob,
       title: "Social Media Design Kit",

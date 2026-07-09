@@ -8,7 +8,7 @@ type RevisionRequestCardProps = {
 };
 
 export function RevisionRequestCard({ request, viewerRole = "student" }: RevisionRequestCardProps) {
-  const showRequestedBy = viewerRole !== "client";
+  const showRequestedBy = viewerRole !== "client" && Boolean(request.requestedBy);
 
   return (
     <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col gap-4">
@@ -35,7 +35,7 @@ export function RevisionRequestCard({ request, viewerRole = "student" }: Revisio
               Requested By
             </p>
             <p className="text-slate-900 font-semibold mt-0.5" style={{ fontSize: "0.78rem" }}>
-              {request.requestedBy.name}
+              {request.requestedBy?.name}
             </p>
           </div>
         )}

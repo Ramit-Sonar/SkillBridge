@@ -48,8 +48,12 @@ import { JOB_CATEGORY_LABELS } from "../../constants/job.constants";
 import {
   getProjectById,
   approveDeliverable,
+  getProjectDeliverables,
   requestRevision,
   submitDeliverable,
+  type ProjectDeliverable,
+  type ProjectDeliverableHistoryItem,
+  type ProjectRevisionRequest,
   type ProjectWorkspace,
 } from "../../services/projectService";
 
@@ -219,6 +223,44 @@ function getCategoryBadge(project: WorkspaceProject) {
   const style = CATEGORY_BADGE_STYLES[categoryKey] ?? CATEGORY_BADGE_STYLES.other;
 
   return { label, style };
+}
+
+function mapDeliverableSubmission(deliverable: ProjectDeliverable): ProjectSubmission {
+  return {
+    id: deliverable.id,
+    versionNumber: deliverable.versionNumber,
+    label: deliverable.label,
+    status: deliverable.status,
+    submittedAt: formatWorkspaceDate(deliverable.submittedAt),
+    notes: deliverable.notes,
+    demoLink: deliverable.demoLink,
+    repositoryLink: deliverable.repositoryLink,
+    liveUrl: deliverable.liveUrl,
+    attachments: deliverable.attachments,
+    approvedAt: formatWorkspaceDate(deliverable.approvedAt),
+  };
+}
+
+function mapDeliverableHistoryItem(deliverable: ProjectDeliverableHistoryItem): ProjectSubmission {
+  return {
+    id: deliverable.id,
+    versionNumber: deliverable.versionNumber,
+    label: deliverable.label,
+    status: deliverable.status,
+    submittedAt: formatWorkspaceDate(deliverable.submittedAt),
+  };
+}
+
+function mapRevisionRequest(revision: ProjectRevisionRequest): RevisionRequest {
+  return {
+    id: revision.id,
+    revisionNumber: revision.revisionNumber,
+    requestedBy: revision.requestedBy,
+    requestedAt: formatWorkspaceDate(revision.requestedAt),
+    message: revision.message,
+    attachments: revision.attachments,
+    referenceLinks: revision.referenceLinks,
+  };
 }
 
 function EmptyState({
@@ -405,6 +447,7 @@ export default function ProjectWorkspacePage() {
   const [submissions, setSubmissions] = useState<ProjectSubmission[]>([]);
   const [revisionRequests, setRevisionRequests] = useState<RevisionRequest[]>([]);
   const [timeline, setTimeline] = useState<ProjectTimelineItem[]>([]);
+  const [canSubmitDeliverables, setCanSubmitDeliverables] = useState(false);
   const [loadingProject, setLoadingProject] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -424,21 +467,38 @@ export default function ProjectWorkspacePage() {
     setLoadError("");
 
     try {
-      const workspaceResponse = await getProjectById(id);
+      const [workspaceResponse, deliverablesResponse] = await Promise.all([
+        getProjectById(id),
+        getProjectDeliverables(id),
+      ]);
       const nextProject = mapWorkspaceProject(workspaceResponse.data, role);
+      const deliverables = deliverablesResponse.data;
 
       if (!nextProject) {
         throw new Error("Project details are incomplete.");
       }
 
       setProjectData(nextProject);
-      setStatus(nextProject.status);
+      setStatus(deliverables.project.status);
       setLastUpdated(nextProject.lastUpdated);
-      setSubmissions([]);
-      setRevisionRequests([]);
+      setCanSubmitDeliverables(deliverables.project.canSubmit);
+      setSubmissions([
+        ...(deliverables.currentDeliverable
+          ? [mapDeliverableSubmission(deliverables.currentDeliverable)]
+          : []),
+        ...deliverables.history.map(mapDeliverableHistoryItem),
+      ]);
+      setRevisionRequests(
+        deliverables.currentRevisionRequest
+          ? [mapRevisionRequest(deliverables.currentRevisionRequest)]
+          : []
+      );
       setTimeline([]);
     } catch (error) {
       setProjectData(null);
+      setCanSubmitDeliverables(false);
+      setSubmissions([]);
+      setRevisionRequests([]);
       setLoadError(error instanceof Error ? error.message : "Project could not be loaded.");
     } finally {
       setLoadingProject(false);
@@ -533,6 +593,8 @@ export default function ProjectWorkspacePage() {
       await submitDeliverable(id, {
         notes: formData.notes,
         demoLink: formData.demoLink,
+        repositoryLink: formData.repositoryLink,
+        liveUrl: formData.liveUrl,
         files: formData.files.map((file) => file.file),
       });
       await loadProjectWorkspace();
@@ -636,7 +698,7 @@ export default function ProjectWorkspacePage() {
         <RevisionRequestCard request={latestRevisionRequest} viewerRole={role} />
       )}
 
-      {role === "student" && status === "active" && (
+      {role === "student" && status === "active" && canSubmitDeliverables && (
         <ProjectSubmissionForm
           title="Submit Deliverables"
           helperMessage="Upload your files, add a demo link if available, and explain what the client should review."
@@ -646,7 +708,7 @@ export default function ProjectWorkspacePage() {
         />
       )}
 
-      {role === "student" && status === "revision_requested" && (
+      {role === "student" && status === "revision_requested" && canSubmitDeliverables && (
         <ProjectSubmissionForm
           title="Resubmit Deliverables"
           helperMessage="Use the same form to upload your revised files and explain what changed from the previous version."
@@ -656,7 +718,7 @@ export default function ProjectWorkspacePage() {
         />
       )}
 
-      {role === "client" && status === "submitted" && (
+      {role === "client" && status === "submitted" && latestSubmission && (
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
           <div>
             <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
