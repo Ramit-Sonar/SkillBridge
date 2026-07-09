@@ -44,7 +44,6 @@ import { Timeline } from "../../app/components/shared/Timeline";
 import {
   ConfirmDialog,
   Notification,
-  SidePanel,
   StatusBadge,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
@@ -570,6 +569,58 @@ function RevisionRequestDialog({
               "Request Revision"
             )}
           </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function StudentProfileModal({
+  profile,
+  onClose,
+}: {
+  profile: ProfileViewProps;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.93, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93 }}
+        transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+      >
+        <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
+          <div>
+            <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+              Student Profile
+            </p>
+            <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
+              {profile.name}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+            aria-label="Close student profile"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="w-full max-w-xl mx-auto">
+            <StudentProfileView profile={profile} />
+          </div>
         </div>
       </motion.div>
     </motion.div>
@@ -1257,16 +1308,10 @@ export default function ProjectWorkspacePage() {
         )}
 
         {showStudentProfile && studentProfile && (
-          <SidePanel
-            title="Student Profile"
-            subtitle={studentProfile.name}
+          <StudentProfileModal
+            profile={studentProfile}
             onClose={() => setShowStudentProfile(false)}
-            maxWidthClassName="max-w-2xl"
-            zIndexClassName="z-50"
-            bodyClassName="flex-1 overflow-y-auto p-5"
-          >
-            <StudentProfileView profile={studentProfile} />
-          </SidePanel>
+          />
         )}
       </AnimatePresence>
       <Notification message={notification} onClose={() => setNotification(null)} />
