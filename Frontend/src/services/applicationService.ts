@@ -135,6 +135,11 @@ export type AcceptApplicationResponse = ApplicationActionResponse & {
     jobId: string;
     status: ApplicationJobStatus;
   };
+  project: {
+    projectId: string;
+    status: "active";
+    startedAt: string;
+  };
 };
 
 export type RejectApplicationResponse = ApplicationActionResponse & {
