@@ -36,7 +36,13 @@ import {
   type ProfileViewProps,
 } from "../../app/components/shared/StudentProfileView";
 import { Timeline } from "../../app/components/shared/Timeline";
-import { ConfirmDialog, SidePanel, StatusBadge } from "../../app/components/shared/ui";
+import {
+  ConfirmDialog,
+  Notification,
+  SidePanel,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import {
   PROJECT_STATUS_CFG,
   type ProjectStatus,
@@ -483,6 +489,7 @@ export default function ProjectWorkspacePage() {
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [showStudentProfile, setShowStudentProfile] = useState(false);
+  const [notification, setNotification] = useState<NotificationMessage>(null);
 
   const loadProjectWorkspace = async () => {
     if (!id) {
@@ -661,12 +668,16 @@ export default function ProjectWorkspacePage() {
     if (!id) return;
 
     try {
-      await approveDeliverable(id);
+      const response = await approveDeliverable(id);
       setShowApprove(false);
       await loadProjectWorkspace();
+      setNotification({ type: "success", text: response.message });
       setShowReview(true);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Deliverables could not be approved.");
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Deliverables could not be approved.",
+      });
       setShowApprove(false);
     }
   };
@@ -1013,7 +1024,13 @@ export default function ProjectWorkspacePage() {
         {showApprove && (
           <ConfirmDialog
             title="Approve Deliverables"
-            body={`Approve the latest deliverables for "${projectData.title}"?`}
+            body={
+              <>
+                Approve the latest deliverables for <strong>{projectData.title}</strong>? Once
+                approved, this project will be marked as completed and no further submissions or
+                revision requests will be allowed.
+              </>
+            }
             confirmLabel="Approve"
             confirmColor="#059669"
             onConfirm={handleApprove}
@@ -1021,6 +1038,7 @@ export default function ProjectWorkspacePage() {
             icon={CheckCircle}
             iconBg="#ECFDF5"
             iconColor="#059669"
+            busyDelayMs={0}
           />
         )}
 
@@ -1057,6 +1075,7 @@ export default function ProjectWorkspacePage() {
           </SidePanel>
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }
