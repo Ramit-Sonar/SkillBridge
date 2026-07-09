@@ -97,6 +97,7 @@ export function FileAttachmentCard({ attachment, canPreview = true, canDownload 
             onClick={handlePreview}
             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="Preview attachment"
+            aria-label={`Preview ${attachment.originalName || "attachment"}`}
           >
             <Eye className="w-3.5 h-3.5" />
           </button>
@@ -108,6 +109,7 @@ export function FileAttachmentCard({ attachment, canPreview = true, canDownload 
             disabled={!hasValidUrl || isDownloading}
             className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
             title="Download attachment"
+            aria-label={`Download ${attachment.originalName || "attachment"}`}
           >
             <Download className="w-3.5 h-3.5" />
           </button>

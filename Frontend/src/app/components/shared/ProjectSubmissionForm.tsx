@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Link, Upload } from "lucide-react";
 import { FileUploadArea, type UploadedFile } from "./FileUploadArea";
@@ -16,7 +16,7 @@ type ProjectSubmissionFormProps = {
   helperMessage: string;
   buttonLabel: string;
   submitting: boolean;
-  onSubmit: (data: ProjectSubmissionFormData) => void;
+  onSubmit: (data: ProjectSubmissionFormData) => Promise<void> | void;
 };
 
 const inputCls =
@@ -34,8 +34,26 @@ export function ProjectSubmissionForm({
   const [repositoryLink, setRepositoryLink] = useState("");
   const [liveUrl, setLiveUrl] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const submitLockedRef = useRef(false);
+  const formId = useId();
 
   const canSubmit = files.length > 0 && notes.trim().length > 0 && !submitting;
+  const notesId = `${formId}-notes`;
+  const demoLinkId = `${formId}-demo-link`;
+  const repositoryLinkId = `${formId}-repository-link`;
+  const liveUrlId = `${formId}-live-url`;
+
+  const handleSubmit = async () => {
+    if (!canSubmit || submitLockedRef.current) return;
+
+    submitLockedRef.current = true;
+
+    try {
+      await onSubmit({ notes, demoLink, repositoryLink, liveUrl, files });
+    } finally {
+      submitLockedRef.current = false;
+    }
+  };
 
   return (
     <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-5">
@@ -49,10 +67,15 @@ export function ProjectSubmissionForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+        <label
+          htmlFor={notesId}
+          className="text-slate-900 font-semibold"
+          style={{ fontSize: "0.82rem" }}
+        >
           Submission Notes <span className="text-red-400">*</span>
         </label>
         <textarea
+          id={notesId}
           rows={4}
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
@@ -63,12 +86,17 @@ export function ProjectSubmissionForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+        <label
+          htmlFor={demoLinkId}
+          className="text-slate-900 font-semibold"
+          style={{ fontSize: "0.82rem" }}
+        >
           Demo Link <span className="text-slate-400 font-normal">(optional)</span>
         </label>
         <div className="relative">
           <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
+            id={demoLinkId}
             type="url"
             value={demoLink}
             onChange={(event) => setDemoLink(event.target.value)}
@@ -80,12 +108,17 @@ export function ProjectSubmissionForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+        <label
+          htmlFor={repositoryLinkId}
+          className="text-slate-900 font-semibold"
+          style={{ fontSize: "0.82rem" }}
+        >
           Repository Link <span className="text-slate-400 font-normal">(optional)</span>
         </label>
         <div className="relative">
           <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
+            id={repositoryLinkId}
             type="url"
             value={repositoryLink}
             onChange={(event) => setRepositoryLink(event.target.value)}
@@ -97,12 +130,17 @@ export function ProjectSubmissionForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+        <label
+          htmlFor={liveUrlId}
+          className="text-slate-900 font-semibold"
+          style={{ fontSize: "0.82rem" }}
+        >
           Live URL <span className="text-slate-400 font-normal">(optional)</span>
         </label>
         <div className="relative">
           <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
+            id={liveUrlId}
             type="url"
             value={liveUrl}
             onChange={(event) => setLiveUrl(event.target.value)}
@@ -127,10 +165,7 @@ export function ProjectSubmissionForm({
 
       <motion.button
         type="button"
-        onClick={() => {
-          if (!canSubmit) return;
-          onSubmit({ notes, demoLink, repositoryLink, liveUrl, files });
-        }}
+        onClick={handleSubmit}
         disabled={!canSubmit}
         whileHover={canSubmit ? { scale: 1.02, boxShadow: "0 8px 20px rgba(37,99,235,0.25)" } : {}}
         whileTap={canSubmit ? { scale: 0.97 } : {}}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ElementType } from "react";
+import { useEffect, useId, useState, type ElementType } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -413,6 +413,9 @@ function RevisionRequestDialog({
   const [referenceLinks, setReferenceLinks] = useState("");
   const [busy, setBusy] = useState(false);
   const canSubmit = message.trim().length > 0 && !busy;
+  const dialogId = useId();
+  const messageId = `${dialogId}-revision-message`;
+  const referenceLinksId = `${dialogId}-reference-links`;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -472,10 +475,15 @@ function RevisionRequestDialog({
 
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
           <div className="flex flex-col gap-1.5">
-            <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+            <label
+              htmlFor={messageId}
+              className="text-slate-900 font-semibold"
+              style={{ fontSize: "0.82rem" }}
+            >
               Revision Message <span className="text-red-400">*</span>
             </label>
             <textarea
+              id={messageId}
               rows={4}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
@@ -501,10 +509,15 @@ function RevisionRequestDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
+            <label
+              htmlFor={referenceLinksId}
+              className="text-slate-900 font-semibold"
+              style={{ fontSize: "0.82rem" }}
+            >
               Reference Links <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <textarea
+              id={referenceLinksId}
               rows={3}
               value={referenceLinks}
               onChange={(event) => setReferenceLinks(event.target.value)}

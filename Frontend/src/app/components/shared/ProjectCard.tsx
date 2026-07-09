@@ -63,12 +63,14 @@ function getLatestSubmissionSummary(submission?: ProjectCardSubmission) {
 
 export function ProjectCard({ project, role }: ProjectCardProps) {
   const navigate = useNavigate();
-  const person = role === "student" ? project.client! : project.student!;
+  const person = role === "student" ? project.client : project.student;
   const personLabel = role === "student" ? "Client" : "Student";
   const currentAction =
     project.currentAction ||
     getProjectCardAction(project.status, role, project.submissions.length > 0);
   const latestSubmission = getLatestSubmissionSummary(project.submissions[0]);
+  const personName = person?.name ?? `${personLabel} unavailable`;
+  const personInitials = person?.initials || "?";
 
   return (
     <motion.div
@@ -94,19 +96,19 @@ export function ProjectCard({ project, role }: ProjectCardProps) {
 
       <div className="flex items-center gap-2.5">
         <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-          {person.avatar ? (
+          {person?.avatar ? (
             <img
               src={person.avatar}
-              alt={person.name}
+              alt={personName}
               className="w-full h-full rounded-full object-cover"
             />
           ) : (
-            <span style={{ fontSize: "0.72rem" }}>{person.initials}</span>
+            <span style={{ fontSize: "0.72rem" }}>{personInitials}</span>
           )}
         </div>
         <div className="min-w-0">
           <p className="text-slate-900 font-semibold truncate" style={{ fontSize: "0.78rem" }}>
-            {person.name}
+            {personName}
           </p>
           <p className="text-slate-400" style={{ fontSize: "0.65rem" }}>
             {personLabel}
