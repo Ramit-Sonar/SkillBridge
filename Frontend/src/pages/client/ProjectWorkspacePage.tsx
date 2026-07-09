@@ -64,9 +64,11 @@ import {
   getProjectTimeline,
   requestRevision,
   submitDeliverable,
+  type ProjectDeliverablesResponse,
   type ProjectDeliverable,
   type ProjectDeliverableHistoryItem,
   type ProjectTimelineEvent,
+  type ProjectTimelineResponse,
   type ProjectRevisionRequest,
   type ProjectWorkspace,
 } from "../../services/projectService";
@@ -325,6 +327,27 @@ function mapRevisionRequest(revision: ProjectRevisionRequest): RevisionRequest {
   };
 }
 
+function mapDeliverablesSnapshot(
+  deliverables: ProjectDeliverablesResponse
+): Pick<
+  ProjectWorkspaceSnapshot,
+  "status" | "canSubmitDeliverables" | "submissions" | "revisionRequests"
+> {
+  return {
+    status: deliverables.project.status,
+    canSubmitDeliverables: deliverables.project.canSubmit,
+    submissions: [
+      ...(deliverables.currentDeliverable
+        ? [mapDeliverableSubmission(deliverables.currentDeliverable)]
+        : []),
+      ...deliverables.history.map(mapDeliverableHistoryItem),
+    ],
+    revisionRequests: deliverables.currentRevisionRequest
+      ? [mapRevisionRequest(deliverables.currentRevisionRequest)]
+      : [],
+  };
+}
+
 function mapTimelineEvent(event: ProjectTimelineEvent, index: number): ProjectTimelineItem {
   const presentation = PROJECT_TIMELINE_PRESENTATION[event.type] ?? {
     label: event.message,
@@ -342,6 +365,10 @@ function mapTimelineEvent(event: ProjectTimelineEvent, index: number): ProjectTi
     tone: presentation.tone,
     icon: presentation.icon,
   };
+}
+
+function mapTimelineSnapshot(timeline: ProjectTimelineResponse): ProjectTimelineItem[] {
+  return timeline.timeline.map(mapTimelineEvent);
 }
 
 function EmptyState({
@@ -532,6 +559,8 @@ export default function ProjectWorkspacePage() {
   const [activeTab, setActiveTab] = useState<ProjectWorkspaceTab>("deliverables");
   const [workspace, setWorkspace] = useState<ProjectWorkspaceSnapshot | null>(null);
   const [loadingProject, setLoadingProject] = useState(true);
+  const [deliverablesLoaded, setDeliverablesLoaded] = useState(false);
+  const [timelineLoaded, setTimelineLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
@@ -549,36 +578,40 @@ export default function ProjectWorkspacePage() {
 
     setLoadingProject(true);
     setLoadError("");
+    setDeliverablesLoaded(false);
+    setTimelineLoaded(false);
 
     try {
-      const [workspaceResponse, deliverablesResponse, timelineResponse] = await Promise.all([
-        getProjectById(id),
-        getProjectDeliverables(id),
-        getProjectTimeline(id),
-      ]);
+      const workspaceResponse = await getProjectById(id);
       const nextProject = mapWorkspaceProject(workspaceResponse.data, role);
-      const deliverables = deliverablesResponse.data;
 
       if (!nextProject) {
         throw new Error("Project details are incomplete.");
       }
 
-      setWorkspace({
+      const nextWorkspace: ProjectWorkspaceSnapshot = {
         projectData: nextProject,
-        status: deliverables.project.status,
+        status: nextProject.status,
         lastUpdated: nextProject.lastUpdated,
-        canSubmitDeliverables: deliverables.project.canSubmit,
-        submissions: [
-          ...(deliverables.currentDeliverable
-            ? [mapDeliverableSubmission(deliverables.currentDeliverable)]
-            : []),
-          ...deliverables.history.map(mapDeliverableHistoryItem),
-        ],
-        revisionRequests: deliverables.currentRevisionRequest
-          ? [mapRevisionRequest(deliverables.currentRevisionRequest)]
-          : [],
-        timeline: timelineResponse.data.timeline.map(mapTimelineEvent),
-      });
+        canSubmitDeliverables: false,
+        submissions: [],
+        revisionRequests: [],
+        timeline: [],
+      };
+
+      if (activeTab === "deliverables") {
+        const deliverablesResponse = await getProjectDeliverables(id);
+        Object.assign(nextWorkspace, mapDeliverablesSnapshot(deliverablesResponse.data));
+        setDeliverablesLoaded(true);
+      }
+
+      if (activeTab === "activity") {
+        const timelineResponse = await getProjectTimeline(id);
+        nextWorkspace.timeline = mapTimelineSnapshot(timelineResponse.data);
+        setTimelineLoaded(true);
+      }
+
+      setWorkspace(nextWorkspace);
     } catch (error) {
       setWorkspace(null);
       setLoadError(error instanceof Error ? error.message : "Project could not be loaded.");
@@ -590,6 +623,81 @@ export default function ProjectWorkspacePage() {
   useEffect(() => {
     loadProjectWorkspace();
   }, [id, role]);
+
+  const loadProjectDeliverables = async () => {
+    if (!id || deliverablesLoaded) return;
+
+    setLoadError("");
+
+    try {
+      const deliverablesResponse = await getProjectDeliverables(id);
+      const deliverablesSnapshot = mapDeliverablesSnapshot(deliverablesResponse.data);
+
+      setWorkspace((current) => (current ? { ...current, ...deliverablesSnapshot } : current));
+      setDeliverablesLoaded(true);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Project deliverables could not be loaded."
+      );
+    }
+  };
+
+  const loadProjectTimeline = async () => {
+    if (!id || timelineLoaded) return;
+
+    setLoadError("");
+
+    try {
+      const timelineResponse = await getProjectTimeline(id);
+
+      setWorkspace((current) =>
+        current ? { ...current, timeline: mapTimelineSnapshot(timelineResponse.data) } : current
+      );
+      setTimelineLoaded(true);
+    } catch (error) {
+      setLoadError(
+        error instanceof Error ? error.message : "Project timeline could not be loaded."
+      );
+    }
+  };
+
+  const refreshProjectAfterMutation = async () => {
+    if (!id) return;
+
+    setLoadError("");
+
+    const [workspaceResponse, deliverablesResponse, timelineResponse] = await Promise.all([
+      getProjectById(id),
+      getProjectDeliverables(id),
+      getProjectTimeline(id),
+    ]);
+    const nextProject = mapWorkspaceProject(workspaceResponse.data, role);
+
+    if (!nextProject) {
+      throw new Error("Project details are incomplete.");
+    }
+
+    setWorkspace({
+      projectData: nextProject,
+      lastUpdated: nextProject.lastUpdated,
+      timeline: mapTimelineSnapshot(timelineResponse.data),
+      ...mapDeliverablesSnapshot(deliverablesResponse.data),
+    });
+    setDeliverablesLoaded(true);
+    setTimelineLoaded(true);
+  };
+
+  useEffect(() => {
+    if (!workspace) return;
+
+    if (activeTab === "deliverables") {
+      loadProjectDeliverables();
+    }
+
+    if (activeTab === "activity") {
+      loadProjectTimeline();
+    }
+  }, [activeTab, workspace?.projectData.id]);
 
   if (loadingProject) {
     return (
@@ -688,7 +796,7 @@ export default function ProjectWorkspacePage() {
         liveUrl: formData.liveUrl,
         files: formData.files.map((file) => file.file),
       });
-      await loadProjectWorkspace();
+      await refreshProjectAfterMutation();
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Project could not be submitted.");
     } finally {
@@ -710,7 +818,7 @@ export default function ProjectWorkspacePage() {
         files: data.files.map((file) => file.file),
       });
       setShowRevisionDialog(false);
-      await loadProjectWorkspace();
+      await refreshProjectAfterMutation();
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Revision request could not be sent.");
       setShowRevisionDialog(false);
@@ -723,7 +831,7 @@ export default function ProjectWorkspacePage() {
     try {
       const response = await approveDeliverable(id);
       setShowApprove(false);
-      await loadProjectWorkspace();
+      await refreshProjectAfterMutation();
       setNotification({ type: "success", text: response.message });
       setShowReview(true);
     } catch (error) {
@@ -789,113 +897,123 @@ export default function ProjectWorkspacePage() {
 
   const renderDeliverablesTab = () => (
     <div className="flex flex-col gap-5">
-      {latestRevisionRequest && (
-        <RevisionRequestCard request={latestRevisionRequest} viewerRole={role} />
-      )}
-
-      {role === "student" && status === "active" && canSubmitDeliverables && (
-        <ProjectSubmissionForm
-          title="Submit Deliverables"
-          helperMessage="Upload your files, add a demo link if available, and explain what the client should review."
-          buttonLabel="Submit Project"
-          submitting={submitting}
-          onSubmit={handleSubmitProject}
-        />
-      )}
-
-      {role === "student" && status === "revision_requested" && canSubmitDeliverables && (
-        <ProjectSubmissionForm
-          title="Resubmit Deliverables"
-          helperMessage="Use the same form to upload your revised files and explain what changed from the previous version."
-          buttonLabel="Resubmit Project"
-          submitting={submitting}
-          onSubmit={handleSubmitProject}
-        />
-      )}
-
-      {role === "client" && status === "submitted" && latestSubmission && (
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
-          <div>
-            <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
-              Review Submission
-            </h2>
-            <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
-              Approve the deliverables or request changes with a clear revision message.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setShowApprove(true)}
-              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
-              style={{ fontSize: "0.875rem" }}
-            >
-              <CheckCircle className="w-4 h-4" /> Approve Deliverables
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setShowRevisionDialog(true)}
-              className="flex-1 flex items-center justify-center gap-2 bg-white text-amber-600 font-semibold py-3 rounded-xl border border-amber-200 hover:bg-amber-50 transition-colors"
-              style={{ fontSize: "0.875rem" }}
-            >
-              <GitPullRequest className="w-4 h-4" /> Request Revision
-            </motion.button>
-          </div>
-        </section>
-      )}
-
-      <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
-        <div>
-          <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
-            Deliverables
-          </h2>
-          <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
-            Latest submission is shown first. Older versions stay available for history.
+      {!deliverablesLoaded ? (
+        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5">
+          <p className="text-slate-500 text-center py-6" style={{ fontSize: "0.85rem" }}>
+            Loading deliverables...
           </p>
-        </div>
+        </section>
+      ) : (
+        <>
+          {latestRevisionRequest && (
+            <RevisionRequestCard request={latestRevisionRequest} viewerRole={role} />
+          )}
 
-        {latestSubmission ? (
-          <>
+          {role === "student" && status === "active" && canSubmitDeliverables && (
+            <ProjectSubmissionForm
+              title="Submit Deliverables"
+              helperMessage="Upload your files, add a demo link if available, and explain what the client should review."
+              buttonLabel="Submit Project"
+              submitting={submitting}
+              onSubmit={handleSubmitProject}
+            />
+          )}
+
+          {role === "student" && status === "revision_requested" && canSubmitDeliverables && (
+            <ProjectSubmissionForm
+              title="Resubmit Deliverables"
+              helperMessage="Use the same form to upload your revised files and explain what changed from the previous version."
+              buttonLabel="Resubmit Project"
+              submitting={submitting}
+              onSubmit={handleSubmitProject}
+            />
+          )}
+
+          {role === "client" && status === "submitted" && latestSubmission && (
+            <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
+              <div>
+                <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+                  Review Submission
+                </h2>
+                <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
+                  Approve the deliverables or request changes with a clear revision message.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowApprove(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
+                  style={{ fontSize: "0.875rem" }}
+                >
+                  <CheckCircle className="w-4 h-4" /> Approve Deliverables
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowRevisionDialog(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white text-amber-600 font-semibold py-3 rounded-xl border border-amber-200 hover:bg-amber-50 transition-colors"
+                  style={{ fontSize: "0.875rem" }}
+                >
+                  <GitPullRequest className="w-4 h-4" /> Request Revision
+                </motion.button>
+              </div>
+            </section>
+          )}
+
+          <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
             <div>
-              <p
-                className="text-slate-400 font-semibold mb-2"
-                style={{
-                  fontSize: "0.62rem",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.07em",
-                }}
-              >
-                Latest Submission
+              <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+                Deliverables
+              </h2>
+              <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
+                Latest submission is shown first. Older versions stay available for history.
               </p>
-              <DeliverableVersionCard submission={latestSubmission} />
             </div>
 
-            {olderSubmissions.length > 0 && (
-              <details className="group">
-                <summary
-                  className="cursor-pointer text-blue-600 font-semibold hover:text-blue-700"
-                  style={{ fontSize: "0.82rem" }}
-                >
-                  Version History ({olderSubmissions.length})
-                </summary>
-                <div className="flex flex-col gap-3 mt-3">
-                  {olderSubmissions.map((submission) => (
-                    <DeliverableVersionCard key={submission.id} submission={submission} />
-                  ))}
+            {latestSubmission ? (
+              <>
+                <div>
+                  <p
+                    className="text-slate-400 font-semibold mb-2"
+                    style={{
+                      fontSize: "0.62rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.07em",
+                    }}
+                  >
+                    Latest Submission
+                  </p>
+                  <DeliverableVersionCard submission={latestSubmission} />
                 </div>
-              </details>
+
+                {olderSubmissions.length > 0 && (
+                  <details className="group">
+                    <summary
+                      className="cursor-pointer text-blue-600 font-semibold hover:text-blue-700"
+                      style={{ fontSize: "0.82rem" }}
+                    >
+                      Version History ({olderSubmissions.length})
+                    </summary>
+                    <div className="flex flex-col gap-3 mt-3">
+                      {olderSubmissions.map((submission) => (
+                        <DeliverableVersionCard key={submission.id} submission={submission} />
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </>
+            ) : (
+              <EmptyState
+                icon={FileText}
+                title="No Deliverables Submitted"
+                message="Submitted files and notes will appear here."
+              />
             )}
-          </>
-        ) : (
-          <EmptyState
-            icon={FileText}
-            title="No Deliverables Submitted"
-            message="Submitted files and notes will appear here."
-          />
-        )}
-      </section>
+          </section>
+        </>
+      )}
     </div>
   );
 
@@ -939,7 +1057,11 @@ export default function ProjectWorkspacePage() {
           <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: "0.95rem" }}>
             Project Timeline
           </h2>
-          {timeline.length > 0 ? (
+          {!timelineLoaded ? (
+            <p className="text-slate-500 text-center py-6" style={{ fontSize: "0.85rem" }}>
+              Loading timeline...
+            </p>
+          ) : timeline.length > 0 ? (
             <Timeline items={timeline} />
           ) : (
             <EmptyState
