@@ -16,7 +16,6 @@ import {
   X,
 } from "lucide-react";
 import { DashboardLayout, type DashboardRole } from "../../app/components/layout/DashboardLayout";
-import { ReviewModal } from "../../app/components/ReviewModal";
 import {
   ReadOnlyApplicationView,
   type ApplicationDetailsData,
@@ -578,7 +577,6 @@ export default function ProjectWorkspacePage() {
   const [submitting, setSubmitting] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
-  const [showReview, setShowReview] = useState(false);
   const [showStudentProfile, setShowStudentProfile] = useState(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
@@ -846,7 +844,6 @@ export default function ProjectWorkspacePage() {
       setShowApprove(false);
       await refreshProjectAfterMutation();
       setNotification({ type: "success", text: response.message });
-      setShowReview(true);
     } catch (error) {
       setNotification({
         type: "error",
@@ -1242,19 +1239,6 @@ export default function ProjectWorkspacePage() {
           <RevisionRequestDialog
             onClose={() => setShowRevisionDialog(false)}
             onSubmit={handleRequestRevision}
-          />
-        )}
-
-        {showReview && projectData.student && (
-          <ReviewModal
-            studentName={projectData.student.name}
-            studentInitials={projectData.student.initials}
-            projectName={projectData.title}
-            completedAt={lastUpdated}
-            onClose={() => setShowReview(false)}
-            onSubmit={() => {
-              setShowReview(false);
-            }}
           />
         )}
 
