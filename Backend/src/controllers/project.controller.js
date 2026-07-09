@@ -16,6 +16,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { buildClientSummary } from "../utils/buildClientSummary.js";
 import {
   buildApproveDeliverableResponse,
   buildDeliverablesSummary,
@@ -280,9 +281,7 @@ const getProjectById = asyncHandler(async (req, res) => {
   let partnerVerification = null;
 
   if (req.user.role === "student" && clientId) {
-    partnerProfile = await ClientProfile.findOne({ user: clientId })
-      .select("companyName")
-      .lean();
+    partnerProfile = await buildClientSummary(clientId);
   }
 
   if (req.user.role === "client" && studentId) {

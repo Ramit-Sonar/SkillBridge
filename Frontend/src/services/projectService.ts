@@ -75,7 +75,15 @@ export type ProjectWorkspaceJob = {
   clientName?: string;
   clientInitials?: string;
   clientAvatar?: string;
+  clientLocation?: string;
   clientCompanyName?: string;
+  clientWebsite?: string;
+  clientAbout?: string;
+  clientVerified?: boolean;
+  clientJobsPosted?: number;
+  clientProjectsCompleted?: number | null;
+  clientJoinedDate?: string;
+  clientRating?: number | null;
 };
 
 export type ProjectWorkspaceApplication = {

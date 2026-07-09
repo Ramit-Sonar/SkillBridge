@@ -231,7 +231,17 @@ export const buildProjectWorkspace = ({
                 clientName: project.client.fullName,
                 clientInitials: getInitials(project.client.fullName),
                 clientAvatar: project.client.avatar || "",
+                clientLocation: partnerProfile?.location || "",
                 clientCompanyName: partnerProfile?.companyName || "",
+                clientWebsite: partnerProfile?.website || "",
+                clientAbout: partnerProfile?.bio || "",
+                clientVerified:
+                  partnerProfile?.verification?.status === "approved",
+                clientJobsPosted: partnerProfile?.statistics?.jobsPosted,
+                clientProjectsCompleted:
+                  partnerProfile?.statistics?.projectsCompleted,
+                clientJoinedDate: partnerProfile?.joined,
+                clientRating: partnerProfile?.statistics?.averageRating,
               }
             : {}),
         }
