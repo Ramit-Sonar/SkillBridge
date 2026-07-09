@@ -49,10 +49,12 @@ import {
   getProjectById,
   approveDeliverable,
   getProjectDeliverables,
+  getProjectTimeline,
   requestRevision,
   submitDeliverable,
   type ProjectDeliverable,
   type ProjectDeliverableHistoryItem,
+  type ProjectTimelineEvent,
   type ProjectRevisionRequest,
   type ProjectWorkspace,
 } from "../../services/projectService";
@@ -263,6 +265,22 @@ function mapRevisionRequest(revision: ProjectRevisionRequest): RevisionRequest {
   };
 }
 
+function getTimelineTone(eventType: string): ProjectTimelineItem["tone"] {
+  if (eventType === "project_completed" || eventType === "deliverable_approved") return "success";
+  if (eventType === "revision_requested") return "danger";
+
+  return "neutral";
+}
+
+function mapTimelineEvent(event: ProjectTimelineEvent, index: number): ProjectTimelineItem {
+  return {
+    key: `${event.type}-${event.referenceId ?? index}-${event.createdAt}`,
+    label: event.message,
+    date: formatWorkspaceDate(event.createdAt),
+    tone: getTimelineTone(event.type),
+  };
+}
+
 function EmptyState({
   icon: Icon,
   title,
@@ -459,6 +477,7 @@ export default function ProjectWorkspacePage() {
   const loadProjectWorkspace = async () => {
     if (!id) {
       setProjectData(null);
+      setTimeline([]);
       setLoadingProject(false);
       return;
     }
@@ -467,9 +486,10 @@ export default function ProjectWorkspacePage() {
     setLoadError("");
 
     try {
-      const [workspaceResponse, deliverablesResponse] = await Promise.all([
+      const [workspaceResponse, deliverablesResponse, timelineResponse] = await Promise.all([
         getProjectById(id),
         getProjectDeliverables(id),
+        getProjectTimeline(id),
       ]);
       const nextProject = mapWorkspaceProject(workspaceResponse.data, role);
       const deliverables = deliverablesResponse.data;
@@ -493,12 +513,13 @@ export default function ProjectWorkspacePage() {
           ? [mapRevisionRequest(deliverables.currentRevisionRequest)]
           : []
       );
-      setTimeline([]);
+      setTimeline(timelineResponse.data.timeline.map(mapTimelineEvent));
     } catch (error) {
       setProjectData(null);
       setCanSubmitDeliverables(false);
       setSubmissions([]);
       setRevisionRequests([]);
+      setTimeline([]);
       setLoadError(error instanceof Error ? error.message : "Project could not be loaded.");
     } finally {
       setLoadingProject(false);
@@ -584,7 +605,7 @@ export default function ProjectWorkspacePage() {
   ];
 
   const handleSubmitProject = async (formData: ProjectSubmissionFormData) => {
-    if (!id) return;
+    if (!id || submitting) return;
 
     setSubmitting(true);
     setLoadError("");

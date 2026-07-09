@@ -121,7 +121,7 @@ export function ProjectSubmissionForm({
           files={files}
           onAdd={(file) => setFiles((current) => [...current, file])}
           onRemove={(name) => setFiles((current) => current.filter((file) => file.name !== name))}
-          maxFiles={5}
+          maxFiles={3}
         />
       </div>
 
