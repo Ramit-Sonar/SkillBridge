@@ -170,6 +170,16 @@ type WorkspaceProject = {
   studentProfile: ProfileViewProps | null;
 };
 
+type ProjectWorkspaceSnapshot = {
+  projectData: WorkspaceProject;
+  status: ProjectStatus;
+  lastUpdated: string;
+  submissions: ProjectSubmission[];
+  revisionRequests: RevisionRequest[];
+  timeline: ProjectTimelineItem[];
+  canSubmitDeliverables: boolean;
+};
+
 function getProjectPerson(name?: string, avatar = ""): WorkspacePerson | null {
   if (!name) return null;
 
@@ -520,13 +530,7 @@ export default function ProjectWorkspacePage() {
   const role: DashboardRole = location.pathname.includes("/student/") ? "student" : "client";
 
   const [activeTab, setActiveTab] = useState<ProjectWorkspaceTab>("deliverables");
-  const [projectData, setProjectData] = useState<WorkspaceProject | null>(null);
-  const [status, setStatus] = useState<ProjectStatus>("active");
-  const [lastUpdated, setLastUpdated] = useState("");
-  const [submissions, setSubmissions] = useState<ProjectSubmission[]>([]);
-  const [revisionRequests, setRevisionRequests] = useState<RevisionRequest[]>([]);
-  const [timeline, setTimeline] = useState<ProjectTimelineItem[]>([]);
-  const [canSubmitDeliverables, setCanSubmitDeliverables] = useState(false);
+  const [workspace, setWorkspace] = useState<ProjectWorkspaceSnapshot | null>(null);
   const [loadingProject, setLoadingProject] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -538,8 +542,7 @@ export default function ProjectWorkspacePage() {
 
   const loadProjectWorkspace = async () => {
     if (!id) {
-      setProjectData(null);
-      setTimeline([]);
+      setWorkspace(null);
       setLoadingProject(false);
       return;
     }
@@ -560,28 +563,24 @@ export default function ProjectWorkspacePage() {
         throw new Error("Project details are incomplete.");
       }
 
-      setProjectData(nextProject);
-      setStatus(deliverables.project.status);
-      setLastUpdated(nextProject.lastUpdated);
-      setCanSubmitDeliverables(deliverables.project.canSubmit);
-      setSubmissions([
-        ...(deliverables.currentDeliverable
-          ? [mapDeliverableSubmission(deliverables.currentDeliverable)]
-          : []),
-        ...deliverables.history.map(mapDeliverableHistoryItem),
-      ]);
-      setRevisionRequests(
-        deliverables.currentRevisionRequest
+      setWorkspace({
+        projectData: nextProject,
+        status: deliverables.project.status,
+        lastUpdated: nextProject.lastUpdated,
+        canSubmitDeliverables: deliverables.project.canSubmit,
+        submissions: [
+          ...(deliverables.currentDeliverable
+            ? [mapDeliverableSubmission(deliverables.currentDeliverable)]
+            : []),
+          ...deliverables.history.map(mapDeliverableHistoryItem),
+        ],
+        revisionRequests: deliverables.currentRevisionRequest
           ? [mapRevisionRequest(deliverables.currentRevisionRequest)]
-          : []
-      );
-      setTimeline(timelineResponse.data.timeline.map(mapTimelineEvent));
+          : [],
+        timeline: timelineResponse.data.timeline.map(mapTimelineEvent),
+      });
     } catch (error) {
-      setProjectData(null);
-      setCanSubmitDeliverables(false);
-      setSubmissions([]);
-      setRevisionRequests([]);
-      setTimeline([]);
+      setWorkspace(null);
       setLoadError(error instanceof Error ? error.message : "Project could not be loaded.");
     } finally {
       setLoadingProject(false);
@@ -632,7 +631,7 @@ export default function ProjectWorkspacePage() {
     );
   }
 
-  if (!projectData) {
+  if (!workspace) {
     return (
       <DashboardLayout role={role} title="Project" activeNav="projects">
         <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -651,6 +650,15 @@ export default function ProjectWorkspacePage() {
     );
   }
 
+  const {
+    projectData,
+    status,
+    lastUpdated,
+    submissions,
+    revisionRequests,
+    timeline,
+    canSubmitDeliverables,
+  } = workspace;
   const latestSubmission = submissions[0];
   const olderSubmissions = submissions.slice(1);
   const latestRevisionRequest = revisionRequests[0];
