@@ -1,4 +1,4 @@
-import { useState, type ElementType, type ReactNode } from "react";
+import { useRef, useState, type ElementType, type ReactNode } from "react";
 import { motion } from "motion/react";
 
 type ConfirmDialogProps = {
@@ -33,12 +33,14 @@ export function ConfirmDialog({
   busyDelayMs = 900,
 }: ConfirmDialogProps) {
   const [busy, setBusy] = useState(false);
+  const confirmLockedRef = useRef(false);
   const centered = align === "center";
   const isBusy = busy || Boolean(loading);
 
   const handleConfirm = async () => {
-    if (isBusy) return;
+    if (isBusy || confirmLockedRef.current) return;
 
+    confirmLockedRef.current = true;
     setBusy(true);
 
     try {
@@ -50,6 +52,7 @@ export function ConfirmDialog({
     } catch {
       // Page-level action handlers show the backend error message.
     } finally {
+      confirmLockedRef.current = false;
       setBusy(false);
     }
   };

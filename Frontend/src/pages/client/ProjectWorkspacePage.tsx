@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ElementType } from "react";
+import { useEffect, useId, useRef, useState, type ElementType } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -411,14 +411,16 @@ function RevisionRequestDialog({
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [referenceLinks, setReferenceLinks] = useState("");
   const [busy, setBusy] = useState(false);
+  const submitLockedRef = useRef(false);
   const canSubmit = message.trim().length > 0 && !busy;
   const dialogId = useId();
   const messageId = `${dialogId}-revision-message`;
   const referenceLinksId = `${dialogId}-reference-links`;
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || submitLockedRef.current) return;
 
+    submitLockedRef.current = true;
     setBusy(true);
 
     try {
@@ -431,6 +433,7 @@ function RevisionRequestDialog({
           .filter(Boolean),
       });
     } finally {
+      submitLockedRef.current = false;
       setBusy(false);
     }
   };
