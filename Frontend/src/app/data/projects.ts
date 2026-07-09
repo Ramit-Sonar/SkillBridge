@@ -1,6 +1,8 @@
 // Shared project dummy data - replace with API responses when the backend is ready.
 
+import type { LucideIcon } from "lucide-react";
 import type { ProfileViewProps } from "../components/shared/StudentProfileView";
+import type { TimelineTone } from "../components/shared/Timeline";
 
 export type ProjectStatus = "active" | "submitted" | "revision_requested" | "completed";
 
@@ -49,8 +51,12 @@ export interface RevisionRequest {
 export interface ProjectTimelineItem {
   key: string;
   label: string;
+  description?: string;
+  actor?: string;
   date: string;
-  tone: "neutral" | "success" | "danger" | "muted";
+  fullDate?: string;
+  tone: TimelineTone;
+  icon?: LucideIcon;
 }
 
 export interface ProjectJobDetails {

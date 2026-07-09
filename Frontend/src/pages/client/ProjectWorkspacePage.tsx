@@ -3,11 +3,14 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
+  Award,
   Calendar,
   CheckCircle,
   Clock,
   FileText,
+  FolderPlus,
   GitPullRequest,
+  RefreshCw,
   Tag,
   Upload,
   X,
@@ -21,7 +24,10 @@ import {
 import { DeliverableVersionCard } from "../../app/components/shared/DeliverableVersionCard";
 import { FileUploadArea, type UploadedFile } from "../../app/components/shared/FileUploadArea";
 import { ProjectOverview } from "../../app/components/shared/ProjectOverview";
-import { getProjectStateText } from "../../app/components/shared/projectPresentation";
+import {
+  formatProjectRelativeDate,
+  getProjectStateText,
+} from "../../app/components/shared/projectPresentation";
 import {
   ProjectSubmissionForm,
   type ProjectSubmissionFormData,
@@ -74,6 +80,42 @@ const CATEGORY_BADGE_STYLES: Record<string, { bg: string; color: string; border:
   documentation: { bg: "#ECFDF5", color: "#059669", border: "#6EE7B7" },
   presentation: { bg: "#FFFBEB", color: "#D97706", border: "#FDE68A" },
   other: { bg: "#F8FAFC", color: "#64748B", border: "#CBD5E1" },
+};
+
+const PROJECT_TIMELINE_PRESENTATION: Record<
+  string,
+  Pick<ProjectTimelineItem, "label" | "tone" | "icon">
+> = {
+  project_created: {
+    label: "Project Created",
+    tone: "primary",
+    icon: FolderPlus,
+  },
+  deliverable_submitted: {
+    label: "Deliverable Submitted",
+    tone: "info",
+    icon: Upload,
+  },
+  revision_requested: {
+    label: "Revision Requested",
+    tone: "warning",
+    icon: RefreshCw,
+  },
+  deliverable_resubmitted: {
+    label: "Deliverable Resubmitted",
+    tone: "info",
+    icon: Upload,
+  },
+  deliverable_approved: {
+    label: "Deliverable Approved",
+    tone: "success",
+    icon: CheckCircle,
+  },
+  project_completed: {
+    label: "Project Completed",
+    tone: "success",
+    icon: Award,
+  },
 };
 
 function formatWorkspaceDate(date?: string | null) {
@@ -273,19 +315,22 @@ function mapRevisionRequest(revision: ProjectRevisionRequest): RevisionRequest {
   };
 }
 
-function getTimelineTone(eventType: string): ProjectTimelineItem["tone"] {
-  if (eventType === "project_completed" || eventType === "deliverable_approved") return "success";
-  if (eventType === "revision_requested") return "danger";
-
-  return "neutral";
-}
-
 function mapTimelineEvent(event: ProjectTimelineEvent, index: number): ProjectTimelineItem {
+  const presentation = PROJECT_TIMELINE_PRESENTATION[event.type] ?? {
+    label: event.message,
+    tone: "neutral" as const,
+    icon: CheckCircle,
+  };
+
   return {
     key: `${event.type}-${event.referenceId ?? index}-${event.createdAt}`,
-    label: event.message,
-    date: formatWorkspaceDate(event.createdAt),
-    tone: getTimelineTone(event.type),
+    label: presentation.label,
+    description: event.message,
+    actor: event.actor?.fullName,
+    date: formatProjectRelativeDate(event.createdAt),
+    fullDate: formatWorkspaceDate(event.createdAt),
+    tone: presentation.tone,
+    icon: presentation.icon,
   };
 }
 
@@ -886,7 +931,15 @@ export default function ProjectWorkspacePage() {
           <h2 className="text-slate-900 font-bold mb-4" style={{ fontSize: "0.95rem" }}>
             Project Timeline
           </h2>
-          <Timeline items={timeline} />
+          {timeline.length > 0 ? (
+            <Timeline items={timeline} />
+          ) : (
+            <EmptyState
+              icon={Clock}
+              title="No Timeline Events"
+              message="Project activity will appear here when backend events are recorded."
+            />
+          )}
         </section>
       );
     }
