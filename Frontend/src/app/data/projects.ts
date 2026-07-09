@@ -42,6 +42,8 @@ export interface RevisionRequest {
   message: string;
   attachments: ProjectFile[];
   referenceLinks: string[];
+  resolved: boolean;
+  resolvedAt?: string | null;
 }
 
 export interface ProjectTimelineItem {

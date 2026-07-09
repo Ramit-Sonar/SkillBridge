@@ -1,14 +1,33 @@
 import { ExternalLink, GitPullRequest } from "lucide-react";
 import type { RevisionRequest } from "../../data/projects";
 import { FileAttachmentCard } from "./FileAttachmentCard";
+import { StatusBadge, type StatusBadgeConfig } from "./ui";
 
 type RevisionRequestCardProps = {
   request: RevisionRequest;
   viewerRole?: "student" | "client";
 };
 
+const REVISION_STATUS_CFG: Record<"open" | "resolved", StatusBadgeConfig> = {
+  open: {
+    label: "Open",
+    color: "#D97706",
+    bg: "#FFFBEB",
+    border: "#FDE68A",
+    dot: "#F59E0B",
+  },
+  resolved: {
+    label: "Resolved",
+    color: "#059669",
+    bg: "#ECFDF5",
+    border: "#6EE7B7",
+    dot: "#10B981",
+  },
+};
+
 export function RevisionRequestCard({ request, viewerRole = "student" }: RevisionRequestCardProps) {
   const showRequestedBy = viewerRole !== "client" && Boolean(request.requestedBy);
+  const statusConfig = request.resolved ? REVISION_STATUS_CFG.resolved : REVISION_STATUS_CFG.open;
 
   return (
     <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col gap-4">
@@ -26,6 +45,7 @@ export function RevisionRequestCard({ request, viewerRole = "student" }: Revisio
             </p>
           </div>
         </div>
+        <StatusBadge config={statusConfig} />
       </div>
 
       <div className={showRequestedBy ? "grid sm:grid-cols-2 gap-3" : "grid gap-3"}>

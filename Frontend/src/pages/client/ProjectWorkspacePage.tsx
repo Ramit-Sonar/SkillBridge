@@ -262,6 +262,8 @@ function mapRevisionRequest(revision: ProjectRevisionRequest): RevisionRequest {
     message: revision.message,
     attachments: revision.attachments,
     referenceLinks: revision.referenceLinks,
+    resolved: revision.resolved,
+    resolvedAt: formatWorkspaceDate(revision.resolvedAt),
   };
 }
 
@@ -312,7 +314,11 @@ function RevisionRequestDialog({
   onSubmit,
 }: {
   onClose: () => void;
-  onSubmit: (data: { message: string; files: UploadedFile[]; referenceLinks: string[] }) => void;
+  onSubmit: (data: {
+    message: string;
+    files: UploadedFile[];
+    referenceLinks: string[];
+  }) => Promise<void>;
 }) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -320,12 +326,13 @@ function RevisionRequestDialog({
   const [busy, setBusy] = useState(false);
   const canSubmit = message.trim().length > 0 && !busy;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
 
     setBusy(true);
-    setTimeout(() => {
-      onSubmit({
+
+    try {
+      await onSubmit({
         message: message.trim(),
         files,
         referenceLinks: referenceLinks
@@ -333,7 +340,9 @@ function RevisionRequestDialog({
           .map((link) => link.trim())
           .filter(Boolean),
       });
-    }, 700);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -398,6 +407,7 @@ function RevisionRequestDialog({
               onRemove={(name) =>
                 setFiles((current) => current.filter((file) => file.name !== name))
               }
+              disabled={busy}
               maxFiles={3}
             />
           </div>
