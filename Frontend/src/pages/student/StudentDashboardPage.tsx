@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { useNavigate } from "react-router";
 import { Search, Folder, CheckCircle, FileText, ChevronRight } from "lucide-react";
@@ -6,15 +7,10 @@ import { StatGrid } from "../../app/components/shared/StatCard";
 import { QuickActionsGrid } from "../../app/components/shared/QuickActionCard";
 import { SectionCard } from "../../app/components/shared/SectionCard";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
-import { PROJECTS } from "../../app/data/projects";
+import { PROJECT_STATUS_CFG } from "../../app/data/projects";
+import { getMyProjects, type MyProjectsResponse } from "../../services/projectService";
 
 const IS_VERIFIED = false;
-
-const studentStats = [
-  { value: 2, label: "Total Applications", icon: FileText, color: "#2563EB", bg: "#EFF6FF" },
-  { value: 2, label: "Active Projects", icon: Folder, color: "#14B8A6", bg: "#F0FDFA" },
-  { value: 1, label: "Completed Projects", icon: CheckCircle, color: "#059669", bg: "#ECFDF5" },
-];
 
 const RECENT_APPS = [
   {
@@ -35,10 +31,57 @@ const RECENT_APPS = [
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
-  const active = PROJECTS.filter((p) => p.status === "active" || p.status === "submitted").slice(
-    0,
-    3
-  );
+  const [projectData, setProjectData] = useState<MyProjectsResponse>({
+    totalProjects: 0,
+    projects: [],
+  });
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [projectError, setProjectError] = useState("");
+  const projects = projectData.projects;
+  const active = projects
+    .filter((project) => project.status === "active" || project.status === "submitted")
+    .slice(0, 3);
+  const activeProjectsCount = projects.filter(
+    (project) => project.status === "active" || project.status === "submitted"
+  ).length;
+  const completedProjectsCount = projects.filter(
+    (project) => project.status === "completed"
+  ).length;
+  const studentStats = [
+    { value: 2, label: "Total Applications", icon: FileText, color: "#2563EB", bg: "#EFF6FF" },
+    {
+      value: activeProjectsCount,
+      label: "Active Projects",
+      icon: Folder,
+      color: "#14B8A6",
+      bg: "#F0FDFA",
+    },
+    {
+      value: completedProjectsCount,
+      label: "Completed Projects",
+      icon: CheckCircle,
+      color: "#059669",
+      bg: "#ECFDF5",
+    },
+  ];
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      setLoadingProjects(true);
+      setProjectError("");
+
+      try {
+        const response = await getMyProjects();
+        setProjectData(response.data);
+      } catch (error) {
+        setProjectError(error instanceof Error ? error.message : "Projects could not be loaded.");
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
+    loadProjects();
+  }, []);
 
   return (
     <DashboardLayout role="student" title="Dashboard" activeNav="dashboard">
@@ -138,17 +181,22 @@ export default function StudentDashboard() {
 
           {/* Active Projects */}
           <SectionCard title="Active Projects" subtitle="Your ongoing project work.">
-            {active.length === 0 ? (
+            {loadingProjects ? (
+              <p className="text-slate-400 text-center py-6" style={{ fontSize: "0.82rem" }}>
+                Loading projects...
+              </p>
+            ) : projectError ? (
+              <p className="text-red-500 text-center py-6" style={{ fontSize: "0.82rem" }}>
+                {projectError}
+              </p>
+            ) : active.length === 0 ? (
               <p className="text-slate-400 text-center py-6" style={{ fontSize: "0.82rem" }}>
                 No active projects yet.
               </p>
             ) : (
               <div className="flex flex-col gap-0">
                 {active.map((p, i) => {
-                  const cfg =
-                    p.status === "submitted"
-                      ? { label: "Submitted", color: "#7C3AED", bg: "#F5F3FF" }
-                      : { label: "Active", color: "#2563EB", bg: "#EFF6FF" };
+                  const cfg = PROJECT_STATUS_CFG[p.status];
                   return (
                     <div
                       key={p.id}
