@@ -9,7 +9,7 @@ import {
   normalizeSubmittedAttachments,
   uploadAttachments as uploadJobAttachments,
 } from "../utils/attachment.js";
-import { buildClientSummary } from "../utils/buildClientSummary.js";
+import { buildClientSummary } from "../services/client.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const VALID_JOB_CATEGORIES = [
@@ -168,12 +168,12 @@ const createJob = asyncHandler(async (req, res) => {
 
   const attachments = await uploadJobAttachments(req.files, files);
 
-    // if (verification?.status !== "approved") {
-    //   throw new ApiError(
-    //     403,
-    //     "Client verification is required before applying"
-    //   );
-    // }
+  // if (verification?.status !== "approved") {
+  //   throw new ApiError(
+  //     403,
+  //     "Client verification is required before applying"
+  //   );
+  // }
 
   const job = await Job.create({
     client: req.user._id,

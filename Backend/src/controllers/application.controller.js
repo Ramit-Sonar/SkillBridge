@@ -9,8 +9,8 @@ import {
   buildApplicantSummary,
   buildApplicationDetails,
   buildApplicationSummary,
-} from "../utils/applicationResponse.js";
-import { buildClientSummary } from "../utils/buildClientSummary.js";
+} from "../services/application.service.js";
+import { buildClientSummary } from "../services/client.service.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";

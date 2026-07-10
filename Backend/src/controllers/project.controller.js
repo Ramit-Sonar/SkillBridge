@@ -16,7 +16,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { buildClientSummary } from "../utils/buildClientSummary.js";
+import { buildClientSummary } from "../services/client.service.js";
 import {
   buildApproveDeliverableResponse,
   buildDeliverablesSummary,
@@ -26,7 +26,7 @@ import {
   buildRequestRevisionResponse,
   buildRevisionSummary,
   buildSubmitDeliverableResponse,
-} from "../utils/projectResponse.js";
+} from "../services/projectResponse.service.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
 const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];

@@ -26,7 +26,8 @@ jest.unstable_mockModule("../../src/models/job.model.js", () => ({
   },
 }));
 
-const { buildClientSummary } = await import("../../src/utils/buildClientSummary.js");
+const { buildClientSummary } =
+  await import("../../src/services/client.service.js");
 
 describe("buildClientSummary", () => {
   beforeEach(() => {

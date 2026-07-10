@@ -7,7 +7,9 @@ const buildClientSummary = async (userId) => {
 
   const [client, clientProfile, jobsPosted] = await Promise.all([
     User.findById(userId).select("fullName avatar createdAt"),
-    ClientProfile.findOne({ user: userId }).select("location bio companyName website"),
+    ClientProfile.findOne({ user: userId }).select(
+      "location bio companyName website"
+    ),
     Job.countDocuments({ client: userId }),
   ]);
 
