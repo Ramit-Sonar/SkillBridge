@@ -7,6 +7,7 @@ const findReviewsMock = jest.fn();
 const canReviewProjectMock = jest.fn();
 const buildReviewSummaryMock = jest.fn();
 const buildStudentReviewSummaryMock = jest.fn();
+const getStudentRatingSummaryMock = jest.fn();
 
 jest.unstable_mockModule("../../src/models/review.model.js", () => ({
   Review: {
@@ -19,9 +20,10 @@ jest.unstable_mockModule("../../src/services/review.service.js", () => ({
   canReviewProject: canReviewProjectMock,
   buildReviewSummary: buildReviewSummaryMock,
   buildStudentReviewSummary: buildStudentReviewSummaryMock,
+  getStudentRatingSummary: getStudentRatingSummaryMock,
 }));
 
-const { createReview, getStudentReviews } =
+const { createReview, getStudentRatingSummary, getStudentReviews } =
   await import("../../src/controllers/review.controller.js");
 
 const clientUser = {
@@ -476,6 +478,63 @@ describe("Review Controller", () => {
     const { next } = await runController(getStudentReviews);
 
     expect(findReviewsMock).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 401,
+        message: "User not authenticated",
+      })
+    );
+  });
+
+  test("returns the logged-in student's rating summary", async () => {
+    const ratingSummary = {
+      averageRating: 4.3,
+      reviewCount: 3,
+      ratingDistribution: {
+        1: 0,
+        2: 0,
+        3: 1,
+        4: 0,
+        5: 2,
+      },
+    };
+
+    getStudentRatingSummaryMock.mockResolvedValue(ratingSummary);
+
+    const { res, next } = await runController(getStudentRatingSummary, {
+      user: studentUser,
+    });
+
+    expect(getStudentRatingSummaryMock).toHaveBeenCalledWith(studentUser._id);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 200,
+        data: ratingSummary,
+        message: "Student rating summary fetched successfully",
+      })
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  test("rejects clients viewing student rating summary", async () => {
+    const { next } = await runController(getStudentRatingSummary, {
+      user: clientUser,
+    });
+
+    expect(getStudentRatingSummaryMock).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 403,
+        message: "Only students can view their rating summary",
+      })
+    );
+  });
+
+  test("rejects unauthenticated users viewing student rating summary", async () => {
+    const { next } = await runController(getStudentRatingSummary);
+
+    expect(getStudentRatingSummaryMock).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: 401,

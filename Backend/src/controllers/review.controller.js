@@ -3,6 +3,7 @@ import {
   buildReviewSummary,
   buildStudentReviewSummary,
   canReviewProject,
+  getStudentRatingSummary as getStudentRatingSummaryData,
 } from "../services/review.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -113,4 +114,26 @@ const getStudentReviews = asyncHandler(async (req, res) => {
     );
 });
 
-export { createReview, getStudentReviews };
+const getStudentRatingSummary = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (req.user.role !== "student") {
+    throw new ApiError(403, "Only students can view their rating summary");
+  }
+
+  const ratingSummary = await getStudentRatingSummaryData(req.user._id);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        ratingSummary,
+        "Student rating summary fetched successfully"
+      )
+    );
+});
+
+export { createReview, getStudentRatingSummary, getStudentReviews };
