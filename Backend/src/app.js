@@ -9,6 +9,7 @@ import clientRouter from "./routes/client.routes.js";
 import verificationRouter from "./routes/verification.routes.js";
 import applicationRouter from "./routes/application.routes.js";
 import projectRouter from "./routes/project.routes.js";
+import reviewRouter from "./routes/review.routes.js";
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/api/v1/client", clientRouter);
 app.use("/api/v1/verification", verificationRouter);
 app.use("/api/v1/applications", applicationRouter);
 app.use("/api/v1/projects", projectRouter);
+app.use("/api/v1/reviews", reviewRouter);
 
 app.use(globalErrorHandler);
 

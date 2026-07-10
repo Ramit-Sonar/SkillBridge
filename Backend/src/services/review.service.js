@@ -101,4 +101,16 @@ const getStudentRatingSummary = async (studentId) => {
   };
 };
 
-export { canReviewProject, getStudentRatingSummary };
+const buildReviewSummary = (review) => ({
+  reviewId: review._id,
+  projectId: review.project,
+  studentId: review.student,
+  clientId: review.client,
+  rating: review.rating,
+  comment: review.comment || "",
+  editedAt: review.editedAt,
+  createdAt: review.createdAt,
+  updatedAt: review.updatedAt,
+});
+
+export { buildReviewSummary, canReviewProject, getStudentRatingSummary };
