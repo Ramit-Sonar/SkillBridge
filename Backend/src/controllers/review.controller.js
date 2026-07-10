@@ -1,6 +1,7 @@
 import { Review } from "../models/review.model.js";
 import {
   buildReviewSummary,
+  buildStudentReviewSummary,
   canReviewProject,
 } from "../services/review.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -71,4 +72,45 @@ const createReview = asyncHandler(async (req, res) => {
   }
 });
 
-export { createReview };
+const getStudentReviews = asyncHandler(async (req, res) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  if (req.user.role !== "student") {
+    throw new ApiError(403, "Only students can view their reviews");
+  }
+
+  const reviews = await Review.find({ student: req.user._id })
+    .select("_id project client rating comment createdAt")
+    .populate({
+      path: "client",
+      select: "_id fullName avatar",
+    })
+    .populate({
+      path: "project",
+      select: "_id job completedAt",
+      populate: {
+        path: "job",
+        select: "_id title category",
+      },
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const reviewSummaries = reviews.map((review) =>
+    buildStudentReviewSummary(review)
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { reviews: reviewSummaries },
+        "Student reviews fetched successfully"
+      )
+    );
+});
+
+export { createReview, getStudentReviews };

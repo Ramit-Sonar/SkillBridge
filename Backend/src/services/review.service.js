@@ -113,4 +113,36 @@ const buildReviewSummary = (review) => ({
   updatedAt: review.updatedAt,
 });
 
-export { buildReviewSummary, canReviewProject, getStudentRatingSummary };
+const buildStudentReviewSummary = (review) => ({
+  reviewId: review._id,
+  rating: review.rating,
+  comment: review.comment || "",
+  createdAt: review.createdAt,
+  client: review.client
+    ? {
+        _id: review.client._id,
+        fullName: review.client.fullName,
+        avatar: review.client.avatar || "",
+      }
+    : null,
+  project: review.project
+    ? {
+        _id: review.project._id,
+        completedAt: review.project.completedAt,
+        job: review.project.job
+          ? {
+              _id: review.project.job._id,
+              title: review.project.job.title,
+              category: review.project.job.category,
+            }
+          : null,
+      }
+    : null,
+});
+
+export {
+  buildReviewSummary,
+  buildStudentReviewSummary,
+  canReviewProject,
+  getStudentRatingSummary,
+};
