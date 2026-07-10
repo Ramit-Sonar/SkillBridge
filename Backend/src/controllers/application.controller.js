@@ -411,7 +411,7 @@ const withdrawApplication = asyncHandler(async (req, res) => {
       },
     },
     {
-      new: true,
+      returnDocument: "after",
     }
   ).select("_id status appliedAt withdrawnAt updatedAt");
 
@@ -518,7 +518,7 @@ const acceptApplication = asyncHandler(async (req, res) => {
           },
         },
         {
-          new: true,
+          returnDocument: "after",
           session,
         }
       ).select("_id job student status appliedAt acceptedAt updatedAt");
@@ -553,7 +553,7 @@ const acceptApplication = asyncHandler(async (req, res) => {
           },
         },
         {
-          new: true,
+          returnDocument: "after",
           session,
         }
       ).select("_id status");
@@ -667,7 +667,7 @@ const rejectApplication = asyncHandler(async (req, res) => {
       },
     },
     {
-      new: true,
+      returnDocument: "after",
     }
   ).select("_id status appliedAt rejectedAt updatedAt");
 

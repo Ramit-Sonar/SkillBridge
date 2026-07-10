@@ -8,7 +8,7 @@ interface ReviewModalProps {
   projectName: string;
   completedAt: string;
   onClose: () => void;
-  onSubmit: (review: { rating: number; comment: string; recommended: boolean }) => void;
+  onSubmit: (review: { rating: number; comment: string }) => Promise<void> | void;
 }
 
 export function ReviewModal({
@@ -22,20 +22,28 @@ export function ReviewModal({
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState("");
-  const [recommended, setRecommended] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
-  const canSubmit = rating > 0 && comment.trim().length > 0 && recommended !== null && !submitting;
+  const canSubmit = rating > 0 && !submitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
+
+    setError("");
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+
+    try {
+      await onSubmit({ rating, comment: comment.trim() });
       setSubmitted(true);
-      onSubmit({ rating, comment: comment.trim(), recommended: recommended! });
-    }, 1200);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Review could not be submitted."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const displayStars = hovered || rating;
@@ -199,47 +207,14 @@ export function ReviewModal({
                   />
                 </div>
 
-                {/* Recommendation */}
-                <div className="flex flex-col gap-2.5">
-                  <p className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
-                    Would you recommend this student?
+                {error && (
+                  <p
+                    className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-3 py-2"
+                    style={{ fontSize: "0.75rem" }}
+                  >
+                    {error}
                   </p>
-                  <div className="flex gap-3">
-                    {[
-                      { val: true, label: "Yes, I'd recommend" },
-                      { val: false, label: "Not this time" },
-                    ].map(({ val, label }) => {
-                      const active = recommended === val;
-                      return (
-                        <motion.button
-                          key={String(val)}
-                          type="button"
-                          onClick={() => setRecommended(val)}
-                          whileTap={{ scale: 0.96 }}
-                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border font-semibold transition-all duration-200"
-                          style={{
-                            background: active ? (val ? "#ECFDF5" : "#FEF2F2") : "#F8FAFC",
-                            color: active ? (val ? "#059669" : "#DC2626") : "#64748B",
-                            borderColor: active ? (val ? "#6EE7B7" : "#FECACA") : "#E2E8F0",
-                            fontSize: "0.75rem",
-                          }}
-                        >
-                          <span
-                            className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-colors ${active ? (val ? "border-emerald-600" : "border-red-600") : "border-slate-300"}`}
-                          >
-                            {active && (
-                              <span
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ background: val ? "#059669" : "#DC2626" }}
-                              />
-                            )}
-                          </span>
-                          {label}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
+                )}
 
                 {/* Submit */}
                 <motion.button

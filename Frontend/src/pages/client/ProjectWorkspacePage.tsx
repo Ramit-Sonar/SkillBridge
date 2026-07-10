@@ -47,6 +47,7 @@ import {
   StatusBadge,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
+import { ReviewModal } from "../../app/components/ReviewModal";
 import {
   PROJECT_STATUS_CFG,
   type ProjectStatus,
@@ -70,6 +71,7 @@ import {
   type ProjectRevisionRequest,
   type ProjectWorkspace,
 } from "../../services/projectService";
+import { createReview } from "../../services/reviewService";
 
 type ProjectWorkspaceTab = "overview" | "deliverables" | "activity" | "job" | "proposal";
 
@@ -643,7 +645,10 @@ export default function ProjectWorkspacePage() {
   const [showApprove, setShowApprove] = useState(false);
   const [showRevisionDialog, setShowRevisionDialog] = useState(false);
   const [showStudentProfile, setShowStudentProfile] = useState(false);
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
+  const reviewSubmitLockedRef = useRef(false);
 
   const loadProjectWorkspace = async () => {
     if (!id) {
@@ -656,6 +661,7 @@ export default function ProjectWorkspacePage() {
     setLoadError("");
     setDeliverablesLoaded(false);
     setTimelineLoaded(false);
+    setReviewSubmitted(false);
 
     try {
       const workspaceResponse = await getProjectById(id);
@@ -865,14 +871,20 @@ export default function ProjectWorkspacePage() {
     setLoadError("");
 
     try {
-      await submitDeliverable(id, {
+      const response = await submitDeliverable(id, {
         notes: formData.notes,
         demoLink: formData.demoLink,
         repositoryLink: formData.repositoryLink,
         liveUrl: formData.liveUrl,
         files: formData.files.map((file) => file.file),
       });
-      await refreshProjectAfterMutation();
+      setNotification({ type: "success", text: response.message });
+
+      try {
+        await refreshProjectAfterMutation();
+      } catch {
+        setLoadError("Project submitted, but latest workspace data could not be refreshed.");
+      }
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Project could not be submitted.");
     } finally {
@@ -906,15 +918,63 @@ export default function ProjectWorkspacePage() {
 
     try {
       const response = await approveDeliverable(id);
+      const approvedProject = response.data.project;
+      const approvedLastUpdated = formatWorkspaceDate(approvedProject.lastActivityAt);
+
       setShowApprove(false);
-      await refreshProjectAfterMutation();
       setNotification({ type: "success", text: response.message });
+      setWorkspace((current) =>
+        current
+          ? {
+              ...current,
+              status: approvedProject.status,
+              lastUpdated: approvedLastUpdated,
+              canSubmitDeliverables: false,
+              projectData: {
+                ...current.projectData,
+                status: approvedProject.status,
+                completedAt: formatWorkspaceDate(approvedProject.completedAt),
+                lastUpdated: approvedLastUpdated,
+              },
+            }
+          : current
+      );
+      setActiveTab("overview");
+      setTimeout(() => setShowReviewDialog(true), 600);
+
+      try {
+        await refreshProjectAfterMutation();
+      } catch {
+        setLoadError("Project approved, but latest workspace data could not be refreshed.");
+      }
     } catch (error) {
       setNotification({
         type: "error",
         text: error instanceof Error ? error.message : "Deliverables could not be approved.",
       });
       setShowApprove(false);
+    }
+  };
+
+  const handleCreateReview = async (review: { rating: number; comment: string }) => {
+    if (!id || reviewSubmitLockedRef.current) return;
+
+    reviewSubmitLockedRef.current = true;
+
+    try {
+      const response = await createReview(id, {
+        rating: review.rating,
+        comment: review.comment.trim(),
+      });
+
+      setReviewSubmitted(true);
+      setNotification({ type: "success", text: response.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Review could not be submitted.";
+      setNotification({ type: "error", text: message });
+      throw new Error(message);
+    } finally {
+      reviewSubmitLockedRef.current = false;
     }
   };
 
@@ -954,6 +1014,19 @@ export default function ProjectWorkspacePage() {
           style={{ fontSize: "0.82rem" }}
         >
           <CheckCircle className="w-4 h-4" /> Review Deliverables
+        </button>
+      );
+    }
+
+    if (role === "client" && status === "completed" && !reviewSubmitted) {
+      return (
+        <button
+          type="button"
+          onClick={() => setShowReviewDialog(true)}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors"
+          style={{ fontSize: "0.82rem" }}
+        >
+          <Award className="w-4 h-4" /> Leave Review
         </button>
       );
     }
@@ -1311,6 +1384,17 @@ export default function ProjectWorkspacePage() {
           <StudentProfileModal
             profile={studentProfile}
             onClose={() => setShowStudentProfile(false)}
+          />
+        )}
+
+        {showReviewDialog && (
+          <ReviewModal
+            studentName={projectData.student?.name || studentProfile?.name || "Student"}
+            studentInitials={projectData.student?.initials || studentProfile?.initials || "ST"}
+            projectName={projectData.title}
+            completedAt={projectData.completedAt || "Completed"}
+            onClose={() => setShowReviewDialog(false)}
+            onSubmit={handleCreateReview}
           />
         )}
       </AnimatePresence>
