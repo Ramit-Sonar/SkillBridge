@@ -168,6 +168,13 @@ const createJob = asyncHandler(async (req, res) => {
 
   const attachments = await uploadJobAttachments(req.files, files);
 
+    // if (verification?.status !== "approved") {
+    //   throw new ApiError(
+    //     403,
+    //     "Client verification is required before applying"
+    //   );
+    // }
+
   const job = await Job.create({
     client: req.user._id,
     title: title.trim(),
