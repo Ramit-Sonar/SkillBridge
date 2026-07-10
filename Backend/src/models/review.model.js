@@ -33,14 +33,6 @@ const reviewSchema = new mongoose.Schema(
       maxlength: [1000, "Comment cannot be more than 1000 characters"],
     },
 
-    moderationStatus: {
-      type: String,
-      enum: {
-        values: ["visible", "hidden", "flagged"],
-        message: "Moderation status must be visible, hidden, or flagged",
-      },
-      default: "visible",
-    },
 
     editedAt: {
       type: Date,
