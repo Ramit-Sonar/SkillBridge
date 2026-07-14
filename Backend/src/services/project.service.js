@@ -40,6 +40,130 @@ export const getOpenRevision = async (projectId, session = null) => {
   return query;
 };
 
+const buildLatestDeliverableMap = async (projectIds) => {
+  if (projectIds.length === 0) return new Map();
+
+  const latestDeliverables = await Deliverable.aggregate([
+    {
+      $match: {
+        project: { $in: projectIds },
+      },
+    },
+    {
+      $sort: {
+        project: 1,
+        submittedAt: -1,
+        versionNumber: -1,
+      },
+    },
+    {
+      $group: {
+        _id: "$project",
+        deliverableId: { $first: "$_id" },
+        versionNumber: { $first: "$versionNumber" },
+        submittedAt: { $first: "$submittedAt" },
+        status: { $first: "$status" },
+        demoLink: { $first: "$demoLink" },
+        repositoryLink: { $first: "$repositoryLink" },
+        liveUrl: { $first: "$liveUrl" },
+      },
+    },
+  ]);
+
+  return new Map(
+    latestDeliverables.map((deliverable) => [
+      deliverable._id.toString(),
+      {
+        id: deliverable.deliverableId?.toString(),
+        versionNumber: deliverable.versionNumber,
+        submittedAt: deliverable.submittedAt,
+        status: deliverable.status,
+        demoLink: deliverable.demoLink || "",
+        repositoryLink: deliverable.repositoryLink || "",
+        liveUrl: deliverable.liveUrl || "",
+      },
+    ])
+  );
+};
+
+export const getStudentCompletedProjectProfileMap = async (
+  studentIds,
+  projectLimit = Infinity
+) => {
+  const validStudentIds = [
+    ...new Set(studentIds.map((id) => id?.toString()).filter(Boolean)),
+  ];
+
+  if (validStudentIds.length === 0) return new Map();
+
+  const completedProjects = await Project.find({
+    student: { $in: validStudentIds },
+    status: "completed",
+  })
+    .select("_id student client job status completedAt lastActivityAt")
+    .populate({
+      path: "client",
+      select: "_id fullName avatar",
+    })
+    .populate({
+      path: "job",
+      select: "_id title category description skills",
+    })
+    .sort({ completedAt: -1, lastActivityAt: -1 })
+    .lean();
+
+  const latestDeliverableMap = await buildLatestDeliverableMap(
+    completedProjects.map((project) => project._id)
+  );
+
+  const profileMap = new Map(
+    validStudentIds.map((studentId) => [
+      studentId,
+      {
+        completedProjectsCount: 0,
+        completedProjects: [],
+      },
+    ])
+  );
+
+  completedProjects.forEach((project) => {
+    const studentId = project.student?.toString();
+    const profile = profileMap.get(studentId);
+
+    if (!profile) return;
+
+    profile.completedProjectsCount += 1;
+
+    if (profile.completedProjects.length >= projectLimit) return;
+
+    profile.completedProjects.push({
+      projectId: project._id?.toString(),
+      status: project.status,
+      completedAt: project.completedAt,
+      job: project.job
+        ? {
+            jobId: project.job._id?.toString(),
+            title: project.job.title,
+            category: project.job.category,
+            description: project.job.description,
+            skills: project.job.skills || [],
+          }
+        : null,
+      client: project.client
+        ? {
+            clientId: project.client._id?.toString(),
+            fullName: project.client.fullName,
+            avatar: project.client.avatar || "",
+          }
+        : null,
+      latestSubmission:
+        latestDeliverableMap.get(project._id.toString()) || null,
+    });
+  });
+
+  return profileMap;
+};
+
 export const appendTimeline = async (project, event, session = null) => {
   project.timeline.push({
     ...event,

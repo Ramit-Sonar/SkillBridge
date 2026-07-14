@@ -2,21 +2,25 @@
 import { Link } from "react-router";
 import { Zap } from "lucide-react";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
+import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 
 const PROFILE = {
-  name: "Ramit Sonar",
-  initials: "RS",
-  headline: "Computer Engineering Student",
-  bio: "Computer Engineering student passionate about web development, React, UI design, and building modern digital products. I enjoy creating clean interfaces and solving real problems through technology.",
+  user: {
+    fullName: "Ramit Sonar",
+  },
+  profile: {
+    education: "Computer Engineering",
+    bio: "Computer Engineering student passionate about web development, React, UI design, and building modern digital products. I enjoy creating clean interfaces and solving real problems through technology.",
+    skills: [
+      { name: "React", verified: true },
+      { name: "Figma", verified: true },
+      { name: "JavaScript", verified: false },
+    ],
+    github: "github.com/ramitsonar",
+    linkedin: "linkedin.com/in/ramitsonar",
+    portfolio: "ramitsonar.com",
+  },
   verified: true,
-  skills: [
-    { name: "React", verified: true },
-    { name: "Figma", verified: true },
-    { name: "JavaScript", verified: false },
-  ],
-  github: "github.com/ramitsonar",
-  linkedin: "linkedin.com/in/ramitsonar",
-  portfolio: "ramitsonar.com",
 };
 
 export default function PublicProfilePage() {
@@ -44,7 +48,7 @@ export default function PublicProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
-          <StudentProfileView profile={PROFILE} />
+          <StudentProfileView profile={buildStudentProfileViewProps(PROFILE)} />
         </motion.div>
       </main>
     </div>

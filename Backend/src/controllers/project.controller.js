@@ -10,8 +10,10 @@ import {
   appendTimeline,
   getLatestDeliverable,
   getOpenRevision,
+  getStudentCompletedProjectProfileMap,
   updateProjectActivity,
 } from "../services/project.service.js";
+import { getStudentReviewProfileMap } from "../services/review.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
@@ -125,6 +127,9 @@ const getLatestDeliverableMap = async (projectIds) => {
         versionNumber: { $first: "$versionNumber" },
         submittedAt: { $first: "$submittedAt" },
         status: { $first: "$status" },
+        demoLink: { $first: "$demoLink" },
+        repositoryLink: { $first: "$repositoryLink" },
+        liveUrl: { $first: "$liveUrl" },
       },
     },
   ]);
@@ -136,6 +141,9 @@ const getLatestDeliverableMap = async (projectIds) => {
         versionNumber: deliverable.versionNumber,
         submittedAt: deliverable.submittedAt,
         status: deliverable.status,
+        demoLink: deliverable.demoLink || "",
+        repositoryLink: deliverable.repositoryLink || "",
+        liveUrl: deliverable.liveUrl || "",
       },
     ])
   );
@@ -182,10 +190,10 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const partnerField = req.user.role === "student" ? "client" : "student";
 
   const projects = await Project.find({ [ownerField]: req.user._id })
-    .select("_id job student client status lastActivityAt")
+    .select("_id job student client status completedAt lastActivityAt")
     .populate({
       path: "job",
-      select: "_id title category budget deadline",
+      select: "_id title category description skills budget deadline",
     })
     .populate({
       path: partnerField,
@@ -279,23 +287,34 @@ const getProjectById = asyncHandler(async (req, res) => {
 
   let partnerProfile = null;
   let partnerVerification = null;
+  let studentProjectProfile = null;
+  let studentReviewProfile = null;
 
   if (req.user.role === "student" && clientId) {
     partnerProfile = await buildClientSummary(clientId);
   }
 
   if (req.user.role === "client" && studentId) {
-    const [studentProfile, verification] = await Promise.all([
+    const [
+      studentProfile,
+      verification,
+      studentProjectProfileMap,
+      studentReviewProfileMap,
+    ] = await Promise.all([
       StudentProfile.findOne({ user: studentId })
         .select("bio education university skills github linkedin portfolio")
         .lean(),
       Verification.findOne({ user: studentId, type: "student" })
         .select("status verifiedAt")
         .lean(),
+      getStudentCompletedProjectProfileMap([studentId]),
+      getStudentReviewProfileMap([studentId]),
     ]);
 
     partnerProfile = studentProfile;
     partnerVerification = verification;
+    studentProjectProfile = studentProjectProfileMap.get(studentId) || null;
+    studentReviewProfile = studentReviewProfileMap.get(studentId) || null;
   }
 
   const projectWorkspace = buildProjectWorkspace({
@@ -303,6 +322,8 @@ const getProjectById = asyncHandler(async (req, res) => {
     viewerRole: req.user.role,
     partnerProfile,
     partnerVerification,
+    studentProjectProfile,
+    studentReviewProfile,
   });
 
   return res

@@ -9,7 +9,11 @@ import {
   StatusBadge,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
-import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
+import {
+  StudentProfileView,
+  type ProfileViewProps,
+} from "../../app/components/shared/StudentProfileView";
+import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
 import {
@@ -86,6 +90,7 @@ interface Applicant {
   portfolio?: string;
   profileCompleted?: boolean;
   job?: ApplicationDetails["job"];
+  profileData: ProfileViewProps;
 }
 
 interface Job {
@@ -260,54 +265,59 @@ function isStudentVerified(student: ApplicantCard["student"] | ApplicationDetail
 
 function mapApplicantFromApi(applicant: ApplicantCard): Applicant {
   const student = applicant.student;
-  const profile = student?.profile;
-  const skills = profile?.skills ?? [];
-  const university = profile?.university || "University not provided";
-  const headline = profile?.education || university;
+  const profileData = buildStudentProfileViewProps({
+    profile: student,
+    fallbackName: "Unknown Student",
+    fallbackBio: "No profile summary provided.",
+  });
+  const university = profileData.university || "University not provided";
 
   return {
     id: applicant.applicationId,
-    name: student?.fullName || "Unknown Student",
-    initials: getInitials(student?.fullName),
-    education: university,
+    name: profileData.name,
+    initials: profileData.initials,
+    education: profileData.education || university,
     university,
-    headline,
-    verified: isStudentVerified(student),
-    skills: skills.map((skill) => ({ name: skill, verified: false })),
-    rating: 0,
-    reviewCount: 0,
-    completedProjects: 0,
-    bio: profile?.bio || "No profile summary provided.",
+    headline: profileData.headline || university,
+    verified: profileData.verified,
+    skills: profileData.skills,
+    rating: profileData.rating ?? 0,
+    reviewCount: profileData.reviewCount ?? 0,
+    completedProjects: profileData.completedProjectsCount ?? 0,
+    bio: profileData.bio,
     appliedAt: formatApplicationDate(applicant.appliedAt),
     status: applicant.status,
-    avatarUrl: student?.avatar,
-    github: profile?.github,
-    linkedin: profile?.linkedin,
-    portfolio: profile?.portfolio,
+    avatarUrl: profileData.avatarUrl,
+    github: profileData.github,
+    linkedin: profileData.linkedin,
+    portfolio: profileData.portfolio,
     profileCompleted: student?.profileCompleted,
+    profileData,
   };
 }
 
 function mapApplicantDetailsFromApi(application: ApplicationDetails): Applicant {
   const student = application.student;
-  const profile = student?.profile;
-  const skills = profile?.skills ?? [];
-  const university = profile?.university || "University not provided";
-  const headline = profile?.education || university;
+  const profileData = buildStudentProfileViewProps({
+    profile: student,
+    fallbackName: "Unknown Student",
+    fallbackBio: "No profile summary provided.",
+  });
+  const university = profileData.university || "University not provided";
 
   return {
     id: application.applicationId,
-    name: student?.fullName || "Unknown Student",
-    initials: getInitials(student?.fullName),
-    education: university,
+    name: profileData.name,
+    initials: profileData.initials,
+    education: profileData.education || university,
     university,
-    headline,
-    verified: isStudentVerified(student),
-    skills: skills.map((skill) => ({ name: skill, verified: false })),
-    rating: 0,
-    reviewCount: 0,
-    completedProjects: 0,
-    bio: profile?.bio || "No profile summary provided.",
+    headline: profileData.headline || university,
+    verified: profileData.verified,
+    skills: profileData.skills,
+    rating: profileData.rating ?? 0,
+    reviewCount: profileData.reviewCount ?? 0,
+    completedProjects: profileData.completedProjectsCount ?? 0,
+    bio: profileData.bio,
     appliedAt: formatApplicationDate(application.appliedAt),
     updatedAt: formatApplicationDate(application.updatedAt),
     acceptedAt: formatApplicationDate(application.acceptedAt),
@@ -318,33 +328,18 @@ function mapApplicantDetailsFromApi(application: ApplicationDetails): Applicant 
     whySuitable: application.whySuitable,
     attachments: application.attachments,
     status: application.status,
-    avatarUrl: student?.avatar,
-    github: profile?.github,
-    linkedin: profile?.linkedin,
-    portfolio: profile?.portfolio,
+    avatarUrl: profileData.avatarUrl,
+    github: profileData.github,
+    linkedin: profileData.linkedin,
+    portfolio: profileData.portfolio,
     profileCompleted: student?.profileCompleted,
     job: application.job,
+    profileData,
   };
 }
 
-function getApplicantProfileData(applicant: Applicant) {
-  return {
-    name: applicant.name,
-    initials: applicant.initials,
-    headline: applicant.headline,
-    education: applicant.education,
-    university: applicant.university,
-    bio: applicant.bio,
-    verified: applicant.verified,
-    skills: applicant.skills,
-    rating: applicant.rating,
-    reviewCount: applicant.reviewCount,
-    completedProjectsCount: applicant.completedProjects,
-    avatarUrl: applicant.avatarUrl,
-    github: applicant.github,
-    linkedin: applicant.linkedin,
-    portfolio: applicant.portfolio,
-  };
+function getApplicantProfileData(applicant: Applicant): ProfileViewProps {
+  return applicant.profileData;
 }
 
 function getApplicantApplicationData(applicant: Applicant): ApplicationDetailsData {

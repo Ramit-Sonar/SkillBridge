@@ -9,16 +9,30 @@ export interface ProfileProject {
   description?: string;
   skills: string[];
   rating?: number;
+  clientName?: string;
+  completedAt?: string;
+  repositoryLink?: string;
+  liveUrl?: string;
+  reviewComment?: string;
 }
 
 export interface ProfileReview {
   id: string;
   clientName: string;
   clientInitials: string;
+  clientAvatar?: string;
   rating: number;
   comment: string;
   submittedAt: string;
 }
+
+export type ProfileRatingDistribution = {
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+};
 
 export interface ProfileCertificate {
   id: string;
@@ -40,6 +54,7 @@ export interface ProfileViewProps {
   skills: { name: string; verified: boolean }[];
   rating?: number;
   reviewCount?: number;
+  ratingDistribution?: ProfileRatingDistribution;
   completedProjectsCount?: number;
   github?: string;
   linkedin?: string;
@@ -286,6 +301,12 @@ function Skills({ skills }: { skills: { name: string; verified: boolean }[] }) {
   );
 }
 
+function getExternalHref(url: string) {
+  return url.toLowerCase().startsWith("http://") || url.toLowerCase().startsWith("https://")
+    ? url
+    : `https://${url}`;
+}
+
 function Portfolio({ projects }: { projects: ProfileProject[] }) {
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
@@ -357,6 +378,16 @@ function Portfolio({ projects }: { projects: ProfileProject[] }) {
                 <span className="text-slate-400" style={{ fontSize: "0.68rem" }}>
                   {project.category}
                 </span>
+                {(project.clientName || project.completedAt) && (
+                  <>
+                    <span className="text-slate-200" style={{ fontSize: "0.65rem" }}>
+                      {"\u00b7"}
+                    </span>
+                    <span className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                      {[project.clientName, project.completedAt].filter(Boolean).join(" - ")}
+                    </span>
+                  </>
+                )}
               </div>
               {project.description && (
                 <p
@@ -369,6 +400,33 @@ function Portfolio({ projects }: { projects: ProfileProject[] }) {
               <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
                 {project.skills.join(" - ")}
               </p>
+              {(project.repositoryLink || project.liveUrl) && (
+                <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: "0.68rem" }}>
+                  {project.repositoryLink && (
+                    <a
+                      href={getExternalHref(project.repositoryLink)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+                    >
+                      Repository
+                    </a>
+                  )}
+                  {project.repositoryLink && project.liveUrl && (
+                    <span className="text-slate-200">{"\u00b7"}</span>
+                  )}
+                  {project.liveUrl && (
+                    <a
+                      href={getExternalHref(project.liveUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+                    >
+                      Live Demo
+                    </a>
+                  )}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
@@ -447,11 +505,16 @@ function Certificates({ certificates }: { certificates: ProfileCertificate[] }) 
   );
 }
 
-function Reviews({ reviews }: { reviews: ProfileReview[] }) {
-  const avg =
-    reviews.length > 0
-      ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
-      : "0.0";
+function Reviews({
+  reviews,
+  rating = 0,
+  reviewCount = 0,
+}: {
+  reviews: ProfileReview[];
+  rating?: number;
+  reviewCount?: number;
+}) {
+  const avg = rating.toFixed(1);
 
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
@@ -476,7 +539,7 @@ function Reviews({ reviews }: { reviews: ProfileReview[] }) {
           </div>
           <div className="border-l border-amber-200 pl-3">
             <p className="text-amber-600 font-semibold" style={{ fontSize: "0.72rem" }}>
-              {reviews.length} Reviews
+              {reviewCount} Reviews
             </p>
           </div>
         </div>
@@ -498,7 +561,7 @@ function Reviews({ reviews }: { reviews: ProfileReview[] }) {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {reviews.slice(0, 1).map((review) => (
+          {reviews.map((review) => (
             <motion.div
               key={review.id}
               whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
@@ -507,10 +570,18 @@ function Reviews({ reviews }: { reviews: ProfileReview[] }) {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0"
+                    className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
                     style={{ fontSize: "0.48rem" }}
                   >
-                    {review.clientInitials}
+                    {review.clientAvatar ? (
+                      <img
+                        src={review.clientAvatar}
+                        alt={review.clientName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      review.clientInitials
+                    )}
                   </div>
                   <p className="text-slate-900 font-semibold" style={{ fontSize: "0.8rem" }}>
                     {review.clientName}
@@ -550,7 +621,11 @@ export function StudentProfileView({
       <Skills skills={profile.skills} />
       <Portfolio projects={profile.projects ?? []} />
       <Certificates certificates={profile.certificates ?? []} />
-      <Reviews reviews={profile.reviews ?? []} />
+      <Reviews
+        reviews={profile.reviews ?? []}
+        rating={profile.rating}
+        reviewCount={profile.reviewCount}
+      />
     </div>
   );
 }

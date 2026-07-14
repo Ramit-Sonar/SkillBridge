@@ -11,6 +11,12 @@ const emptyRatingDistribution = {
   5: 0,
 };
 
+const buildEmptyRatingSummary = () => ({
+  averageRating: 0,
+  reviewCount: 0,
+  ratingDistribution: { ...emptyRatingDistribution },
+});
+
 const canReviewProject = async (projectId, clientId) => {
   if (!mongoose.isValidObjectId(projectId)) {
     throw new ApiError(400, "Invalid project id");
@@ -81,11 +87,7 @@ const getStudentRatingSummary = async (studentId) => {
   ]);
 
   if (!summary) {
-    return {
-      averageRating: 0,
-      reviewCount: 0,
-      ratingDistribution: { ...emptyRatingDistribution },
-    };
+    return buildEmptyRatingSummary();
   }
 
   return {
@@ -99,6 +101,131 @@ const getStudentRatingSummary = async (studentId) => {
       5: summary.fiveStar,
     },
   };
+};
+
+const getStudentRatingSummaryMap = async (studentIds) => {
+  const validStudentIds = [
+    ...new Set(studentIds.map((id) => id?.toString()).filter(Boolean)),
+  ];
+
+  if (validStudentIds.length === 0) return new Map();
+
+  const objectIds = validStudentIds.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+  const summaries = await Review.aggregate([
+    {
+      $match: {
+        student: { $in: objectIds },
+      },
+    },
+    {
+      $group: {
+        _id: "$student",
+        averageRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+        oneStar: {
+          $sum: { $cond: [{ $eq: ["$rating", 1] }, 1, 0] },
+        },
+        twoStar: {
+          $sum: { $cond: [{ $eq: ["$rating", 2] }, 1, 0] },
+        },
+        threeStar: {
+          $sum: { $cond: [{ $eq: ["$rating", 3] }, 1, 0] },
+        },
+        fourStar: {
+          $sum: { $cond: [{ $eq: ["$rating", 4] }, 1, 0] },
+        },
+        fiveStar: {
+          $sum: { $cond: [{ $eq: ["$rating", 5] }, 1, 0] },
+        },
+      },
+    },
+  ]);
+
+  const summaryMap = new Map(
+    validStudentIds.map((studentId) => [studentId, buildEmptyRatingSummary()])
+  );
+
+  summaries.forEach((summary) => {
+    summaryMap.set(summary._id.toString(), {
+      averageRating: Number(summary.averageRating.toFixed(1)),
+      reviewCount: summary.reviewCount,
+      ratingDistribution: {
+        1: summary.oneStar,
+        2: summary.twoStar,
+        3: summary.threeStar,
+        4: summary.fourStar,
+        5: summary.fiveStar,
+      },
+    });
+  });
+
+  return summaryMap;
+};
+
+const getStudentLatestReviewMap = async (
+  studentIds,
+  limitPerStudent = Infinity
+) => {
+  const validStudentIds = [
+    ...new Set(studentIds.map((id) => id?.toString()).filter(Boolean)),
+  ];
+
+  if (validStudentIds.length === 0) return new Map();
+
+  const reviews = await Review.find({ student: { $in: validStudentIds } })
+    .select("_id student project client rating comment createdAt")
+    .populate({
+      path: "client",
+      select: "_id fullName avatar",
+    })
+    .populate({
+      path: "project",
+      select: "_id job completedAt",
+      populate: {
+        path: "job",
+        select: "_id title category",
+      },
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const reviewMap = new Map(
+    validStudentIds.map((studentId) => [studentId, []])
+  );
+
+  reviews.forEach((review) => {
+    const studentId = review.student?.toString();
+    const studentReviews = reviewMap.get(studentId);
+
+    if (!studentReviews || studentReviews.length >= limitPerStudent) return;
+
+    studentReviews.push(buildStudentReviewSummary(review));
+  });
+
+  return reviewMap;
+};
+
+const getStudentReviewProfileMap = async (
+  studentIds,
+  latestReviewLimit = 3
+) => {
+  const [ratingSummaryMap, latestReviewMap] = await Promise.all([
+    getStudentRatingSummaryMap(studentIds),
+    getStudentLatestReviewMap(studentIds, latestReviewLimit),
+  ]);
+
+  return new Map(
+    [...ratingSummaryMap.keys()].map((studentId) => [
+      studentId,
+      {
+        ratingSummary:
+          ratingSummaryMap.get(studentId) || buildEmptyRatingSummary(),
+        latestReviews: latestReviewMap.get(studentId) || [],
+      },
+    ])
+  );
 };
 
 const buildReviewSummary = (review) => ({
@@ -144,5 +271,6 @@ export {
   buildReviewSummary,
   buildStudentReviewSummary,
   canReviewProject,
+  getStudentReviewProfileMap,
   getStudentRatingSummary,
 };

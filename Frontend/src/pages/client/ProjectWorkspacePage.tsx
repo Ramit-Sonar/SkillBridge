@@ -40,6 +40,7 @@ import {
   StudentProfileView,
   type ProfileViewProps,
 } from "../../app/components/shared/StudentProfileView";
+import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { Timeline } from "../../app/components/shared/Timeline";
 import {
   ConfirmDialog,
@@ -268,23 +269,9 @@ function mapWorkspaceProject(
     },
     studentProfile:
       role === "client" && workspace.studentProfile
-        ? {
-            name: workspace.studentProfile.name,
-            initials: workspace.studentProfile.initials,
-            headline: workspace.studentProfile.headline,
-            education: workspace.studentProfile.education,
-            university: workspace.studentProfile.university,
-            bio: workspace.studentProfile.bio,
-            verified: workspace.studentProfile.verified,
-            skills: workspace.studentProfile.skills,
-            rating: 0,
-            reviewCount: 0,
-            completedProjectsCount: 0,
-            github: workspace.studentProfile.github,
-            linkedin: workspace.studentProfile.linkedin,
-            portfolio: workspace.studentProfile.portfolio,
-            avatarUrl: workspace.studentProfile.avatarUrl,
-          }
+        ? buildStudentProfileViewProps({
+            profile: workspace.studentProfile,
+          })
         : null,
   };
 }
@@ -969,6 +956,7 @@ export default function ProjectWorkspacePage() {
 
       setReviewSubmitted(true);
       setNotification({ type: "success", text: response.message });
+      await refreshProjectAfterMutation();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Review could not be submitted.";
       setNotification({ type: "error", text: message });

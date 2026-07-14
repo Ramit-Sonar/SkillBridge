@@ -1,5 +1,6 @@
 import type { ApiResponse } from "./applicationService";
 import type { JobAttachment } from "./jobService";
+import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
   /\/users\/?$/,
@@ -18,6 +19,9 @@ export type ProjectSummarySubmission = {
   versionNumber: number;
   submittedAt: string;
   status: "submitted" | "approved";
+  demoLink?: string;
+  repositoryLink?: string;
+  liveUrl?: string;
 };
 
 export type ProjectSummary = {
@@ -25,14 +29,46 @@ export type ProjectSummary = {
   title: string;
   status: ProjectStatus;
   category: string;
+  description?: string;
+  skills?: string[];
   student: ProjectPerson | null;
   client: ProjectPerson | null;
   deadline: string;
   budget: string;
   revisionCount: number;
+  completedAt?: string | null;
   lastUpdated: string;
   currentAction: string;
   submissions: ProjectSummarySubmission[];
+};
+
+export type ProjectProfileLatestSubmission = {
+  id?: string;
+  versionNumber: number;
+  submittedAt: string;
+  status: "submitted" | "approved";
+  demoLink: string;
+  repositoryLink: string;
+  liveUrl: string;
+};
+
+export type ProjectProfileCompletedProject = {
+  projectId: string;
+  status: ProjectStatus;
+  completedAt: string | null;
+  job: {
+    jobId: string;
+    title: string;
+    category: string;
+    description: string;
+    skills: string[];
+  } | null;
+  client: {
+    clientId: string;
+    fullName: string;
+    avatar: string;
+  } | null;
+  latestSubmission: ProjectProfileLatestSubmission | null;
 };
 
 export type MyProjectsResponse = {
@@ -116,6 +152,11 @@ export type ProjectStudentProfile = {
   github: string;
   linkedin: string;
   portfolio: string;
+  statistics?: StudentRatingSummary & {
+    completedProjectsCount: number;
+  };
+  completedProjects?: ProjectProfileCompletedProject[];
+  latestReviews?: StudentReviewSummary[];
   avatarUrl: string;
 };
 

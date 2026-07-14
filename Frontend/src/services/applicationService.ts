@@ -1,4 +1,6 @@
 import type { ClientSummary, JobAttachment } from "./jobService";
+import type { ProjectProfileCompletedProject } from "./projectService";
+import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
   /\/users\/?$/,
@@ -53,6 +55,9 @@ export type StudentSummary = {
   fullName: string;
   avatar?: string;
   profileCompleted?: boolean;
+  statistics?: StudentRatingSummary & {
+    completedProjectsCount: number;
+  };
   verification: {
     status: string | null;
     verifiedAt: string | null;
@@ -66,6 +71,8 @@ export type StudentSummary = {
     linkedin?: string;
     portfolio: string;
   };
+  completedProjects?: ProjectProfileCompletedProject[];
+  latestReviews?: StudentReviewSummary[];
 };
 
 export type ApplicantCard = {

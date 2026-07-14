@@ -18,11 +18,26 @@ export const buildStudentSummary = ({
   student,
   studentProfile,
   studentVerification,
+  studentProjectProfile,
+  studentReviewProfile,
 }) => ({
   studentId: student._id,
   fullName: student.fullName,
   avatar: student.avatar,
   profileCompleted: student.profileCompleted,
+  statistics: {
+    averageRating: studentReviewProfile?.ratingSummary?.averageRating || 0,
+    reviewCount: studentReviewProfile?.ratingSummary?.reviewCount || 0,
+    ratingDistribution: studentReviewProfile?.ratingSummary
+      ?.ratingDistribution || {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    },
+    completedProjectsCount: studentProjectProfile?.completedProjectsCount || 0,
+  },
   verification: {
     status: studentVerification?.status || null,
     verifiedAt: studentVerification?.verifiedAt || null,
@@ -33,12 +48,16 @@ export const buildStudentSummary = ({
     skills: studentProfile?.skills || [],
     portfolio: studentProfile?.portfolio || "",
   },
+  completedProjects: studentProjectProfile?.completedProjects || [],
+  latestReviews: studentReviewProfile?.latestReviews || [],
 });
 
 export const buildApplicantSummary = ({
   application,
   studentProfile,
   studentVerification,
+  studentProjectProfile,
+  studentReviewProfile,
 }) => ({
   applicationId: application._id,
   status: application.status,
@@ -48,6 +67,8 @@ export const buildApplicantSummary = ({
         student: application.student,
         studentProfile,
         studentVerification,
+        studentProjectProfile,
+        studentReviewProfile,
       })
     : null,
 });
@@ -57,6 +78,8 @@ export const buildApplicationDetails = ({
   studentProfile,
   studentVerification,
   clientSummary,
+  studentProjectProfile,
+  studentReviewProfile,
 }) => ({
   applicationId: application._id,
   status: application.status,
@@ -94,6 +117,8 @@ export const buildApplicationDetails = ({
           student: application.student,
           studentProfile,
           studentVerification,
+          studentProjectProfile,
+          studentReviewProfile,
         }),
         profile: {
           bio: studentProfile?.bio || "",

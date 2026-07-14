@@ -92,10 +92,15 @@ const buildWorkspaceStudentProfile = ({
   student,
   studentProfile,
   studentVerification,
+  studentProjectProfile,
+  studentReviewProfile,
 }) => {
   if (!student) return null;
 
   const skills = studentProfile?.skills || [];
+  const ratingSummary = studentReviewProfile?.ratingSummary || null;
+  const completedProjectsCount =
+    studentProjectProfile?.completedProjectsCount || 0;
 
   return {
     id: student._id?.toString(),
@@ -113,6 +118,20 @@ const buildWorkspaceStudentProfile = ({
     github: studentProfile?.github || "",
     linkedin: studentProfile?.linkedin || "",
     portfolio: studentProfile?.portfolio || "",
+    statistics: {
+      averageRating: ratingSummary?.averageRating || 0,
+      reviewCount: ratingSummary?.reviewCount || 0,
+      ratingDistribution: ratingSummary?.ratingDistribution || {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+      },
+      completedProjectsCount,
+    },
+    completedProjects: studentProjectProfile?.completedProjects || [],
+    latestReviews: studentReviewProfile?.latestReviews || [],
     avatarUrl: student.avatar || "",
   };
 };
@@ -152,6 +171,9 @@ export const buildProjectSummary = ({
         versionNumber: latestSubmission.versionNumber,
         submittedAt: latestSubmission.submittedAt,
         status: latestSubmission.status,
+        demoLink: latestSubmission.demoLink || "",
+        repositoryLink: latestSubmission.repositoryLink || "",
+        liveUrl: latestSubmission.liveUrl || "",
       }
     : null;
 
@@ -160,11 +182,14 @@ export const buildProjectSummary = ({
     title: project.job?.title || "",
     status: project.status,
     category: project.job?.category || "",
+    description: project.job?.description || "",
+    skills: project.job?.skills || [],
     student: buildProjectPerson(project.student),
     client: buildProjectPerson(project.client),
     deadline: formatCardDate(project.job?.deadline),
     budget: formatCardBudget(project.job?.budget),
     revisionCount,
+    completedAt: project.completedAt,
     lastUpdated: project.lastActivityAt,
     currentAction: getCurrentAction(
       project.status,
@@ -180,6 +205,8 @@ export const buildProjectWorkspace = ({
   viewerRole,
   partnerProfile,
   partnerVerification,
+  studentProjectProfile,
+  studentReviewProfile,
 }) => {
   const partner = viewerRole === "student" ? project.client : project.student;
   const partnerRole = viewerRole === "student" ? "client" : "student";
@@ -267,6 +294,8 @@ export const buildProjectWorkspace = ({
             student: project.student,
             studentProfile: partnerProfile,
             studentVerification: partnerVerification,
+            studentProjectProfile,
+            studentReviewProfile,
           })
         : null,
   };

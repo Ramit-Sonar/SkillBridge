@@ -94,65 +94,82 @@ import {
   useDashboardCurrentUser,
 } from "../../app/components/layout/DashboardLayout";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
+import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { getProfile, setProfile, subscribeProfile } from "../../app/data/profileStore";
+import { getMyProjects, type ProjectSummary } from "../../services/projectService";
+import {
+  getStudentRatingSummary,
+  getStudentReviews,
+  type StudentRatingSummary,
+  type StudentReviewSummary,
+} from "../../services/reviewService";
 import { getStudentProfile } from "../../services/studentProfileService";
-
-const DEFAULT_RATING = 0;
-const DEFAULT_REVIEW_COUNT = 0;
 
 function StudentProfileContent() {
   const currentUser = useDashboardCurrentUser();
   const [shareOpen, setShareOpen] = useState(false);
   const [profile, setProfileState] = useState(getProfile());
+  const [ratingSummary, setRatingSummary] = useState<StudentRatingSummary | null>(null);
+  const [reviews, setReviews] = useState<StudentReviewSummary[]>([]);
+  const [completedProjects, setCompletedProjects] = useState<ProjectSummary[]>([]);
 
   useEffect(() => {
     let mounted = true;
 
     const loadStudentProfile = async () => {
-      try {
-        const response = await getStudentProfile();
+      const [profileResult, ratingResult, reviewsResult, projectsResult] = await Promise.allSettled(
+        [getStudentProfile(), getStudentRatingSummary(), getStudentReviews(), getMyProjects()]
+      );
 
-        if (!mounted || !response.data) return;
+      if (!mounted) return;
 
+      if (profileResult.status === "fulfilled" && profileResult.value.data) {
+        const profileData = profileResult.value.data;
         setProfile({
-          bio: response.data.bio ?? "",
-          education: response.data.education ?? "",
-          university: response.data.university ?? "",
-          skills: response.data.skills ?? [],
-          github: response.data.github ?? "",
-          linkedin: response.data.linkedin ?? "",
-          portfolio: response.data.portfolio ?? "",
+          bio: profileData.bio ?? "",
+          education: profileData.education ?? "",
+          university: profileData.university ?? "",
+          skills: profileData.skills ?? [],
+          github: profileData.github ?? "",
+          linkedin: profileData.linkedin ?? "",
+          portfolio: profileData.portfolio ?? "",
         });
-      } catch (error) {
-        // A new student may not have saved profile details yet.
+      }
+
+      if (ratingResult.status === "fulfilled") {
+        setRatingSummary(ratingResult.value.data);
+      }
+
+      if (reviewsResult.status === "fulfilled") {
+        setReviews(reviewsResult.value.data.reviews);
+      }
+
+      if (projectsResult.status === "fulfilled") {
+        setCompletedProjects(
+          projectsResult.value.data.projects.filter((project) => project.status === "completed")
+        );
       }
     };
 
     loadStudentProfile();
+    window.addEventListener("focus", loadStudentProfile);
 
     return () => {
       mounted = false;
+      window.removeEventListener("focus", loadStudentProfile);
     };
   }, []);
 
   // Re-render whenever Settings saves to the store
   useEffect(() => subscribeProfile(() => setProfileState(getProfile())), []);
 
-  // User owns the name; StudentProfile owns the profile details.
-  const p = profile;
-  const name = currentUser?.fullName || "";
-  const bio = p.bio;
-  const initials = name
-    .trim()
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const skills = p.skills.map((s) => ({
-    name: s,
-    verified: false,
-  }));
+  const profileView = buildStudentProfileViewProps({
+    user: currentUser,
+    profile,
+    ratingSummary,
+    reviews,
+    completedProjects,
+  });
 
   return (
     <>
@@ -174,25 +191,7 @@ function StudentProfileContent() {
           </motion.button>
         </div>
 
-        <StudentProfileView
-          profile={{
-            name,
-            initials,
-            headline: p.education ? `${p.education} Student` : "",
-            education: p.education,
-            university: p.university,
-            bio,
-            verified: false,
-            skills,
-            rating: DEFAULT_RATING,
-            reviewCount: DEFAULT_REVIEW_COUNT,
-            completedProjectsCount: 0,
-            github: p.github || undefined,
-            linkedin: p.linkedin || undefined,
-            portfolio: p.portfolio || undefined,
-            avatarUrl: currentUser?.avatar,
-          }}
-        />
+        <StudentProfileView profile={profileView} />
       </motion.div>
 
       <AnimatePresence>

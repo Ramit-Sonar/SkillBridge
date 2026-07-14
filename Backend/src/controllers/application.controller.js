@@ -14,7 +14,11 @@ import { buildClientSummary } from "../services/client.service.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
-import { createProjectFromAcceptedApplication } from "../services/project.service.js";
+import {
+  createProjectFromAcceptedApplication,
+  getStudentCompletedProjectProfileMap,
+} from "../services/project.service.js";
+import { getStudentReviewProfileMap } from "../services/review.service.js";
 
 const submitApplication = asyncHandler(async (req, res) => {
   const uploadedFiles = req.files;
@@ -232,13 +236,20 @@ const getJobApplications = asyncHandler(async (req, res) => {
     .map((application) => application.student?._id)
     .filter(Boolean);
 
-  const [studentProfiles, studentVerifications] = await Promise.all([
+  const [
+    studentProfiles,
+    studentVerifications,
+    studentProjectProfileMap,
+    studentReviewProfileMap,
+  ] = await Promise.all([
     StudentProfile.find({ user: { $in: studentIds } })
       .select("user education university skills portfolio")
       .lean(),
     Verification.find({ user: { $in: studentIds }, type: "student" })
       .select("user status verifiedAt")
       .lean(),
+    getStudentCompletedProjectProfileMap(studentIds),
+    getStudentReviewProfileMap(studentIds),
   ]);
 
   const studentProfileMap = new Map(
@@ -258,6 +269,8 @@ const getJobApplications = asyncHandler(async (req, res) => {
       application,
       studentProfile: studentProfileMap.get(studentId),
       studentVerification: studentVerificationMap.get(studentId),
+      studentProjectProfile: studentProjectProfileMap.get(studentId),
+      studentReviewProfile: studentReviewProfileMap.get(studentId),
     });
   });
 
@@ -322,27 +335,34 @@ const getApplicationById = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not allowed to view this application");
   }
 
-  const [studentProfile, studentVerification, clientSummary] =
-    await Promise.all([
-      studentId
-        ? StudentProfile.findOne({ user: studentId })
-            .select("bio education university skills github linkedin portfolio")
-            .lean()
-        : null,
-      studentId
-        ? Verification.findOne({ user: studentId, type: "student" })
-            .select("status verifiedAt")
-            .lean()
-        : null,
-      application.job?.client
-        ? buildClientSummary(application.job.client)
-        : null,
-    ]);
+  const [
+    studentProfile,
+    studentVerification,
+    clientSummary,
+    studentProjectProfileMap,
+    studentReviewProfileMap,
+  ] = await Promise.all([
+    studentId
+      ? StudentProfile.findOne({ user: studentId })
+          .select("bio education university skills github linkedin portfolio")
+          .lean()
+      : null,
+    studentId
+      ? Verification.findOne({ user: studentId, type: "student" })
+          .select("status verifiedAt")
+          .lean()
+      : null,
+    application.job?.client ? buildClientSummary(application.job.client) : null,
+    studentId ? getStudentCompletedProjectProfileMap([studentId]) : null,
+    studentId ? getStudentReviewProfileMap([studentId]) : null,
+  ]);
   const applicationDetails = buildApplicationDetails({
     application,
     studentProfile,
     studentVerification,
     clientSummary,
+    studentProjectProfile: studentProjectProfileMap?.get(studentId),
+    studentReviewProfile: studentReviewProfileMap?.get(studentId),
   });
 
   return res
@@ -699,5 +719,3 @@ export {
   submitApplication,
   withdrawApplication,
 };
-
-
