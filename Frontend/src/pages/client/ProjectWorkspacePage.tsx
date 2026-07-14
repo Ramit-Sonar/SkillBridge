@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
+  AlertCircle,
   Award,
   Calendar,
   CheckCircle,
@@ -395,6 +396,28 @@ function EmptyState({
   );
 }
 
+function getRevisionReferenceLinks(value: string) {
+  const links = value
+    .split("\n")
+    .map((link) => link.trim())
+    .filter(Boolean);
+
+  const hasInvalidLink = links.some((link) => {
+    try {
+      const parsedUrl = new URL(link);
+      return parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:";
+    } catch {
+      return true;
+    }
+  });
+
+  if (hasInvalidLink) {
+    throw new Error("Reference links must be valid URLs starting with http:// or https://.");
+  }
+
+  return links;
+}
+
 function RevisionRequestDialog({
   onClose,
   onSubmit,
@@ -409,6 +432,7 @@ function RevisionRequestDialog({
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [referenceLinks, setReferenceLinks] = useState("");
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const submitLockedRef = useRef(false);
   const canSubmit = message.trim().length > 0 && !busy;
@@ -421,16 +445,18 @@ function RevisionRequestDialog({
 
     submitLockedRef.current = true;
     setBusy(true);
+    setError("");
 
     try {
       await onSubmit({
         message: message.trim(),
         files,
-        referenceLinks: referenceLinks
-          .split("\n")
-          .map((link) => link.trim())
-          .filter(Boolean),
+        referenceLinks: getRevisionReferenceLinks(referenceLinks),
       });
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Revision request could not be sent."
+      );
     } finally {
       submitLockedRef.current = false;
       setBusy(false);
@@ -521,12 +547,24 @@ function RevisionRequestDialog({
               id={referenceLinksId}
               rows={3}
               value={referenceLinks}
-              onChange={(event) => setReferenceLinks(event.target.value)}
+              onChange={(event) => {
+                setReferenceLinks(event.target.value);
+                setError("");
+              }}
               placeholder="Add one reference link per line."
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 resize-none"
               style={{ fontSize: "0.875rem" }}
             />
           </div>
+
+          {error && (
+            <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-red-500 leading-relaxed" style={{ fontSize: "0.78rem" }}>
+                {error}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 px-6 py-4 shrink-0 border-t border-black/[0.05]">
@@ -873,7 +911,7 @@ export default function ProjectWorkspacePage() {
         setLoadError("Project submitted, but latest workspace data could not be refreshed.");
       }
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Project could not be submitted.");
+      throw new Error(error instanceof Error ? error.message : "Project could not be submitted.");
     } finally {
       setSubmitting(false);
     }
@@ -887,16 +925,23 @@ export default function ProjectWorkspacePage() {
     if (!id) return;
 
     try {
-      await requestRevision(id, {
+      const response = await requestRevision(id, {
         message: data.message,
         referenceLinks: data.referenceLinks,
         files: data.files.map((file) => file.file),
       });
       setShowRevisionDialog(false);
-      await refreshProjectAfterMutation();
+      setNotification({ type: "success", text: response.message });
+
+      try {
+        await refreshProjectAfterMutation();
+      } catch {
+        setLoadError("Revision request sent, but latest workspace data could not be refreshed.");
+      }
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Revision request could not be sent.");
-      setShowRevisionDialog(false);
+      throw new Error(
+        error instanceof Error ? error.message : "Revision request could not be sent."
+      );
     }
   };
 

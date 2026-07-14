@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { Link, Upload } from "lucide-react";
+import { AlertCircle, Link, Upload } from "lucide-react";
 import { FileUploadArea, type UploadedFile } from "./FileUploadArea";
 
 export type ProjectSubmissionFormData = {
@@ -22,6 +22,22 @@ type ProjectSubmissionFormProps = {
 const inputCls =
   "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10";
 
+function validateOptionalUrl(value: string, fieldName: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) return;
+
+  try {
+    const parsedUrl = new URL(trimmedValue);
+
+    if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") return;
+  } catch {
+    // The message below is shown for both malformed URLs and unsupported protocols.
+  }
+
+  throw new Error(`${fieldName} must be a valid URL starting with http:// or https://.`);
+}
+
 export function ProjectSubmissionForm({
   title,
   helperMessage,
@@ -34,6 +50,7 @@ export function ProjectSubmissionForm({
   const [repositoryLink, setRepositoryLink] = useState("");
   const [liveUrl, setLiveUrl] = useState("");
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [error, setError] = useState("");
   const submitLockedRef = useRef(false);
   const formId = useId();
 
@@ -47,9 +64,18 @@ export function ProjectSubmissionForm({
     if (!canSubmit || submitLockedRef.current) return;
 
     submitLockedRef.current = true;
+    setError("");
 
     try {
+      validateOptionalUrl(demoLink, "Demo link");
+      validateOptionalUrl(repositoryLink, "Repository link");
+      validateOptionalUrl(liveUrl, "Live URL");
+
       await onSubmit({ notes, demoLink, repositoryLink, liveUrl, files });
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Project could not be submitted."
+      );
     } finally {
       submitLockedRef.current = false;
     }
@@ -99,7 +125,10 @@ export function ProjectSubmissionForm({
             id={demoLinkId}
             type="url"
             value={demoLink}
-            onChange={(event) => setDemoLink(event.target.value)}
+            onChange={(event) => {
+              setDemoLink(event.target.value);
+              setError("");
+            }}
             placeholder="https://your-project-demo.com"
             className={`${inputCls} pl-10`}
             style={{ fontSize: "0.875rem" }}
@@ -121,7 +150,10 @@ export function ProjectSubmissionForm({
             id={repositoryLinkId}
             type="url"
             value={repositoryLink}
-            onChange={(event) => setRepositoryLink(event.target.value)}
+            onChange={(event) => {
+              setRepositoryLink(event.target.value);
+              setError("");
+            }}
             placeholder="https://github.com/username/project"
             className={`${inputCls} pl-10`}
             style={{ fontSize: "0.875rem" }}
@@ -143,7 +175,10 @@ export function ProjectSubmissionForm({
             id={liveUrlId}
             type="url"
             value={liveUrl}
-            onChange={(event) => setLiveUrl(event.target.value)}
+            onChange={(event) => {
+              setLiveUrl(event.target.value);
+              setError("");
+            }}
             placeholder="https://your-project.vercel.app"
             className={`${inputCls} pl-10`}
             style={{ fontSize: "0.875rem" }}
@@ -162,6 +197,15 @@ export function ProjectSubmissionForm({
           maxFiles={3}
         />
       </div>
+
+      {error && (
+        <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <p className="text-red-500 leading-relaxed" style={{ fontSize: "0.78rem" }}>
+            {error}
+          </p>
+        </div>
+      )}
 
       <motion.button
         type="button"
