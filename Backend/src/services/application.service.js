@@ -43,9 +43,12 @@ export const buildStudentSummary = ({
     verifiedAt: studentVerification?.verifiedAt || null,
   },
   profile: {
+    bio: studentProfile?.bio || "",
     education: studentProfile?.education || "",
     university: studentProfile?.university || "",
     skills: studentProfile?.skills || [],
+    github: studentProfile?.github || "",
+    linkedin: studentProfile?.linkedin || "",
     portfolio: studentProfile?.portfolio || "",
   },
   completedProjects: studentProjectProfile?.completedProjects || [],

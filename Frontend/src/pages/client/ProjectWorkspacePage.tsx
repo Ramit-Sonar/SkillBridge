@@ -950,32 +950,14 @@ export default function ProjectWorkspacePage() {
 
     try {
       const response = await approveDeliverable(id);
-      const approvedProject = response.data.project;
-      const approvedLastUpdated = formatWorkspaceDate(approvedProject.lastActivityAt);
 
       setShowApprove(false);
       setNotification({ type: "success", text: response.message });
-      setWorkspace((current) =>
-        current
-          ? {
-              ...current,
-              status: approvedProject.status,
-              lastUpdated: approvedLastUpdated,
-              canSubmitDeliverables: false,
-              projectData: {
-                ...current.projectData,
-                status: approvedProject.status,
-                completedAt: formatWorkspaceDate(approvedProject.completedAt),
-                lastUpdated: approvedLastUpdated,
-              },
-            }
-          : current
-      );
-      setActiveTab("overview");
-      setTimeout(() => setShowReviewDialog(true), 600);
 
       try {
         await refreshProjectAfterMutation();
+        setActiveTab("overview");
+        setTimeout(() => setShowReviewDialog(true), 600);
       } catch {
         setLoadError("Project approved, but latest workspace data could not be refreshed.");
       }

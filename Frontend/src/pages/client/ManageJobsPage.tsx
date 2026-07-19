@@ -755,38 +755,40 @@ function ApplicationsPanel({
   const [error, setError] = useState("");
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadApplicants() {
-      setLoadingApplicants(true);
+  const loadApplicants = useCallback(
+    async ({ showLoading = true, preserveCurrentData = false } = {}) => {
+      if (showLoading) setLoadingApplicants(true);
       setError("");
 
       try {
         const response = await getJobApplications(job.id);
-        if (!isMounted) return;
         const applicantList = response.data.applicants.map(mapApplicantFromApi);
+
         setApplicants(applicantList);
         onApplicantsChange(job.id, applicantList);
+        setWorkspaceApplicant((current) => {
+          if (!current) return current;
+
+          const refreshedApplicant = applicantList.find((applicant) => applicant.id === current.id);
+
+          return refreshedApplicant ? { ...current, ...refreshedApplicant } : current;
+        });
       } catch (error) {
-        if (!isMounted) return;
         const message = error instanceof Error ? error.message : "Failed to load applications.";
-        setError(message);
         setNotification({ type: "error", text: message });
-        setApplicants([]);
+
+        if (!preserveCurrentData) {
+          setError(message);
+          setApplicants([]);
+        }
       } finally {
-        if (isMounted) setLoadingApplicants(false);
+        if (showLoading) setLoadingApplicants(false);
       }
-    }
+    },
+    [job.id, onApplicantsChange]
+  );
 
-    loadApplicants();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [job.id, onApplicantsChange]);
-
-  const handleViewDetails = async (applicationId: string) => {
+  const loadApplicantDetails = useCallback(async (applicationId: string) => {
     setDetailsLoadingId(applicationId);
 
     try {
@@ -800,6 +802,30 @@ function ApplicationsPanel({
     } finally {
       setDetailsLoadingId(null);
     }
+  }, []);
+
+  useEffect(() => {
+    loadApplicants();
+  }, [loadApplicants]);
+
+  useEffect(() => {
+    const refreshApplicantData = () => {
+      loadApplicants({ showLoading: false, preserveCurrentData: true });
+
+      if (workspaceApplicant) {
+        loadApplicantDetails(workspaceApplicant.id);
+      }
+    };
+
+    window.addEventListener("focus", refreshApplicantData);
+
+    return () => {
+      window.removeEventListener("focus", refreshApplicantData);
+    };
+  }, [loadApplicantDetails, loadApplicants, workspaceApplicant]);
+
+  const handleViewDetails = async (applicationId: string) => {
+    await loadApplicantDetails(applicationId);
   };
 
   const handleHire = async (applicant: Applicant) => {
@@ -807,40 +833,6 @@ function ApplicationsPanel({
 
     try {
       const response = await acceptApplication(applicant.id);
-      const acceptedAt = formatApplicationDate(response.data.acceptedAt);
-      const updatedAt = formatApplicationDate(response.data.updatedAt);
-
-      setApplicants((prev) => {
-        const updatedApplicants = prev.map((item) => {
-          if (item.id === applicant.id) {
-            return { ...item, status: "accepted" as AppStatus, acceptedAt, updatedAt };
-          }
-
-          if (item.status === "pending") {
-            return { ...item, status: "rejected" as AppStatus };
-          }
-
-          return item;
-        });
-
-        onApplicantsChange(job.id, updatedApplicants);
-
-        return updatedApplicants;
-      });
-
-      setWorkspaceApplicant((prev) => {
-        if (!prev) return prev;
-
-        if (prev.id === applicant.id) {
-          return { ...prev, status: "accepted" as AppStatus, acceptedAt, updatedAt };
-        }
-
-        if (prev.status === "pending") {
-          return { ...prev, status: "rejected" as AppStatus };
-        }
-
-        return prev;
-      });
 
       if (
         response.data.job.status === "open" ||
@@ -852,6 +844,8 @@ function ApplicationsPanel({
 
       setNotification({ type: "success", text: response.message });
       setHireTarget(null);
+      await loadApplicants({ showLoading: false, preserveCurrentData: true });
+      await loadApplicantDetails(applicant.id);
     } catch (error) {
       setNotification({
         type: "error",
@@ -867,29 +861,11 @@ function ApplicationsPanel({
 
     try {
       const response = await rejectApplication(applicant.id);
-      const rejectedAt = formatApplicationDate(response.data.rejectedAt);
-      const updatedAt = formatApplicationDate(response.data.updatedAt);
-
-      setApplicants((prev) => {
-        const updatedApplicants = prev.map((item) =>
-          item.id === applicant.id
-            ? { ...item, status: "rejected" as AppStatus, rejectedAt, updatedAt }
-            : item
-        );
-
-        onApplicantsChange(job.id, updatedApplicants);
-
-        return updatedApplicants;
-      });
-
-      setWorkspaceApplicant((prev) =>
-        prev?.id === applicant.id
-          ? { ...prev, status: "rejected" as AppStatus, rejectedAt, updatedAt }
-          : prev
-      );
 
       setNotification({ type: "success", text: response.message });
       setRejectTarget(null);
+      await loadApplicants({ showLoading: false, preserveCurrentData: true });
+      await loadApplicantDetails(applicant.id);
     } catch (error) {
       setNotification({
         type: "error",

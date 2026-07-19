@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  getPublicStudentProfile,
   getStudentProfile,
   updateStudentProfile,
 } from "../controllers/studentProfile.controller.js";
@@ -8,6 +9,8 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 const studentRoles = authorizeRoles("student");
+
+router.route("/public-profile/:studentId").get(getPublicStudentProfile);
 
 router
   .route("/profile")

@@ -243,7 +243,7 @@ const getJobApplications = asyncHandler(async (req, res) => {
     studentReviewProfileMap,
   ] = await Promise.all([
     StudentProfile.find({ user: { $in: studentIds } })
-      .select("user education university skills portfolio")
+      .select("user bio education university skills github linkedin portfolio")
       .lean(),
     Verification.find({ user: { $in: studentIds }, type: "student" })
       .select("user status verifiedAt")

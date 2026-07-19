@@ -2,9 +2,15 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Share2, Copy, Check, ExternalLink, X } from "lucide-react";
 
-const PUBLIC_URL = "https://skillbridge.app/p/ramit-sonar";
-
-function ShareModal({ onClose }: { onClose: () => void }) {
+function ShareModal({
+  onClose,
+  publicUrl,
+  publicPath,
+}: {
+  onClose: () => void;
+  publicUrl: string;
+  publicPath: string;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <motion.div
@@ -46,13 +52,13 @@ function ShareModal({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 min-w-0">
               <p className="text-slate-500 truncate" style={{ fontSize: "0.72rem" }}>
-                {PUBLIC_URL}
+                {publicUrl}
               </p>
             </div>
             <motion.button
               whileTap={{ scale: 0.92 }}
               onClick={() => {
-                navigator.clipboard.writeText(PUBLIC_URL).catch(() => {});
+                navigator.clipboard.writeText(publicUrl).catch(() => {});
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
@@ -77,7 +83,7 @@ function ShareModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <a
-          href="/p/ramit-sonar"
+          href={publicPath}
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors"
@@ -170,6 +176,8 @@ function StudentProfileContent() {
     reviews,
     completedProjects,
   });
+  const publicPath = currentUser?._id ? `/p/${currentUser._id}` : "/p";
+  const publicUrl = `${window.location.origin}${publicPath}`;
 
   return (
     <>
@@ -195,7 +203,13 @@ function StudentProfileContent() {
       </motion.div>
 
       <AnimatePresence>
-        {shareOpen && <ShareModal onClose={() => setShareOpen(false)} />}
+        {shareOpen && (
+          <ShareModal
+            onClose={() => setShareOpen(false)}
+            publicPath={publicPath}
+            publicUrl={publicUrl}
+          />
+        )}
       </AnimatePresence>
     </>
   );

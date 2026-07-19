@@ -1,29 +1,56 @@
 ﻿import { motion } from "motion/react";
-import { Link } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router";
 import { Zap } from "lucide-react";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
-
-const PROFILE = {
-  user: {
-    fullName: "Ramit Sonar",
-  },
-  profile: {
-    education: "Computer Engineering",
-    bio: "Computer Engineering student passionate about web development, React, UI design, and building modern digital products. I enjoy creating clean interfaces and solving real problems through technology.",
-    skills: [
-      { name: "React", verified: true },
-      { name: "Figma", verified: true },
-      { name: "JavaScript", verified: false },
-    ],
-    github: "github.com/ramitsonar",
-    linkedin: "linkedin.com/in/ramitsonar",
-    portfolio: "ramitsonar.com",
-  },
-  verified: true,
-};
+import { getPublicStudentProfile } from "../../services/studentProfileService";
+import type { StudentSummary } from "../../services/applicationService";
 
 export default function PublicProfilePage() {
+  const { username } = useParams();
+  const [profile, setProfile] = useState<StudentSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPublicProfile() {
+      if (!username) {
+        setError("Student profile link is invalid.");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await getPublicStudentProfile(username);
+
+        if (mounted) {
+          setProfile(response.data);
+        }
+      } catch (error) {
+        if (mounted) {
+          setError(error instanceof Error ? error.message : "Failed to load student profile.");
+          setProfile(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadPublicProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [username]);
+
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Minimal header */}
@@ -48,7 +75,21 @@ export default function PublicProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
-          <StudentProfileView profile={buildStudentProfileViewProps(PROFILE)} />
+          {loading ? (
+            <div className="bg-white border border-black/[0.06] rounded-2xl p-8 text-center">
+              <p className="text-slate-500 font-semibold" style={{ fontSize: "0.85rem" }}>
+                Loading profile...
+              </p>
+            </div>
+          ) : error ? (
+            <div className="bg-white border border-black/[0.06] rounded-2xl p-8 text-center">
+              <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+                {error}
+              </p>
+            </div>
+          ) : profile ? (
+            <StudentProfileView profile={buildStudentProfileViewProps({ profile })} />
+          ) : null}
         </motion.div>
       </main>
     </div>

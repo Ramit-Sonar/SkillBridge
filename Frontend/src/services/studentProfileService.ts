@@ -1,3 +1,5 @@
+import type { StudentSummary } from "./applicationService";
+
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
   /\/users\/?$/,
   ""
@@ -47,6 +49,22 @@ export const updateStudentProfile = async (
     },
     credentials: "include",
     body: JSON.stringify(profileData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const getPublicStudentProfile = async (
+  studentId: string
+): Promise<ApiResponse<StudentSummary>> => {
+  const response = await fetch(`${API_URL}/student/public-profile/${studentId}`, {
+    method: "GET",
   });
 
   const data = await response.json();
