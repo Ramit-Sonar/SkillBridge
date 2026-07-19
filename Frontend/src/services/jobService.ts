@@ -48,6 +48,7 @@ export type JobData = {
   attachments?: JobAttachment[];
   status?: "open" | "closed" | "cancelled";
   applicationCount?: number;
+  pendingApplicationCount?: number;
   createdAt?: string;
   updatedAt?: string;
 };

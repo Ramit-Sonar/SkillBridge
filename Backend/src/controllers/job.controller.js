@@ -223,14 +223,33 @@ const getClientJobs = asyncHandler(async (req, res) => {
       },
     },
   ]);
+  const pendingApplicationCounts = await Application.aggregate([
+    {
+      $match: {
+        job: { $in: jobs.map((job) => job._id) },
+        status: "pending",
+      },
+    },
+    {
+      $group: {
+        _id: "$job",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
 
   const applicationCountMap = new Map(
     applicationCounts.map((item) => [item._id.toString(), item.count])
+  );
+  const pendingApplicationCountMap = new Map(
+    pendingApplicationCounts.map((item) => [item._id.toString(), item.count])
   );
 
   const jobsWithApplicationCount = jobs.map((job) => ({
     ...job,
     applicationCount: applicationCountMap.get(job._id.toString()) || 0,
+    pendingApplicationCount:
+      pendingApplicationCountMap.get(job._id.toString()) || 0,
   }));
 
   return res
