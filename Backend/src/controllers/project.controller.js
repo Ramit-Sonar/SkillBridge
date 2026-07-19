@@ -3,6 +3,7 @@ import validator from "validator";
 import { ClientProfile } from "../models/clientProfile.model.js";
 import { Deliverable } from "../models/deliverable.model.js";
 import { Project } from "../models/project.model.js";
+import { Review } from "../models/review.model.js";
 import { Revision } from "../models/revision.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
@@ -289,6 +290,10 @@ const getProjectById = asyncHandler(async (req, res) => {
   let partnerVerification = null;
   let studentProjectProfile = null;
   let studentReviewProfile = null;
+  const existingReview =
+    project.status === "completed"
+      ? await Review.exists({ project: project._id })
+      : null;
 
   if (req.user.role === "student" && clientId) {
     partnerProfile = await buildClientSummary(clientId);
@@ -324,6 +329,7 @@ const getProjectById = asyncHandler(async (req, res) => {
     partnerVerification,
     studentProjectProfile,
     studentReviewProfile,
+    hasReview: Boolean(existingReview),
   });
 
   return res

@@ -207,11 +207,15 @@ export const buildProjectWorkspace = ({
   partnerVerification,
   studentProjectProfile,
   studentReviewProfile,
+  hasReview = false,
 }) => {
   const partner = viewerRole === "student" ? project.client : project.student;
   const partnerRole = viewerRole === "student" ? "client" : "student";
 
-  const projectSummary = buildProjectStatus(project);
+  const projectSummary = {
+    ...buildProjectStatus(project),
+    hasReview,
+  };
 
   const partnerSummary = partner
     ? {

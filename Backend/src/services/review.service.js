@@ -209,7 +209,7 @@ const getStudentLatestReviewMap = async (
 
 const getStudentReviewProfileMap = async (
   studentIds,
-  latestReviewLimit = 3
+  latestReviewLimit = Infinity
 ) => {
   const [ratingSummaryMap, latestReviewMap] = await Promise.all([
     getStudentRatingSummaryMap(studentIds),

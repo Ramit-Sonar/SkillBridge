@@ -696,6 +696,8 @@ export default function ProjectWorkspacePage() {
         throw new Error("Project details are incomplete.");
       }
 
+      setReviewSubmitted(Boolean(workspaceResponse.data.project.hasReview));
+
       const nextWorkspace: ProjectWorkspaceSnapshot = {
         projectData: nextProject,
         status: nextProject.status,
@@ -783,6 +785,8 @@ export default function ProjectWorkspacePage() {
     if (!nextProject) {
       throw new Error("Project details are incomplete.");
     }
+
+    setReviewSubmitted(Boolean(workspaceResponse.data.project.hasReview));
 
     setWorkspace({
       projectData: nextProject,

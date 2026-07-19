@@ -82,6 +82,7 @@ export type ProjectStatusSummary = {
   startedAt?: string;
   completedAt?: string | null;
   lastActivityAt?: string;
+  hasReview?: boolean;
 };
 
 export type ProjectPartner = {
