@@ -245,10 +245,8 @@ function StudentDetailModal({
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 grid grid-cols-2 gap-3">
             {[
-              { label: "University", value: request.university },
+              { label: "College Name", value: request.collegeName },
               { label: "Student ID", value: request.studentId },
-              { label: "Major", value: request.major },
-              { label: "Year", value: request.year },
               { label: "Submitted", value: request.submittedAt },
               { label: "Status", value: STATUS_CFG[request.status].label },
             ].map(({ label, value }) => (
