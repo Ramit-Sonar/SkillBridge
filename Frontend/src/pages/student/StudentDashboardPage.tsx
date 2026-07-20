@@ -7,27 +7,30 @@ import { StatGrid } from "../../app/components/shared/StatCard";
 import { QuickActionsGrid } from "../../app/components/shared/QuickActionCard";
 import { SectionCard } from "../../app/components/shared/SectionCard";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
+import { APPLICATION_STATUS_CFG } from "../../app/components/shared/ApplicationDetailsContent";
 import { PROJECT_STATUS_CFG } from "../../app/data/projects";
 import { getMyProjects, type MyProjectsResponse } from "../../services/projectService";
+import { getMyApplications, type MyApplicationsResponse } from "../../services/applicationService";
 
 const IS_VERIFIED = false;
 
-const RECENT_APPS = [
-  {
-    title: "Landing Page Design for EdTech",
-    status: "Pending",
-    statusColor: "#D97706",
-    statusBg: "#FFFBEB",
-    applied: "10 Jun 2026",
-  },
-  {
-    title: "React Portfolio Website",
-    status: "Accepted",
-    statusColor: "#059669",
-    statusBg: "#ECFDF5",
-    applied: "8 Jun 2026",
-  },
-];
+function formatAppliedDate(date?: string) {
+  if (!date) return "Date not available";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "Date not available";
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function isActiveProjectStatus(status: string) {
+  return status === "active" || status === "submitted" || status === "revision_requested";
+}
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -35,29 +38,39 @@ export default function StudentDashboard() {
     totalProjects: 0,
     projects: [],
   });
-  const [loadingProjects, setLoadingProjects] = useState(true);
-  const [projectError, setProjectError] = useState("");
+  const [applicationData, setApplicationData] = useState<MyApplicationsResponse>({
+    totalApplications: 0,
+    applications: [],
+  });
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const projects = projectData.projects;
-  const active = projects
-    .filter((project) => project.status === "active" || project.status === "submitted")
-    .slice(0, 3);
-  const activeProjectsCount = projects.filter(
-    (project) => project.status === "active" || project.status === "submitted"
+  const applications = applicationData.applications;
+  const active = projects.filter((project) => isActiveProjectStatus(project.status)).slice(0, 3);
+  const activeProjectsCount = projects.filter((project) =>
+    isActiveProjectStatus(project.status)
   ).length;
   const completedProjectsCount = projects.filter(
     (project) => project.status === "completed"
   ).length;
+  const recentApplications = applications.slice(0, 3);
   const studentStats = [
-    { value: 2, label: "Total Applications", icon: FileText, color: "#2563EB", bg: "#EFF6FF" },
     {
-      value: activeProjectsCount,
+      value: loadingDashboard ? "..." : applicationData.totalApplications,
+      label: "Total Applications",
+      icon: FileText,
+      color: "#2563EB",
+      bg: "#EFF6FF",
+    },
+    {
+      value: loadingDashboard ? "..." : activeProjectsCount,
       label: "Active Projects",
       icon: Folder,
       color: "#14B8A6",
       bg: "#F0FDFA",
     },
     {
-      value: completedProjectsCount,
+      value: loadingDashboard ? "..." : completedProjectsCount,
       label: "Completed Projects",
       icon: CheckCircle,
       color: "#059669",
@@ -66,21 +79,48 @@ export default function StudentDashboard() {
   ];
 
   useEffect(() => {
-    const loadProjects = async () => {
-      setLoadingProjects(true);
-      setProjectError("");
+    let mounted = true;
+
+    const loadDashboardData = async () => {
+      setLoadingDashboard(true);
+      setDashboardError("");
 
       try {
-        const response = await getMyProjects();
-        setProjectData(response.data);
+        const [applicationsResponse, projectsResponse] = await Promise.all([
+          getMyApplications(),
+          getMyProjects(),
+        ]);
+
+        if (!mounted) return;
+
+        setApplicationData(applicationsResponse.data);
+        setProjectData(projectsResponse.data);
       } catch (error) {
-        setProjectError(error instanceof Error ? error.message : "Projects could not be loaded.");
+        if (!mounted) return;
+
+        setDashboardError(
+          error instanceof Error ? error.message : "Dashboard data could not be loaded."
+        );
+        setApplicationData({
+          totalApplications: 0,
+          applications: [],
+        });
+        setProjectData({
+          totalProjects: 0,
+          projects: [],
+        });
       } finally {
-        setLoadingProjects(false);
+        if (mounted) {
+          setLoadingDashboard(false);
+        }
       }
     };
 
-    loadProjects();
+    loadDashboardData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -144,50 +184,69 @@ export default function StudentDashboard() {
           {/* Recent Applications */}
           <SectionCard title="Recent Applications" subtitle="Your latest job application activity.">
             <div className="flex flex-col gap-0">
-              {RECENT_APPS.map((a, i) => (
-                <div
-                  key={a.title}
-                  className={`flex items-center justify-between gap-3 py-3 ${i < RECENT_APPS.length - 1 ? "border-b border-black/[0.04]" : ""}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-slate-900 font-semibold truncate"
-                      style={{ fontSize: "0.82rem" }}
+              {loadingDashboard ? (
+                <p className="text-slate-400 text-center py-6" style={{ fontSize: "0.82rem" }}>
+                  Loading applications...
+                </p>
+              ) : dashboardError ? (
+                <p className="text-red-500 text-center py-6" style={{ fontSize: "0.82rem" }}>
+                  {dashboardError}
+                </p>
+              ) : recentApplications.length === 0 ? (
+                <p className="text-slate-400 text-center py-6" style={{ fontSize: "0.82rem" }}>
+                  No applications submitted yet.
+                </p>
+              ) : (
+                recentApplications.map((application, i) => {
+                  const cfg = APPLICATION_STATUS_CFG[application.status];
+                  const title = application.job?.title ?? "Job unavailable";
+
+                  return (
+                    <div
+                      key={application.applicationId}
+                      className={`flex items-center justify-between gap-3 py-3 ${i < recentApplications.length - 1 ? "border-b border-black/[0.04]" : ""}`}
                     >
-                      {a.title}
-                    </p>
-                    <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
-                      Applied {a.applied}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span
-                      className="font-semibold px-2.5 py-1 rounded-full"
-                      style={{ background: a.statusBg, color: a.statusColor, fontSize: "0.62rem" }}
-                    >
-                      {a.status}
-                    </span>
-                    <button
-                      onClick={() => navigate("/dashboard/student/applications")}
-                      className="text-blue-600 hover:text-blue-700 transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-slate-900 font-semibold truncate"
+                          style={{ fontSize: "0.82rem" }}
+                        >
+                          {title}
+                        </p>
+                        <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
+                          Applied {formatAppliedDate(application.appliedAt)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span
+                          className="font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: cfg.bg, color: cfg.color, fontSize: "0.62rem" }}
+                        >
+                          {cfg.label}
+                        </span>
+                        <button
+                          onClick={() => navigate("/dashboard/student/applications")}
+                          className="text-blue-600 hover:text-blue-700 transition-colors"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </SectionCard>
 
           {/* Active Projects */}
           <SectionCard title="Active Projects" subtitle="Your ongoing project work.">
-            {loadingProjects ? (
+            {loadingDashboard ? (
               <p className="text-slate-400 text-center py-6" style={{ fontSize: "0.82rem" }}>
                 Loading projects...
               </p>
-            ) : projectError ? (
+            ) : dashboardError ? (
               <p className="text-red-500 text-center py-6" style={{ fontSize: "0.82rem" }}>
-                {projectError}
+                {dashboardError}
               </p>
             ) : active.length === 0 ? (
               <p className="text-slate-400 text-center py-6" style={{ fontSize: "0.82rem" }}>
@@ -210,7 +269,9 @@ export default function StudentDashboard() {
                           {p.title}
                         </p>
                         <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
-                          Due {p.deadline}
+                          {[p.client?.name, p.deadline ? `Due ${p.deadline}` : ""]
+                            .filter(Boolean)
+                            .join(" - ") || "Project details unavailable"}
                         </p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
