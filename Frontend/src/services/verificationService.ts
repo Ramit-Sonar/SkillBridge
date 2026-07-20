@@ -21,6 +21,10 @@ export type VerificationData = {
   submittedAt?: string;
   verifiedAt?: string;
   verifiedBy?: string | null;
+  approvedAt?: string;
+  approvedBy?: string | null;
+  rejectedAt?: string;
+  rejectedBy?: string | null;
   rejectionReason?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -82,7 +86,6 @@ export const submitStudentVerification = async (
   return data;
 };
 
-
 export const submitClientVerification = async (
   verificationData: FormData
 ): Promise<ApiResponse<VerificationData>> => {
@@ -100,7 +103,6 @@ export const submitClientVerification = async (
 
   return data;
 };
-
 
 export const getVerificationStatus = async (): Promise<ApiResponse<VerificationData | null>> => {
   const response = await fetch(`${API_URL}/verification/status`, {
@@ -168,6 +170,39 @@ export const getAdminClientVerifications = async (): Promise<
   return data;
 };
 
+export const approveVerification = async (
+  verificationId: string
+): Promise<ApiResponse<VerificationData>> => {
+  const response = await fetch(`${API_URL}/verification/${verificationId}/approve`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const rejectVerification = async (
+  verificationId: string
+): Promise<ApiResponse<VerificationData>> => {
+  const response = await fetch(`${API_URL}/verification/${verificationId}/reject`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
 
 export const updateStudentVerification = async (
   verificationData: FormData
@@ -186,7 +221,6 @@ export const updateStudentVerification = async (
 
   return data;
 };
-
 
 export const updateClientVerification = async (
   verificationData: FormData

@@ -1,9 +1,11 @@
 import { Router } from "express";
 import {
+  approveVerification,
   getAdminClientVerifications,
   getAdminStudentVerificationById,
   getAdminStudentVerifications,
   getVerificationStatus,
+  rejectVerification,
   submitClientVerification,
   submitStudentVerification,
   updateClientVerification,
@@ -29,6 +31,10 @@ router
 router
   .route("/admin/clients")
   .get(verifyJWT, adminRoles, getAdminClientVerifications);
+
+router.route("/:id/approve").patch(verifyJWT, adminRoles, approveVerification);
+
+router.route("/:id/reject").patch(verifyJWT, adminRoles, rejectVerification);
 
 router
   .route("/student")

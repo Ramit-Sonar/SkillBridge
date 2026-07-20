@@ -92,6 +92,28 @@ const verificationSchema = new mongoose.Schema(
       default: null,
     },
 
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    rejectedAt: {
+      type: Date,
+      default: null,
+    },
+
     rejectionReason: {
       type: String,
       trim: true,
@@ -103,7 +125,4 @@ const verificationSchema = new mongoose.Schema(
   }
 );
 
-export const Verification = mongoose.model(
-  "Verification",
-  verificationSchema
-);
+export const Verification = mongoose.model("Verification", verificationSchema);

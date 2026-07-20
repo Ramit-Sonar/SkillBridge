@@ -1,4 +1,5 @@
 ﻿import {
+  useCallback,
   useEffect,
   useState,
   type Dispatch,
@@ -8,11 +9,19 @@
 } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
+import {
+  FilterChipGroup,
+  Notification,
+  SearchInput,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import { type VerificationStatus } from "../../app/data/admin";
 import {
+  approveVerification,
   getAdminClientVerifications,
   getAdminStudentVerifications,
+  rejectVerification,
   type AdminClientVerification,
   type AdminStudentVerification,
 } from "../../services/verificationService";
@@ -89,13 +98,17 @@ function VerificationCard<
   onView,
   onApprove,
   onReject,
+  isProcessing,
+  processingAction,
 }: {
   item: T;
   avatarGradient: string;
   metaItems: { icon: ElementType; label: string; value: string }[];
   onView: (r: T) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onApprove: (id: string) => Promise<boolean>;
+  onReject: (id: string) => Promise<boolean>;
+  isProcessing: boolean;
+  processingAction: "approve" | "reject" | null;
 }) {
   return (
     <motion.div
@@ -166,19 +179,23 @@ function VerificationCard<
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => onApprove(item.id)}
+              disabled={isProcessing}
               className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-50 text-emerald-600 font-semibold py-2 rounded-xl border border-emerald-300 hover:bg-emerald-600 hover:text-white transition-all"
               style={{ fontSize: "0.75rem" }}
             >
-              <CheckCircle className="w-3.5 h-3.5" /> Approve
+              <CheckCircle className="w-3.5 h-3.5" />{" "}
+              {isProcessing && processingAction === "approve" ? "Approving..." : "Approve"}
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => onReject(item.id)}
+              disabled={isProcessing}
               className="flex-1 flex items-center justify-center gap-1.5 bg-red-50 text-red-600 font-semibold py-2 rounded-xl border border-red-200 hover:bg-red-600 hover:text-white transition-all"
               style={{ fontSize: "0.75rem" }}
             >
-              <XCircle className="w-3.5 h-3.5" /> Reject
+              <XCircle className="w-3.5 h-3.5" />{" "}
+              {isProcessing && processingAction === "reject" ? "Rejecting..." : "Reject"}
             </motion.button>
           </>
         )}
@@ -223,11 +240,15 @@ function StudentDetailModal({
   onClose,
   onApprove,
   onReject,
+  isProcessing,
+  processingAction,
 }: {
   request: AdminStudentVerification;
   onClose: () => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onApprove: (id: string) => Promise<boolean>;
+  onReject: (id: string) => Promise<boolean>;
+  isProcessing: boolean;
+  processingAction: "approve" | "reject" | null;
 }) {
   return (
     <motion.div
@@ -321,26 +342,34 @@ function StudentDetailModal({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  onApprove(request.id);
-                  onClose();
+                onClick={async () => {
+                  const success = await onApprove(request.id);
+                  if (success) onClose();
                 }}
+                disabled={isProcessing}
                 className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
                 style={{ fontSize: "0.875rem" }}
               >
-                <CheckCircle className="w-4 h-4" /> Approve Verification
+                <CheckCircle className="w-4 h-4" />{" "}
+                {isProcessing && processingAction === "approve"
+                  ? "Approving..."
+                  : "Approve Verification"}
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  onReject(request.id);
-                  onClose();
+                onClick={async () => {
+                  const success = await onReject(request.id);
+                  if (success) onClose();
                 }}
+                disabled={isProcessing}
                 className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
                 style={{ fontSize: "0.875rem" }}
               >
-                <XCircle className="w-4 h-4" /> Reject Verification
+                <XCircle className="w-4 h-4" />{" "}
+                {isProcessing && processingAction === "reject"
+                  ? "Rejecting..."
+                  : "Reject Verification"}
               </motion.button>
             </div>
           )}
@@ -357,11 +386,15 @@ function ClientDetailModal({
   onClose,
   onApprove,
   onReject,
+  isProcessing,
+  processingAction,
 }: {
   request: AdminClientVerification;
   onClose: () => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onApprove: (id: string) => Promise<boolean>;
+  onReject: (id: string) => Promise<boolean>;
+  isProcessing: boolean;
+  processingAction: "approve" | "reject" | null;
 }) {
   return (
     <motion.div
@@ -491,26 +524,34 @@ function ClientDetailModal({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  onApprove(request.id);
-                  onClose();
+                onClick={async () => {
+                  const success = await onApprove(request.id);
+                  if (success) onClose();
                 }}
+                disabled={isProcessing}
                 className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
                 style={{ fontSize: "0.875rem" }}
               >
-                <CheckCircle className="w-4 h-4" /> Approve Verification
+                <CheckCircle className="w-4 h-4" />{" "}
+                {isProcessing && processingAction === "approve"
+                  ? "Approving..."
+                  : "Approve Verification"}
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  onReject(request.id);
-                  onClose();
+                onClick={async () => {
+                  const success = await onReject(request.id);
+                  if (success) onClose();
                 }}
+                disabled={isProcessing}
                 className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
                 style={{ fontSize: "0.875rem" }}
               >
-                <XCircle className="w-4 h-4" /> Reject Verification
+                <XCircle className="w-4 h-4" />{" "}
+                {isProcessing && processingAction === "reject"
+                  ? "Rejecting..."
+                  : "Reject Verification"}
               </motion.button>
             </div>
           )}
@@ -539,6 +580,10 @@ function VerificationListPanel<
   avatarGradient,
   getMetaItems,
   renderDetailModal,
+  onApproveRequest,
+  onRejectRequest,
+  onRefresh,
+  onNotify,
 }: {
   items: T[];
   setItems: Dispatch<SetStateAction<T[]>>;
@@ -550,33 +595,73 @@ function VerificationListPanel<
   renderDetailModal: (
     item: T,
     onClose: () => void,
-    onApprove: (id: string) => void,
-    onReject: (id: string) => void
+    onApprove: (id: string) => Promise<boolean>,
+    onReject: (id: string) => Promise<boolean>,
+    isProcessing: boolean,
+    processingAction: "approve" | "reject" | null
   ) => ReactNode;
+  onApproveRequest: (id: string) => Promise<unknown>;
+  onRejectRequest: (id: string) => Promise<unknown>;
+  onRefresh: () => Promise<void>;
+  onNotify: (message: NotificationMessage) => void;
 }) {
   const [filter, setFilter] = useState<VerificationStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<T | null>(null);
+  const [processingId, setProcessingId] = useState("");
+  const [processingAction, setProcessingAction] = useState<"approve" | "reject" | null>(null);
 
-  const approve = (id: string) => {
+  const updateLocalStatus = (id: string, status: VerificationStatus) => {
     setItems((prev) =>
-      prev.map((request) =>
-        request.id === id ? { ...request, status: "approved" as VerificationStatus } : request
-      )
+      prev.map((request) => (request.id === id ? { ...request, status } : request))
     );
-    setSelected((prev) =>
-      prev?.id === id ? { ...prev, status: "approved" as VerificationStatus } : prev
-    );
+    setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
   };
-  const reject = (id: string) => {
-    setItems((prev) =>
-      prev.map((request) =>
-        request.id === id ? { ...request, status: "rejected" as VerificationStatus } : request
-      )
-    );
-    setSelected((prev) =>
-      prev?.id === id ? { ...prev, status: "rejected" as VerificationStatus } : prev
-    );
+
+  const approve = async (id: string) => {
+    if (processingId) return false;
+
+    setProcessingId(id);
+    setProcessingAction("approve");
+
+    try {
+      await onApproveRequest(id);
+      updateLocalStatus(id, "approved");
+      onNotify({ type: "success", text: "Verification approved successfully." });
+      await onRefresh();
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Verification could not be approved.";
+      onNotify({ type: "error", text: message });
+      return false;
+    } finally {
+      setProcessingId("");
+      setProcessingAction(null);
+    }
+  };
+
+  const reject = async (id: string) => {
+    if (processingId) return false;
+
+    setProcessingId(id);
+    setProcessingAction("reject");
+
+    try {
+      await onRejectRequest(id);
+      updateLocalStatus(id, "rejected");
+      onNotify({ type: "success", text: "Verification rejected successfully." });
+      await onRefresh();
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Verification could not be rejected.";
+      onNotify({ type: "error", text: message });
+      return false;
+    } finally {
+      setProcessingId("");
+      setProcessingAction(null);
+    }
   };
 
   const counts = {
@@ -644,6 +729,8 @@ function VerificationListPanel<
                   onView={setSelected}
                   onApprove={approve}
                   onReject={reject}
+                  isProcessing={processingId === item.id}
+                  processingAction={processingId === item.id ? processingAction : null}
                 />
               </motion.div>
             ))}
@@ -657,7 +744,9 @@ function VerificationListPanel<
             items.find((request) => request.id === selected.id) ?? selected,
             () => setSelected(null),
             approve,
-            reject
+            reject,
+            processingId === selected.id,
+            processingId === selected.id ? processingAction : null
           )}
       </AnimatePresence>
     </>
@@ -670,195 +759,226 @@ export default function AdminVerificationPage() {
   const [tab, setTab] = useState<"students" | "clients">("students");
   const [studentRequests, setStudentRequests] = useState<AdminStudentVerification[]>([]);
   const [clientRequests, setClientRequests] = useState<AdminClientVerification[]>([]);
+  const [notification, setNotification] = useState<NotificationMessage>(null);
+
+  const loadStudentVerifications = useCallback(async () => {
+    const response = await getAdminStudentVerifications();
+
+    setStudentRequests(
+      response.data.map((request) => ({
+        ...request,
+        submittedAt: formatSubmittedDate(request.submittedAt),
+      }))
+    );
+  }, []);
+
+  const loadClientVerifications = useCallback(async () => {
+    const response = await getAdminClientVerifications();
+
+    setClientRequests(
+      response.data.map((request) => ({
+        ...request,
+        submittedAt: formatSubmittedDate(request.submittedAt),
+      }))
+    );
+  }, []);
+
+  const loadVerifications = useCallback(async () => {
+    await Promise.all([loadStudentVerifications(), loadClientVerifications()]);
+  }, [loadClientVerifications, loadStudentVerifications]);
 
   useEffect(() => {
     let ignore = false;
 
-    const loadStudentVerifications = async () => {
+    const loadInitialVerifications = async () => {
       try {
-        const response = await getAdminStudentVerifications();
-
-        if (ignore) return;
-
-        setStudentRequests(
-          response.data.map((request) => ({
-            ...request,
-            submittedAt: formatSubmittedDate(request.submittedAt),
-          }))
-        );
+        await Promise.all([loadStudentVerifications(), loadClientVerifications()]);
       } catch (error) {
-        console.error("Failed to load student verifications", error);
+        if (!ignore) {
+          console.error("Failed to load verifications", error);
+        }
       }
     };
 
-    const loadClientVerifications = async () => {
-      try {
-        const response = await getAdminClientVerifications();
-
-        if (ignore) return;
-
-        setClientRequests(
-          response.data.map((request) => ({
-            ...request,
-            submittedAt: formatSubmittedDate(request.submittedAt),
-          }))
-        );
-      } catch (error) {
-        console.error("Failed to load client verifications", error);
-      }
-    };
-
-    loadStudentVerifications();
-    loadClientVerifications();
+    loadInitialVerifications();
 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [loadClientVerifications, loadStudentVerifications]);
 
   return (
-    <DashboardLayout role="admin" title="Verification Management" activeNav="students">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="flex flex-col gap-5"
-      >
-        {/* Header */}
-        <div>
-          <h2 className="text-slate-900" style={{ fontSize: "1.05rem", fontWeight: 800 }}>
-            Verification Management
-          </h2>
-          <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.78rem" }}>
-            Review and approve student and client verification requests.
-          </p>
-        </div>
+    <>
+      <DashboardLayout role="admin" title="Verification Management" activeNav="students">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="flex flex-col gap-5"
+        >
+          {/* Header */}
+          <div>
+            <h2 className="text-slate-900" style={{ fontSize: "1.05rem", fontWeight: 800 }}>
+              Verification Management
+            </h2>
+            <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.78rem" }}>
+              Review and approve student and client verification requests.
+            </p>
+          </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-slate-50 border border-slate-200 rounded-2xl p-1 w-fit">
-          {[
-            {
-              value: "students" as const,
-              label: "Students",
-              count: studentRequests.filter((request) => request.status === "pending").length,
-            },
-            {
-              value: "clients" as const,
-              label: "Clients",
-              count: clientRequests.filter((request) => request.status === "pending").length,
-            },
-          ].map((t) => (
-            <motion.button
-              key={t.value}
-              onClick={() => setTab(t.value)}
-              whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl font-semibold transition-all duration-200"
-              style={{
-                background: tab === t.value ? "white" : "transparent",
-                color: tab === t.value ? "#0F172A" : "#64748B",
-                boxShadow: tab === t.value ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-                fontSize: "0.82rem",
-              }}
-            >
-              {t.label}
-              {t.count > 0 && (
-                <span
-                  className="px-1.5 py-px rounded-full font-bold"
-                  style={{
-                    background: tab === t.value ? "#EFF6FF" : "#E2E8F0",
-                    color: tab === t.value ? "#2563EB" : "#94A3B8",
-                    fontSize: "0.6rem",
-                  }}
-                >
-                  {t.count}
-                </span>
-              )}
-            </motion.button>
-          ))}
-        </div>
+          {/* Tabs */}
+          <div className="flex gap-1 bg-slate-50 border border-slate-200 rounded-2xl p-1 w-fit">
+            {[
+              {
+                value: "students" as const,
+                label: "Students",
+                count: studentRequests.filter((request) => request.status === "pending").length,
+              },
+              {
+                value: "clients" as const,
+                label: "Clients",
+                count: clientRequests.filter((request) => request.status === "pending").length,
+              },
+            ].map((t) => (
+              <motion.button
+                key={t.value}
+                onClick={() => setTab(t.value)}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl font-semibold transition-all duration-200"
+                style={{
+                  background: tab === t.value ? "white" : "transparent",
+                  color: tab === t.value ? "#0F172A" : "#64748B",
+                  boxShadow: tab === t.value ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                  fontSize: "0.82rem",
+                }}
+              >
+                {t.label}
+                {t.count > 0 && (
+                  <span
+                    className="px-1.5 py-px rounded-full font-bold"
+                    style={{
+                      background: tab === t.value ? "#EFF6FF" : "#E2E8F0",
+                      color: tab === t.value ? "#2563EB" : "#94A3B8",
+                      fontSize: "0.6rem",
+                    }}
+                  >
+                    {t.count}
+                  </span>
+                )}
+              </motion.button>
+            ))}
+          </div>
 
-        {/* Content */}
-        <AnimatePresence mode="wait">
-          {tab === "students" ? (
-            <motion.div
-              key="students"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-5"
-            >
-              <VerificationListPanel
-                items={studentRequests}
-                setItems={setStudentRequests}
-                emptyIcon={GraduationCap}
-                emptyLabel="No Student Verification Requests"
-                searchPlaceholder="Search by name, email, or university…"
-                avatarGradient="linear-gradient(135deg,#2563EB,#14B8A6)"
-                getMetaItems={(request) => [
-                  {
-                    icon: BookOpen,
-                    label: "College Name",
-                    value: request.collegeName,
-                  },
-                  { icon: Hash, label: "Student ID", value: request.studentId },
-                  {
-                    icon: Clock,
-                    label: "Submitted",
-                    value: request.submittedAt,
-                  },
-                ]}
-                renderDetailModal={(item, onClose, onApprove, onReject) => (
-                  <StudentDetailModal
-                    request={item}
-                    onClose={onClose}
-                    onApprove={onApprove}
-                    onReject={onReject}
-                  />
-                )}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="clients"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="flex flex-col gap-5"
-            >
-              <VerificationListPanel
-                items={clientRequests}
-                setItems={setClientRequests}
-                emptyIcon={Briefcase}
-                emptyLabel="No Client KYC Requests"
-                searchPlaceholder="Search by name or email…"
-                avatarGradient="linear-gradient(135deg,#D97706,#F59E0B)"
-                getMetaItems={(request) => [
-                  { icon: User, label: "Legal Name", value: request.legalName },
-                  { icon: Phone, label: "Phone", value: request.phone },
-                  {
-                    icon: Clock,
-                    label: "Submitted",
-                    value: request.submittedAt,
-                  },
-                  ...(request.companyName
-                    ? [{ icon: Briefcase, label: "Company", value: request.companyName }]
-                    : []),
-                ]}
-                renderDetailModal={(item, onClose, onApprove, onReject) => (
-                  <ClientDetailModal
-                    request={item}
-                    onClose={onClose}
-                    onApprove={onApprove}
-                    onReject={onReject}
-                  />
-                )}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </DashboardLayout>
+          {/* Content */}
+          <AnimatePresence mode="wait">
+            {tab === "students" ? (
+              <motion.div
+                key="students"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-5"
+              >
+                <VerificationListPanel
+                  items={studentRequests}
+                  setItems={setStudentRequests}
+                  emptyIcon={GraduationCap}
+                  emptyLabel="No Student Verification Requests"
+                  searchPlaceholder="Search by name, email, or university…"
+                  avatarGradient="linear-gradient(135deg,#2563EB,#14B8A6)"
+                  getMetaItems={(request) => [
+                    {
+                      icon: BookOpen,
+                      label: "College Name",
+                      value: request.collegeName,
+                    },
+                    { icon: Hash, label: "Student ID", value: request.studentId },
+                    {
+                      icon: Clock,
+                      label: "Submitted",
+                      value: request.submittedAt,
+                    },
+                  ]}
+                  renderDetailModal={(
+                    item,
+                    onClose,
+                    onApprove,
+                    onReject,
+                    isProcessing,
+                    processingAction
+                  ) => (
+                    <StudentDetailModal
+                      request={item}
+                      onClose={onClose}
+                      onApprove={onApprove}
+                      onReject={onReject}
+                      isProcessing={isProcessing}
+                      processingAction={processingAction}
+                    />
+                  )}
+                  onApproveRequest={approveVerification}
+                  onRejectRequest={rejectVerification}
+                  onRefresh={loadVerifications}
+                  onNotify={setNotification}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="clients"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-5"
+              >
+                <VerificationListPanel
+                  items={clientRequests}
+                  setItems={setClientRequests}
+                  emptyIcon={Briefcase}
+                  emptyLabel="No Client KYC Requests"
+                  searchPlaceholder="Search by name or email…"
+                  avatarGradient="linear-gradient(135deg,#D97706,#F59E0B)"
+                  getMetaItems={(request) => [
+                    { icon: User, label: "Legal Name", value: request.legalName },
+                    { icon: Phone, label: "Phone", value: request.phone },
+                    {
+                      icon: Clock,
+                      label: "Submitted",
+                      value: request.submittedAt,
+                    },
+                    ...(request.companyName
+                      ? [{ icon: Briefcase, label: "Company", value: request.companyName }]
+                      : []),
+                  ]}
+                  renderDetailModal={(
+                    item,
+                    onClose,
+                    onApprove,
+                    onReject,
+                    isProcessing,
+                    processingAction
+                  ) => (
+                    <ClientDetailModal
+                      request={item}
+                      onClose={onClose}
+                      onApprove={onApprove}
+                      onReject={onReject}
+                      isProcessing={isProcessing}
+                      processingAction={processingAction}
+                    />
+                  )}
+                  onApproveRequest={approveVerification}
+                  onRejectRequest={rejectVerification}
+                  onRefresh={loadVerifications}
+                  onNotify={setNotification}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </DashboardLayout>
+      <Notification message={notification} onClose={() => setNotification(null)} />
+    </>
   );
 }

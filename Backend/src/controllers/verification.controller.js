@@ -1,4 +1,5 @@
 import { Verification } from "../models/verification.model.js";
+import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -51,9 +52,12 @@ const toAdminClientVerification = (verification) => {
     companyName: verification.companyName || "",
     citizenshipFront: verification.citizenshipFront || "",
     citizenshipSelfie: verification.citizenshipSelfie || "",
-    companyRegistrationDocument:
-      verification.companyRegistrationDocument || "",
+    companyRegistrationDocument: verification.companyRegistrationDocument || "",
     submittedAt: verification.submittedAt,
+    approvedBy: verification.approvedBy || null,
+    approvedAt: verification.approvedAt || null,
+    rejectedBy: verification.rejectedBy || null,
+    rejectedAt: verification.rejectedAt || null,
   };
 };
 
@@ -134,8 +138,6 @@ const submitStudentVerification = asyncHandler(async (req, res) => {
       )
     );
 });
-
-
 
 const submitClientVerification = asyncHandler(async (req, res) => {
   const { legalName, phone, companyKyc, companyName } = req.body || {};
@@ -238,8 +240,6 @@ const submitClientVerification = asyncHandler(async (req, res) => {
     );
 });
 
-
-
 const getVerificationStatus = asyncHandler(async (req, res) => {
   if (!req.user) {
     throw new ApiError(401, "User not authenticated");
@@ -319,7 +319,68 @@ const getAdminClientVerifications = asyncHandler(async (req, res) => {
     );
 });
 
+const approveVerification = asyncHandler(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    throw new ApiError(400, "Invalid verification id");
+  }
 
+  const verification = await Verification.findById(req.params.id);
+
+  if (!verification) {
+    throw new ApiError(404, "Verification not found");
+  }
+
+  const approvedAt = new Date();
+
+  verification.status = "approved";
+  verification.approvedBy = req.user._id;
+  verification.approvedAt = approvedAt;
+  verification.rejectedBy = null;
+  verification.rejectedAt = null;
+  verification.verifiedBy = req.user._id;
+  verification.verifiedAt = approvedAt;
+  verification.rejectionReason = "";
+
+  await verification.save();
+  await User.findByIdAndUpdate(verification.user, { isVerified: true });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, verification, "Verification approved successfully")
+    );
+});
+
+const rejectVerification = asyncHandler(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    throw new ApiError(400, "Invalid verification id");
+  }
+
+  const verification = await Verification.findById(req.params.id);
+
+  if (!verification) {
+    throw new ApiError(404, "Verification not found");
+  }
+
+  const rejectedAt = new Date();
+
+  verification.status = "rejected";
+  verification.rejectedBy = req.user._id;
+  verification.rejectedAt = rejectedAt;
+  verification.approvedBy = null;
+  verification.approvedAt = null;
+  verification.verifiedBy = null;
+  verification.verifiedAt = null;
+
+  await verification.save();
+  await User.findByIdAndUpdate(verification.user, { isVerified: false });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, verification, "Verification rejected successfully")
+    );
+});
 
 const updateStudentVerification = asyncHandler(async (req, res) => {
   const { university, studentId } = req.body || {};
@@ -393,6 +454,10 @@ const updateStudentVerification = asyncHandler(async (req, res) => {
   verification.submittedAt = new Date();
   verification.verifiedBy = null;
   verification.verifiedAt = null;
+  verification.approvedBy = null;
+  verification.approvedAt = null;
+  verification.rejectedBy = null;
+  verification.rejectedAt = null;
   verification.rejectionReason = "";
 
   await verification.save();
@@ -407,8 +472,6 @@ const updateStudentVerification = asyncHandler(async (req, res) => {
       )
     );
 });
-
-
 
 const updateClientVerification = asyncHandler(async (req, res) => {
   const { legalName, phone, companyKyc, companyName } = req.body || {};
@@ -501,6 +564,10 @@ const updateClientVerification = asyncHandler(async (req, res) => {
   verification.submittedAt = new Date();
   verification.verifiedBy = null;
   verification.verifiedAt = null;
+  verification.approvedBy = null;
+  verification.approvedAt = null;
+  verification.rejectedBy = null;
+  verification.rejectedAt = null;
   verification.rejectionReason = "";
 
   await verification.save();
@@ -516,10 +583,7 @@ const updateClientVerification = asyncHandler(async (req, res) => {
     );
 });
 
-const updateVerification = asyncHandler(async (req, res) => {
-});
-
-
+const updateVerification = asyncHandler(async (req, res) => {});
 
 export {
   submitStudentVerification,
@@ -528,6 +592,8 @@ export {
   getAdminStudentVerifications,
   getAdminStudentVerificationById,
   getAdminClientVerifications,
+  approveVerification,
+  rejectVerification,
   updateStudentVerification,
   updateClientVerification,
   updateVerification,
