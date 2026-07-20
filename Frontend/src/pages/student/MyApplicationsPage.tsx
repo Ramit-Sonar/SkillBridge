@@ -85,6 +85,37 @@ function formatDate(date?: string | null) {
   }).format(parsedDate);
 }
 
+function formatRelativeTime(date?: string | null) {
+  if (!date) return "Date not available";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date not available";
+  }
+
+  const diffMs = Date.now() - parsedDate.getTime();
+  const diffSeconds = Math.max(0, Math.floor(diffMs / 1000));
+  const units = [
+    { label: "year", seconds: 60 * 60 * 24 * 365 },
+    { label: "month", seconds: 60 * 60 * 24 * 30 },
+    { label: "week", seconds: 60 * 60 * 24 * 7 },
+    { label: "day", seconds: 60 * 60 * 24 },
+    { label: "hour", seconds: 60 * 60 },
+    { label: "minute", seconds: 60 },
+  ];
+
+  for (const unit of units) {
+    const value = Math.floor(diffSeconds / unit.seconds);
+
+    if (value >= 1) {
+      return `${value} ${unit.label}${value > 1 ? "s" : ""} ago`;
+    }
+  }
+
+  return "Just now";
+}
+
 function getCategoryLabel(category?: string) {
   if (!category) return "Uncategorized";
 
@@ -120,7 +151,7 @@ function mapApplicationCard(application: ApiApplicationCard): ApplicationListIte
     coverSnippet: job?.clientName
       ? `Submitted to ${job.clientName}`
       : "Open details to view your submitted application.",
-    estimatedTime: "View details",
+    estimatedTime: formatRelativeTime(application.appliedAt),
   };
 }
 
