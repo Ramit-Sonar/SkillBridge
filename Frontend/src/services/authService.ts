@@ -10,6 +10,8 @@ export type AuthUser = {
   email: string;
   role: Role;
   avatar?: string;
+  isVerified?: boolean;
+  profileCompleted?: boolean;
 };
 
 type ApiResponse<T> = {
@@ -46,7 +48,7 @@ export const registerUser = async (userData: {
 
 
 
-//this two sendVerificationOtp and  for verify user email 
+//this two sendVerificationOtp and  for verify user email
 export const sendVerificationOtp = async (userData: {
   fullName: string;
   email: string;

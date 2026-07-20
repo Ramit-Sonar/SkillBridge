@@ -744,14 +744,10 @@ function AccountSection() {
 export default function ClientSettingsPage() {
   const [active, setActive] = useState<Section>("profile");
   const [notification, setNotification] = useState<NotificationMessage>(null);
-  // Shared KYC status — drives the top-level reminder card visibility
-  const [kycStatus, setKycStatus] = useState<VerificationDisplayStatus>(
-    getVerificationDisplayStatus(null)
-  );
 
   const CONTENT: Record<Section, React.ReactNode> = {
     profile: <ProfileSection onNotify={setNotification} />,
-    kyc: <KycSection onStatusChange={setKycStatus} onNotify={setNotification} />,
+    kyc: <KycSection onNotify={setNotification} />,
     account: <AccountSection />,
   };
 
@@ -764,7 +760,6 @@ export default function ClientSettingsPage() {
         onSelect={setActive}
         topContent={
           <VerificationReminderCard
-            isVerified={kycStatus === "verified" || kycStatus === "pending"}
             description="Complete KYC verification to start posting jobs and build trust with students."
             settingsPath="/dashboard/client/settings"
           />

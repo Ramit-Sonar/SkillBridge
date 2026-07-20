@@ -172,6 +172,7 @@ function StudentProfileContent() {
   const profileView = buildStudentProfileViewProps({
     user: currentUser,
     profile,
+    verified: currentUser?.isVerified === true,
     ratingSummary,
     reviews,
     completedProjects,

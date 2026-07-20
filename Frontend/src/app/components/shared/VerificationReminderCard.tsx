@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { ShieldCheck } from "lucide-react";
+import { useDashboardCurrentUser } from "../layout/DashboardLayout";
 
 interface Props {
   isVerified?: boolean;
@@ -9,12 +10,16 @@ interface Props {
 }
 
 export function VerificationReminderCard({
-  isVerified = false,
+  isVerified,
   description = "Complete identity verification to apply for jobs, build trust, and showcase your profile to clients.",
   settingsPath = "/dashboard/student/settings",
 }: Props) {
   const navigate = useNavigate();
-  if (isVerified) return null;
+  const currentUser = useDashboardCurrentUser();
+  const accountVerified = isVerified ?? currentUser?.isVerified ?? false;
+
+  if (isVerified === undefined && !currentUser) return null;
+  if (accountVerified) return null;
 
   return (
     <motion.div
