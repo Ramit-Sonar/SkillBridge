@@ -25,6 +25,21 @@ export type VerificationData = {
   updatedAt?: string;
 };
 
+export type AdminStudentVerification = {
+  id: string;
+  name: string;
+  initials: string;
+  email: string;
+  role: "Student";
+  avatar?: string;
+  status: "pending" | "approved" | "rejected";
+  collegeName: string;
+  studentId: string;
+  collegeIdCard: string;
+  studentSelfie: string;
+  submittedAt: string;
+};
+
 type ApiResponse<T> = {
   statusCode: number;
   data: T;
@@ -72,6 +87,40 @@ export const submitClientVerification = async (
 
 export const getVerificationStatus = async (): Promise<ApiResponse<VerificationData | null>> => {
   const response = await fetch(`${API_URL}/verification/status`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const getAdminStudentVerifications = async (): Promise<
+  ApiResponse<AdminStudentVerification[]>
+> => {
+  const response = await fetch(`${API_URL}/verification/admin/students`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const getAdminStudentVerificationById = async (
+  verificationId: string
+): Promise<ApiResponse<AdminStudentVerification>> => {
+  const response = await fetch(`${API_URL}/verification/admin/students/${verificationId}`, {
     method: "GET",
     credentials: "include",
   });

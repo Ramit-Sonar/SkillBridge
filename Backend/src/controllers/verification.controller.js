@@ -3,6 +3,37 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
+
+const getInitials = (fullName = "") => {
+  return fullName
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+};
+
+const toAdminStudentVerification = (verification) => {
+  const user = verification.user || {};
+  const fullName = user.fullName || "Unknown Student";
+
+  return {
+    id: verification._id,
+    name: fullName,
+    initials: getInitials(fullName),
+    email: user.email || "",
+    role: "Student",
+    avatar: user.avatar || "",
+    status: verification.status,
+    collegeName: verification.collegeName || "",
+    studentId: verification.studentId || "",
+    collegeIdCard: verification.collegeIdCard || "",
+    studentSelfie: verification.studentSelfie || "",
+    submittedAt: verification.submittedAt,
+  };
+};
 
 const submitStudentVerification = asyncHandler(async (req, res) => {
   const { university, studentId } = req.body || {};
@@ -205,6 +236,47 @@ const getVerificationStatus = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, verification, "Verification fetched successfully")
+    );
+});
+
+const getAdminStudentVerifications = asyncHandler(async (req, res) => {
+  const verifications = await Verification.find({ type: "student" })
+    .populate("user", "fullName email role avatar")
+    .sort({ submittedAt: -1, createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        verifications.map(toAdminStudentVerification),
+        "Student verifications fetched successfully"
+      )
+    );
+});
+
+const getAdminStudentVerificationById = asyncHandler(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    throw new ApiError(400, "Invalid verification id");
+  }
+
+  const verification = await Verification.findOne({
+    _id: req.params.id,
+    type: "student",
+  }).populate("user", "fullName email role avatar");
+
+  if (!verification) {
+    throw new ApiError(404, "Student verification not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        toAdminStudentVerification(verification),
+        "Student verification fetched successfully"
+      )
     );
 });
 
@@ -413,6 +485,8 @@ export {
   submitStudentVerification,
   submitClientVerification,
   getVerificationStatus,
+  getAdminStudentVerifications,
+  getAdminStudentVerificationById,
   updateStudentVerification,
   updateClientVerification,
   updateVerification,

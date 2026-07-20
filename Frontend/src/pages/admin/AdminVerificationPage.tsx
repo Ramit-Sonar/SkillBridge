@@ -1,4 +1,5 @@
 ﻿import {
+  useEffect,
   useState,
   type Dispatch,
   type ElementType,
@@ -9,12 +10,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
 import {
-  VERIFICATION_REQUESTS,
   CLIENT_KYC_REQUESTS,
-  type VerificationRequest,
   type ClientKycRequest,
   type VerificationStatus,
 } from "../../app/data/admin";
+import {
+  getAdminStudentVerifications,
+  type AdminStudentVerification,
+} from "../../services/verificationService";
 import {
   GraduationCap,
   CheckCircle,
@@ -55,6 +58,20 @@ const STATUS_CFG: Record<
   },
 };
 
+const formatSubmittedDate = (value: string) => {
+  if (!value) return "Not submitted";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 // Shared card component
 
 function VerificationCard<
@@ -63,6 +80,7 @@ function VerificationCard<
     name: string;
     initials: string;
     role?: string;
+    avatar?: string;
     submittedAt: string;
     status: VerificationStatus;
   },
@@ -95,7 +113,15 @@ function VerificationCard<
             className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
             style={{ background: avatarGradient, fontSize: "0.65rem" }}
           >
-            {item.initials}
+            {item.avatar ? (
+              <img
+                src={item.avatar}
+                alt={`${item.name} avatar`}
+                className="w-full h-full object-cover rounded-xl"
+              />
+            ) : (
+              item.initials
+            )}
           </div>
           <div>
             <p className="text-slate-900 font-bold" style={{ fontSize: "0.875rem" }}>
@@ -165,7 +191,20 @@ function VerificationCard<
 
 // Document placeholder
 
-function DocumentPlaceholder({ label }: { label: string }) {
+function DocumentPlaceholder({ label, fileUrl }: { label: string; fileUrl?: string }) {
+  if (fileUrl) {
+    return (
+      <a
+        href={fileUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="bg-slate-100 border border-slate-200 rounded-xl h-24 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
+      >
+        <img src={fileUrl} alt={label} className="w-full h-full object-cover" />
+      </a>
+    );
+  }
+
   return (
     <div className="bg-slate-100 border border-slate-200 rounded-xl h-24 flex flex-col items-center justify-center gap-1.5">
       <User className="w-6 h-6 text-slate-300" />
@@ -187,7 +226,7 @@ function StudentDetailModal({
   onApprove,
   onReject,
 }: {
-  request: VerificationRequest;
+  request: AdminStudentVerification;
   onClose: () => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
@@ -229,7 +268,15 @@ function StudentDetailModal({
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold"
               style={{ fontSize: "1rem" }}
             >
-              {request.initials}
+              {request.avatar ? (
+                <img
+                  src={request.avatar}
+                  alt={`${request.name} avatar`}
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+              ) : (
+                request.initials
+              )}
             </div>
             <div>
               <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
@@ -268,8 +315,8 @@ function StudentDetailModal({
             ))}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <DocumentPlaceholder label="Student ID Card" />
-            <DocumentPlaceholder label="Selfie with ID" />
+            <DocumentPlaceholder label="Student ID Card" fileUrl={request.collegeIdCard} />
+            <DocumentPlaceholder label="Selfie with ID" fileUrl={request.studentSelfie} />
           </div>
           {request.status === "pending" && (
             <div className="flex gap-3">
@@ -609,8 +656,35 @@ function VerificationListPanel<
 
 export default function AdminVerificationPage() {
   const [tab, setTab] = useState<"students" | "clients">("students");
-  const [studentRequests, setStudentRequests] = useState(VERIFICATION_REQUESTS);
+  const [studentRequests, setStudentRequests] = useState<AdminStudentVerification[]>([]);
   const [clientRequests, setClientRequests] = useState(CLIENT_KYC_REQUESTS);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadStudentVerifications = async () => {
+      try {
+        const response = await getAdminStudentVerifications();
+
+        if (ignore) return;
+
+        setStudentRequests(
+          response.data.map((request) => ({
+            ...request,
+            submittedAt: formatSubmittedDate(request.submittedAt),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to load student verifications", error);
+      }
+    };
+
+    loadStudentVerifications();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <DashboardLayout role="admin" title="Verification Management" activeNav="students">

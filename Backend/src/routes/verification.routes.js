@@ -1,5 +1,7 @@
 import { Router } from "express";
 import {
+  getAdminStudentVerificationById,
+  getAdminStudentVerifications,
   getVerificationStatus,
   submitClientVerification,
   submitStudentVerification,
@@ -13,6 +15,15 @@ import { upload } from "../middlewares/multer.middleware.js";
 const router = Router();
 const studentRoles = authorizeRoles("student");
 const clientRoles = authorizeRoles("client");
+const adminRoles = authorizeRoles("admin");
+
+router
+  .route("/admin/students")
+  .get(verifyJWT, adminRoles, getAdminStudentVerifications);
+
+router
+  .route("/admin/students/:id")
+  .get(verifyJWT, adminRoles, getAdminStudentVerificationById);
 
 router
   .route("/student")
