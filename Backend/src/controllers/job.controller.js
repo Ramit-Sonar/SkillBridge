@@ -11,6 +11,7 @@ import {
 } from "../utils/attachment.js";
 import { buildClientSummary } from "../services/client.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { removeTempFiles } from "../utils/tempFile.js";
 
 const VALID_JOB_CATEGORIES = [
   "web-dev",
@@ -72,127 +73,140 @@ const getClientVerificationMap = async (clientIds) => {
 };
 
 const createJob = asyncHandler(async (req, res) => {
-  const {
-    title,
-    category,
-    description,
-    requirements,
-    skills,
-    budget,
-    duration,
-    deadline,
-    complexity,
-    files,
-  } = req.body || {};
+  const uploadedFiles = req.files;
 
-  if (!req.user) {
-    throw new ApiError(401, "User not authenticated");
+  try {
+    const {
+      title,
+      category,
+      description,
+      requirements,
+      skills,
+      budget,
+      duration,
+      deadline,
+      complexity,
+      files,
+    } = req.body || {};
+
+    if (!req.user) {
+      throw new ApiError(401, "User not authenticated");
+    }
+
+    if (req.user.role !== "client") {
+      throw new ApiError(403, "Only clients can create jobs");
+    }
+
+    if (!title?.trim()) {
+      throw new ApiError(400, "Job title is required");
+    }
+
+    if (!category?.trim()) {
+      throw new ApiError(400, "Category is required");
+    }
+
+    if (!VALID_JOB_CATEGORIES.includes(category.trim())) {
+      throw new ApiError(400, "Category must be a valid job category");
+    }
+
+    if (!description?.trim() || description.trim().length < 20) {
+      throw new ApiError(400, "Description must be at least 20 characters");
+    }
+
+    if (!requirements?.trim()) {
+      throw new ApiError(400, "Client requirements are required");
+    }
+
+    if (
+      budget === undefined ||
+      budget === null ||
+      String(budget).trim() === ""
+    ) {
+      throw new ApiError(400, "Budget is required");
+    }
+
+    const numericBudget = Number(budget);
+
+    if (Number.isNaN(numericBudget) || numericBudget < 0) {
+      throw new ApiError(400, "Budget must be a valid amount");
+    }
+
+    if (!duration?.trim()) {
+      throw new ApiError(400, "Duration is required");
+    }
+
+    if (!VALID_JOB_DURATIONS.includes(duration.trim())) {
+      throw new ApiError(400, "Duration must be a valid job duration");
+    }
+
+    if (!deadline) {
+      throw new ApiError(400, "Deadline is required");
+    }
+
+    const deadlineDate = new Date(deadline);
+
+    if (Number.isNaN(deadlineDate.getTime())) {
+      throw new ApiError(400, "Deadline must be a valid date");
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (deadlineDate < today) {
+      throw new ApiError(400, "Deadline cannot be in the past");
+    }
+
+    if (!complexity?.trim()) {
+      throw new ApiError(400, "Complexity is required");
+    }
+
+    if (!["small", "medium"].includes(complexity)) {
+      throw new ApiError(400, "Complexity must be small or medium");
+    }
+
+    const submittedSkills = parseSkills(skills);
+
+    if (skills !== undefined && !Array.isArray(submittedSkills)) {
+      throw new ApiError(400, "Skills must be an array");
+    }
+
+    if (files !== undefined && !Array.isArray(files)) {
+      throw new ApiError(400, "Files must be an array");
+    }
+
+    const verificationMap = await getClientVerificationMap([req.user._id]);
+    const verificationStatus = verificationMap.get(req.user._id.toString());
+
+    if (verificationStatus !== "approved") {
+      throw new ApiError(
+        403,
+        "Profile verification is required before posting a job."
+      );
+    }
+
+    const attachments = await uploadJobAttachments(req.files, files);
+
+    const job = await Job.create({
+      client: req.user._id,
+      title: title.trim(),
+      category: category.trim(),
+      description: description.trim(),
+      requirements: requirements.trim(),
+      skills: submittedSkills ?? [],
+      budget: numericBudget,
+      duration: duration.trim(),
+      deadline: deadlineDate,
+      complexity,
+      attachments,
+      status: "open",
+    });
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, job, "Job created successfully"));
+  } finally {
+    removeTempFiles(uploadedFiles);
   }
-
-  if (req.user.role !== "client") {
-    throw new ApiError(403, "Only clients can create jobs");
-  }
-
-  if (!title?.trim()) {
-    throw new ApiError(400, "Job title is required");
-  }
-
-  if (!category?.trim()) {
-    throw new ApiError(400, "Category is required");
-  }
-
-  if (!VALID_JOB_CATEGORIES.includes(category.trim())) {
-    throw new ApiError(400, "Category must be a valid job category");
-  }
-
-  if (!description?.trim() || description.trim().length < 20) {
-    throw new ApiError(400, "Description must be at least 20 characters");
-  }
-
-  if (!requirements?.trim()) {
-    throw new ApiError(400, "Client requirements are required");
-  }
-
-  if (budget === undefined || budget === null || String(budget).trim() === "") {
-    throw new ApiError(400, "Budget is required");
-  }
-
-  const numericBudget = Number(budget);
-
-  if (Number.isNaN(numericBudget) || numericBudget < 0) {
-    throw new ApiError(400, "Budget must be a valid amount");
-  }
-
-  if (!duration?.trim()) {
-    throw new ApiError(400, "Duration is required");
-  }
-
-  if (!VALID_JOB_DURATIONS.includes(duration.trim())) {
-    throw new ApiError(400, "Duration must be a valid job duration");
-  }
-
-  if (!deadline) {
-    throw new ApiError(400, "Deadline is required");
-  }
-
-  const deadlineDate = new Date(deadline);
-
-  if (Number.isNaN(deadlineDate.getTime())) {
-    throw new ApiError(400, "Deadline must be a valid date");
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (deadlineDate < today) {
-    throw new ApiError(400, "Deadline cannot be in the past");
-  }
-
-  if (!complexity?.trim()) {
-    throw new ApiError(400, "Complexity is required");
-  }
-
-  if (!["small", "medium"].includes(complexity)) {
-    throw new ApiError(400, "Complexity must be small or medium");
-  }
-
-  const submittedSkills = parseSkills(skills);
-
-  if (skills !== undefined && !Array.isArray(submittedSkills)) {
-    throw new ApiError(400, "Skills must be an array");
-  }
-
-  if (files !== undefined && !Array.isArray(files)) {
-    throw new ApiError(400, "Files must be an array");
-  }
-
-  const attachments = await uploadJobAttachments(req.files, files);
-
-  // if (verification?.status !== "approved") {
-  //   throw new ApiError(
-  //     403,
-  //     "Client verification is required before applying"
-  //   );
-  // }
-
-  const job = await Job.create({
-    client: req.user._id,
-    title: title.trim(),
-    category: category.trim(),
-    description: description.trim(),
-    requirements: requirements.trim(),
-    skills: submittedSkills ?? [],
-    budget: numericBudget,
-    duration: duration.trim(),
-    deadline: deadlineDate,
-    complexity,
-    attachments,
-    status: "open",
-  });
-
-  return res
-    .status(201)
-    .json(new ApiResponse(201, job, "Job created successfully"));
 });
 
 const getClientJobs = asyncHandler(async (req, res) => {
