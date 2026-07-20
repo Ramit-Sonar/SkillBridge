@@ -30,6 +30,9 @@ const toneStyles: Record<TimelineTone, { bg: string; color: string; border: stri
   muted: { bg: "#F8FAFC", color: "#64748B", border: "#CBD5E1" },
 };
 
+/**
+ * Displays audit-style timeline entries with tone-driven status styling.
+ */
 export function Timeline({ items }: { items: TimelineItem[] }) {
   return (
     <div className="flex flex-col gap-0">

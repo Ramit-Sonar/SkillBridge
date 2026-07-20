@@ -137,6 +137,7 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "client">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
 
+  // Admin user status is simulated locally until user moderation has an API.
   const toggle = (id: string) =>
     setUsers((prev) =>
       prev.map((u) =>

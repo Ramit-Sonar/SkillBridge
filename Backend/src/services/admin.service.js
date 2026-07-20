@@ -1,5 +1,8 @@
 import { User } from "../models/user.model.js";
 
+/**
+ * Ensures the configured admin account exists when the server starts.
+ */
 const createAdmin = async () => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();

@@ -14,6 +14,9 @@ const dashboardPaths = {
   admin: "/admin/dashboard",
 };
 
+/**
+ * Protects dashboard routes and redirects authenticated users to their own role area.
+ */
 export default function AuthenticationGuard({
   allowedRole,
   children,

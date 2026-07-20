@@ -76,7 +76,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Split layout */}
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-20">
-          {/* Left — image with floating accent elements */}
+          {/* Visual proof sits beside the value copy to keep this section concrete. */}
           <motion.div
             initial={{ opacity: 0, x: -32 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -102,7 +102,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
               />
             </div>
 
-            {/* Floating platform badge — top right */}
+            {/* Floating badges reinforce trust signals without adding metrics. */}
             <div className="absolute -top-4 -right-4 lg:-right-6 bg-white/90 backdrop-blur-xl border border-white shadow-xl px-4 py-3 rounded-2xl flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                 <ShieldCheck className="w-4 h-4 text-blue-600" />
@@ -120,7 +120,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
               </div>
             </div>
 
-            {/* Floating platform badge — bottom left */}
+            {/* Portfolio badge mirrors the student-facing profile outcome. */}
             <div className="absolute -bottom-4 -left-4 lg:-left-6 bg-white/90 backdrop-blur-xl border border-white shadow-xl px-4 py-3 rounded-2xl flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
                 <Award className="w-4 h-4 text-teal-500" />
@@ -139,7 +139,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
             </div>
           </motion.div>
 
-          {/* Right — mission and value blocks */}
+          {/* Mission copy and value blocks explain why the platform exists. */}
           <motion.div
             initial={{ opacity: 0, x: 32 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -215,7 +215,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
           </motion.div>
         </div>
 
-        {/* Platform principles strip — no fake numbers, just design labels */}
+        {/* Principle labels avoid unsupported metrics while still summarizing trust. */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -3,6 +3,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Job service wraps client job management and public job browsing endpoints.
+ */
 export type JobAttachment = {
   url: string;
   publicId?: string;
@@ -76,6 +79,7 @@ type ApiResponse<T> = {
 export const createJob = async (jobData: JobPayload): Promise<ApiResponse<JobData>> => {
   const formData = new FormData();
 
+  // Jobs are submitted as multipart data because attachments are optional.
   formData.append("title", jobData.title);
   formData.append("category", jobData.category);
   formData.append("description", jobData.description);
@@ -156,6 +160,7 @@ export const updateJob = async (
 ): Promise<ApiResponse<JobData>> => {
   const formData = new FormData();
 
+  // Only include fields the editor actually changed.
   if (jobData.title !== undefined) formData.append("title", jobData.title);
   if (jobData.category !== undefined) formData.append("category", jobData.category);
   if (jobData.description !== undefined) formData.append("description", jobData.description);

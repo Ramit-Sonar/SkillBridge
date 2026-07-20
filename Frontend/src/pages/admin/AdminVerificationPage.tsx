@@ -80,6 +80,9 @@ const formatSubmittedDate = (value: string) => {
   });
 };
 
+/**
+ * Shared admin review card used by student and client verification lists.
+ */
 // Shared card component
 
 function VerificationCard<
@@ -611,6 +614,7 @@ function VerificationListPanel<
   const [selected, setSelected] = useState<T | null>(null);
   const [processingId, setProcessingId] = useState("");
   const [processingAction, setProcessingAction] = useState<"approve" | "reject" | null>(null);
+  // Card and detail actions share this confirmation state before mutating verification status.
   const [confirmAction, setConfirmAction] = useState<{
     id: string;
     name: string;
@@ -619,6 +623,7 @@ function VerificationListPanel<
   } | null>(null);
 
   const updateLocalStatus = (id: string, status: VerificationStatus) => {
+    // Reflect approval/rejection immediately while the list refresh catches up.
     setItems((prev) =>
       prev.map((request) => (request.id === id ? { ...request, status } : request))
     );
@@ -712,6 +717,7 @@ function VerificationListPanel<
 
   const filtered = items.filter((request) => {
     const q = search.toLowerCase();
+    // Keep filtering generic so the same panel can render student and client requests.
     const matchSearch = !q || request.name.toLowerCase().includes(q);
     const matchFilter = filter === "all" || request.status === filter;
     return matchSearch && matchFilter;
@@ -850,6 +856,7 @@ export default function AdminVerificationPage() {
   }, []);
 
   const loadVerifications = useCallback(async () => {
+    // Refresh both tabs after any decision because pending counts are shared in the header.
     await Promise.all([loadStudentVerifications(), loadClientVerifications()]);
   }, [loadClientVerifications, loadStudentVerifications]);
 

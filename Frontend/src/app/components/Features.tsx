@@ -8,7 +8,7 @@ import {
   Clock,
 } from "lucide-react";
 
-// ── Inline UI mockups (no fake numbers or dollar amounts) ─────────────────────
+// Inline marketing mockups avoid numeric claims that are not backed by product data.
 
 function VerifiedCardMockup() {
   return (
@@ -206,7 +206,7 @@ function FlexibilityMockup() {
   );
 }
 
-// ── Fade-up variant ───────────────────────────────────────────────────────────
+// Shared entrance animation keeps the landing feature blocks consistent.
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
 const fadeUp = {
@@ -222,7 +222,7 @@ export function Features() {
   return (
     <section id="features" className="py-24 lg:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        {/* Header — left-aligned */}
+        {/* Header stays left-aligned to match the asymmetric feature layout. */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -253,7 +253,7 @@ export function Features() {
           </p>
         </motion.div>
 
-        {/* Block 1 — Verified Students: full-width asymmetric */}
+        {/* Verification gets the full-width block because it anchors platform trust. */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -313,7 +313,7 @@ export function Features() {
           <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-teal-500 group-hover:w-full transition-all duration-700" />
         </motion.div>
 
-        {/* Block 2 + 3 — Real Projects & Work History: unequal two-column */}
+        {/* Project and work-history blocks share one row for related user benefits. */}
         <div className="grid lg:grid-cols-5 gap-4 mb-4">
           <motion.div
             initial="hidden"
@@ -385,7 +385,7 @@ export function Features() {
           </motion.div>
         </div>
 
-        {/* Block 4 — Earn While Learning: dark full-width */}
+        {/* Flexibility closes the section as a full-width contrast panel. */}
         <motion.div
           initial="hidden"
           whileInView="visible"

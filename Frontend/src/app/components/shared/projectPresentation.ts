@@ -20,6 +20,9 @@ const PROJECT_SUBMISSION_BADGE_LABELS: Record<ProjectSubmissionStatus, string> =
   approved: "Approved",
 };
 
+/**
+ * Shared project text helpers keep list cards and workspace headers consistent.
+ */
 export function formatProjectRelativeDate(date: string) {
   const parsedDate = new Date(date);
 

@@ -63,6 +63,7 @@ export function ProjectSubmissionForm({
   const handleSubmit = async () => {
     if (!canSubmit || submitLockedRef.current) return;
 
+    // A ref prevents accidental double-submit before parent loading state updates.
     submitLockedRef.current = true;
     setError("");
 
@@ -71,6 +72,7 @@ export function ProjectSubmissionForm({
       validateOptionalUrl(repositoryLink, "Repository link");
       validateOptionalUrl(liveUrl, "Live URL");
 
+      // Parent workspace owns the API call so this form can serve submit and resubmit flows.
       await onSubmit({ notes, demoLink, repositoryLink, liveUrl, files });
     } catch (submitError) {
       setError(

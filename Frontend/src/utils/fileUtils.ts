@@ -27,6 +27,9 @@ const PREVIEW_MIME_TYPES = [
   "text/plain",
 ];
 
+/**
+ * Shared attachment helpers for preview, download, and compact file metadata display.
+ */
 export function isValidAttachmentUrl(url?: string) {
   if (!url) return false;
 
@@ -118,6 +121,7 @@ export async function downloadAttachment(attachment: FileAttachment) {
 
   const blob = await response.blob();
   const downloadUrl = URL.createObjectURL(blob);
+  // Sanitize the suggested filename before attaching it to a temporary link.
   const fileName = attachment.originalName?.replace(/[\\/:*?"<>|]/g, "_").trim() || "attachment";
   const link = document.createElement("a");
 

@@ -8,7 +8,7 @@ import { StatGrid } from "../../app/components/shared/StatCard";
 import { QuickActionsGrid } from "../../app/components/shared/QuickActionCard";
 import { SectionCard } from "../../app/components/shared/SectionCard";
 
-// Quick actions
+// Admin shortcuts are kept local because navigation is the only behavior here.
 
 function QuickActionsSection() {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ function QuickActionsSection() {
   return <QuickActionsGrid actions={actions} columns="sm:grid-cols-2" />;
 }
 
-// Pending tasks
+// Pending tasks still read from local fixtures until this dashboard is API-backed.
 
 function PendingTasks() {
   const navigate = useNavigate();
@@ -102,8 +102,6 @@ function PendingTasks() {
     </SectionCard>
   );
 }
-
-// Page
 
 export default function AdminDashboard() {
   const navigate = useNavigate();

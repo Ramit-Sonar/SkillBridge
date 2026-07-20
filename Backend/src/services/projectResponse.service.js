@@ -1,5 +1,8 @@
 const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
 
+/**
+ * Builds project API response shapes consumed by workspace and project list views.
+ */
 const getInitials = (name = "") =>
   name
     .split(" ")
@@ -212,6 +215,7 @@ export const buildProjectWorkspace = ({
   const partner = viewerRole === "student" ? project.client : project.student;
   const partnerRole = viewerRole === "student" ? "client" : "student";
 
+  // Partner details are role-aware because students see clients and clients see students.
   const projectSummary = {
     ...buildProjectStatus(project),
     hasReview,

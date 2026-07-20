@@ -9,6 +9,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+/**
+ * Handles client reviews for completed projects and student rating summaries.
+ */
 const createReview = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
   const { rating, comment } = req.body || {};

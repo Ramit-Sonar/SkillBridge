@@ -3,6 +3,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Client profile service handles authenticated client profile reads and updates.
+ */
 export type ClientProfileData = {
   _id?: string;
   user?: string;

@@ -63,6 +63,9 @@ const emptyRatingDistribution = {
   5: 0,
 };
 
+/**
+ * Converts different student profile API shapes into one StudentProfileView contract.
+ */
 function getInitials(name = "") {
   return name
     .split(" ")
@@ -110,6 +113,7 @@ function getVerified(profile: ProfileSource, fallbackVerified?: boolean) {
 
   if (profile && "verified" in profile) return Boolean(profile.verified);
   if (profile && "verification" in profile) {
+    // Backend verification status is preferred, with verifiedAt kept for older responses.
     return profile.verification?.status === "approved" || Boolean(profile.verification?.verifiedAt);
   }
 
@@ -222,6 +226,7 @@ export function buildStudentProfileViewProps({
   const education = nestedProfile?.education || "";
   const university = nestedProfile?.university || "";
 
+  // The profile page accepts data from settings, applications, projects, and public profile APIs.
   return {
     name,
     initials:

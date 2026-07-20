@@ -309,6 +309,7 @@ function SkillSelector({
 export default function PostJobPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  // Manage Jobs passes edit data through route state to reuse this form.
   const editJob = (location.state as { editJob?: Record<string, unknown> } | null)?.editJob as
     | {
         id: string;
@@ -390,6 +391,7 @@ export default function PostJobPage() {
 
     try {
       if (isEditing) {
+        // Existing attachments stay on the backend unless replacement files are selected.
         await updateJob(editJob.id, {
           ...form,
           skills,

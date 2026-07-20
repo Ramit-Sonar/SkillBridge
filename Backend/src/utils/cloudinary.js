@@ -7,6 +7,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+/**
+ * Uploads a temporary file to Cloudinary and removes the local copy afterward.
+ */
 const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
@@ -32,6 +35,7 @@ const deleteFromCloudinary = async (publicId) => {
 
   const resourceTypes = ["image", "raw", "video"];
 
+  // Attachments may be stored under different Cloudinary resource types.
   for (const resourceType of resourceTypes) {
     try {
       const response = await cloudinary.uploader.destroy(publicId, {

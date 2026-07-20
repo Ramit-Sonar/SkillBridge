@@ -60,6 +60,7 @@ export default function ClientDashboard() {
       setDashboardError("");
 
       try {
+        // Dashboard counters are derived from the real jobs and projects lists.
         const [jobsResponse, projectsResponse] = await Promise.all([
           getClientJobs(),
           getMyProjects(),

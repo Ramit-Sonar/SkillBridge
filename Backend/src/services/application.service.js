@@ -1,3 +1,6 @@
+/**
+ * Shapes application records for list cards and detail views.
+ */
 export const buildApplicationSummary = (application) => ({
   applicationId: application._id,
   status: application.status,

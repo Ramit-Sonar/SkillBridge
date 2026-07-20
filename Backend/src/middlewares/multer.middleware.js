@@ -2,6 +2,9 @@ import multer from "multer";
 import path from "path"; // 1. You must import path here
 import { ApiError } from "../utils/ApiError.js";
 
+/**
+ * Configures multer storage and file validation for avatars and attachments.
+ */
 const allowedImageTypes = [
   "image/jpeg",
   "image/jpg",
@@ -68,6 +71,7 @@ const attachmentFileFilter = function (req, file, cb) {
     file.mimetype === "application/octet-stream" &&
     allowedRawAttachmentExtensions.includes(fileExtension);
 
+  // Some design/source files arrive as octet-stream, so validate them by extension too.
   if (!allowedAttachmentTypes.includes(file.mimetype) && !isAllowedRawFile) {
     cb(new ApiError(400, "This attachment file type is not allowed"));
     return;

@@ -30,6 +30,7 @@ export default function PublicProfilePage() {
         const response = await getPublicStudentProfile(username);
 
         if (mounted) {
+          // Public profiles are rendered from the backend summary only.
           setProfile(response.data);
         }
       } catch (error) {

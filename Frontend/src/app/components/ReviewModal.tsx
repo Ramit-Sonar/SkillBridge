@@ -35,6 +35,7 @@ export function ReviewModal({
     setSubmitting(true);
 
     try {
+      // Parent workspace owns review persistence and refreshes project state after success.
       await onSubmit({ rating, comment: comment.trim() });
       setSubmitted(true);
     } catch (submitError) {

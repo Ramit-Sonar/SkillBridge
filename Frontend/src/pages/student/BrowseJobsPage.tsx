@@ -105,6 +105,7 @@ function mapJobDetailsFromApi(job: JobData): JobDetailData {
 
   const attachments = job.attachments as (FileAttachment | string)[] | undefined;
 
+  // Support both current attachment objects and older string-only attachment records.
   return {
     ...mapJobFromApi(job),
     client: clientCard,
@@ -126,6 +127,7 @@ function mapJobDetailsFromApi(job: JobData): JobDetailData {
 }
 
 function mapSharedJobDetails(job: JobDetailData): SharedJobDetailData {
+  // SharedJobDetailsContent is reused across public, student, client, and project views.
   return {
     title: job.title,
     category: job.category,
@@ -923,6 +925,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   }, [selectedJobId]);
 
   const handleViewDetails = (jobId: string) => {
+    // Keep the selected job in the URL so details can be refreshed or shared.
     navigate(isGuest ? `/browse?jobId=${jobId}` : `/dashboard/student/browse-jobs/${jobId}`);
   };
 
@@ -949,6 +952,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   };
 
   const handleApplicationSubmitted = (jobId: string, message: string) => {
+    // Mark the job locally so the Apply button updates without refetching the list.
     setSubmittedJobIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]));
     setNotification({
       type: "success",
@@ -969,6 +973,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   const openJobs = useMemo(() => jobs.filter((job) => (job.status ?? "open") === "open"), [jobs]);
 
   const filtered = useMemo(() => {
+    // Apply all active filters in-memory after the backend returns open jobs.
     return openJobs.filter((job) => {
       const q = query.toLowerCase();
       const matchesQuery =

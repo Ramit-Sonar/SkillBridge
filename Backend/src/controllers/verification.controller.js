@@ -1,3 +1,7 @@
+/**
+ * Handles student/client verification submissions and admin review actions.
+ * Verification.status is the source of truth for account trust state.
+ */
 import { Verification } from "../models/verification.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -61,6 +65,9 @@ const toAdminClientVerification = (verification) => {
   };
 };
 
+/**
+ * Stores a student verification request for admin review.
+ */
 const submitStudentVerification = asyncHandler(async (req, res) => {
   const { university, studentId } = req.body || {};
 
@@ -87,6 +94,7 @@ const submitStudentVerification = asyncHandler(async (req, res) => {
     user: req.user._id,
   });
 
+  // Users must update rejected requests instead of creating parallel records.
   if (existingVerification?.status === "pending") {
     throw new ApiError(409, "Verification request is already pending");
   }
@@ -127,6 +135,8 @@ const submitStudentVerification = asyncHandler(async (req, res) => {
     verifiedAt: null,
     rejectionReason: "",
   });
+
+  // A new pending request must not leave a stale verified flag on the user.
   await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
@@ -140,6 +150,9 @@ const submitStudentVerification = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Stores a client KYC request for admin review.
+ */
 const submitClientVerification = asyncHandler(async (req, res) => {
   const { legalName, phone, companyKyc, companyName } = req.body || {};
 
@@ -171,6 +184,7 @@ const submitClientVerification = asyncHandler(async (req, res) => {
     user: req.user._id,
   });
 
+  // Users must update rejected requests instead of creating parallel records.
   if (existingVerification?.status === "pending") {
     throw new ApiError(409, "Verification request is already pending");
   }
@@ -229,6 +243,8 @@ const submitClientVerification = asyncHandler(async (req, res) => {
     verifiedAt: null,
     rejectionReason: "",
   });
+
+  // A new pending request must not leave a stale verified flag on the user.
   await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
@@ -242,6 +258,9 @@ const submitClientVerification = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Returns the logged-in user's current verification record, if one exists.
+ */
 const getVerificationStatus = asyncHandler(async (req, res) => {
   if (!req.user) {
     throw new ApiError(401, "User not authenticated");
@@ -264,7 +283,11 @@ const getVerificationStatus = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Lists student verification requests for the admin dashboard.
+ */
 const getAdminStudentVerifications = asyncHandler(async (req, res) => {
+  // Populate only the user fields required to render admin review cards.
   const verifications = await Verification.find({ type: "student" })
     .populate("user", "fullName email role avatar")
     .sort({ submittedAt: -1, createdAt: -1 });
@@ -280,6 +303,9 @@ const getAdminStudentVerifications = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Fetches one student verification request for admin review.
+ */
 const getAdminStudentVerificationById = asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     throw new ApiError(400, "Invalid verification id");
@@ -305,7 +331,11 @@ const getAdminStudentVerificationById = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Lists client KYC requests for the admin dashboard.
+ */
 const getAdminClientVerifications = asyncHandler(async (req, res) => {
+  // Populate only the user fields required to render admin review cards.
   const verifications = await Verification.find({ type: "client" })
     .populate("user", "fullName email role avatar")
     .sort({ submittedAt: -1, createdAt: -1 });
@@ -321,6 +351,9 @@ const getAdminClientVerifications = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Approves a verification request and syncs the user's verified flag.
+ */
 const approveVerification = asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     throw new ApiError(400, "Invalid verification id");
@@ -353,6 +386,9 @@ const approveVerification = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Rejects a verification request and keeps the user account unverified.
+ */
 const rejectVerification = asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     throw new ApiError(400, "Invalid verification id");
@@ -384,6 +420,9 @@ const rejectVerification = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Resubmits a rejected student verification request for admin review.
+ */
 const updateStudentVerification = asyncHandler(async (req, res) => {
   const { university, studentId } = req.body || {};
 
@@ -463,6 +502,8 @@ const updateStudentVerification = asyncHandler(async (req, res) => {
   verification.rejectionReason = "";
 
   await verification.save();
+
+  // Resubmission returns the request to pending, so the account is not verified yet.
   await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
@@ -476,6 +517,9 @@ const updateStudentVerification = asyncHandler(async (req, res) => {
     );
 });
 
+/**
+ * Resubmits a rejected client verification request for admin review.
+ */
 const updateClientVerification = asyncHandler(async (req, res) => {
   const { legalName, phone, companyKyc, companyName } = req.body || {};
 
@@ -574,6 +618,8 @@ const updateClientVerification = asyncHandler(async (req, res) => {
   verification.rejectionReason = "";
 
   await verification.save();
+
+  // Resubmission returns the request to pending, so the account is not verified yet.
   await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res

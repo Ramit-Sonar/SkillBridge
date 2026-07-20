@@ -11,7 +11,7 @@ const port = process.env.PORT || 3000;
 
 connectDB()
   .then(async () => {
-    // Create default admin if it doesn't exist
+    // Seed the default admin after MongoDB is ready.
     await createAdmin();
 
     app.on("error", (error) => {

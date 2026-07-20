@@ -5,6 +5,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Student profile service handles private edits and public profile reads.
+ */
 export type StudentProfileData = {
   _id?: string;
   user?: string;

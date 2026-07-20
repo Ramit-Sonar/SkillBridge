@@ -200,6 +200,7 @@ function mapWorkspaceProject(
 ): WorkspaceProject | null {
   if (!workspace.job || !workspace.application) return null;
 
+  // Normalize the backend workspace into the single shape used by every tab.
   const status = workspace.project.status;
   const partner = workspace.overview.partner;
   const partnerName = partner?.fullName || "";
@@ -332,6 +333,7 @@ function mapDeliverablesSnapshot(
   ProjectWorkspaceSnapshot,
   "status" | "canSubmitDeliverables" | "submissions" | "revisionRequests"
 > {
+  // Keep current deliverable first, followed by older versions for history.
   return {
     status: deliverables.project.status,
     canSubmitDeliverables: deliverables.project.canSubmit,
@@ -709,12 +711,14 @@ export default function ProjectWorkspacePage() {
       };
 
       if (activeTab === "deliverables") {
+        // Initial load fetches only the active tab's extra data.
         const deliverablesResponse = await getProjectDeliverables(id);
         Object.assign(nextWorkspace, mapDeliverablesSnapshot(deliverablesResponse.data));
         setDeliverablesLoaded(true);
       }
 
       if (activeTab === "activity") {
+        // Timeline is lazy-loaded because most project visits start on deliverables.
         const timelineResponse = await getProjectTimeline(id);
         nextWorkspace.timeline = mapTimelineSnapshot(timelineResponse.data);
         setTimelineLoaded(true);
@@ -775,6 +779,7 @@ export default function ProjectWorkspacePage() {
 
     setLoadError("");
 
+    // After a mutation, refresh all dependent slices so status, timeline, and deliverables agree.
     const [workspaceResponse, deliverablesResponse, timelineResponse] = await Promise.all([
       getProjectById(id),
       getProjectDeliverables(id),
@@ -977,6 +982,7 @@ export default function ProjectWorkspacePage() {
   const handleCreateReview = async (review: { rating: number; comment: string }) => {
     if (!id || reviewSubmitLockedRef.current) return;
 
+    // Prevent duplicate review posts while the modal is awaiting the backend.
     reviewSubmitLockedRef.current = true;
 
     try {

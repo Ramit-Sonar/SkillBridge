@@ -5,6 +5,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Review service reads student reputation data and creates completed-project reviews.
+ */
 export type CreateReviewPayload = {
   rating: number;
   comment?: string;

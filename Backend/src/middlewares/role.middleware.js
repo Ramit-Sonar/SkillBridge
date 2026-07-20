@@ -1,7 +1,9 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-// Role-based access control middleware
+/**
+ * Restricts protected routes to the roles passed by the route definition.
+ */
 export const authorizeRoles = (...allowedRoles) => {
   return asyncHandler(async (req, res, next) => {
     // req.user comes from verifyJWT middleware

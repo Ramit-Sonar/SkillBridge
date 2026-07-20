@@ -64,6 +64,7 @@ function getApplicationTimeline(app: ApplicationDetailsData): TimelineItem[] {
     },
   ];
 
+  // Build timeline entries from timestamps instead of duplicating status-specific UI.
   if (app.status === "pending") {
     items.push({
       key: "pending",

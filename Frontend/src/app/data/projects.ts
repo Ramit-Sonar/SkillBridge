@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { TimelineTone } from "../components/shared/Timeline";
 
+// Shared project view types used by both student and client workspaces.
 export type ProjectStatus = "active" | "submitted" | "revision_requested" | "completed";
 
 export type ProjectSubmissionStatus = "submitted" | "revision_requested" | "approved";

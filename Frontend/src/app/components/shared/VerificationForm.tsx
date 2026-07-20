@@ -1,4 +1,4 @@
-// Reusable verification form — used in StudentSettingsPage.
+// Reusable verification form used in settings pages.
 // Contains all form logic; wrapping (DashboardLayout, card chrome) is handled by the caller.
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -71,6 +71,7 @@ export function FileUpload({
       if (disabled) return;
 
       const isImage = raw.type.startsWith("image/");
+      // Create previews only for images; PDFs are represented by metadata.
       onFile({
         file: raw,
         name: raw.name,
@@ -279,7 +280,7 @@ export function FileUpload({
   );
 }
 
-// ── Submitted success view ────────────────────────────────────────────────────
+// Success view is reused after create and update verification submissions.
 
 export function VerificationSubmittedState({
   status = "pending",
@@ -327,7 +328,7 @@ export function VerificationSubmittedState({
   );
 }
 
-// ── Main exported form ────────────────────────────────────────────────────────
+// Main form keeps student and client KYC field handling in one place.
 
 interface VerificationFormProps {
   /** Called after successful submission so parent can show a back button */
@@ -380,6 +381,7 @@ export function VerificationForm({
       formData.append("university", university);
       formData.append("studentId", studentId);
 
+      // Existing verification documents are reused unless the user uploads replacements.
       if (idCard) {
         formData.append("idCard", idCard.file);
       }

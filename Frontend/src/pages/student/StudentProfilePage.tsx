@@ -127,6 +127,7 @@ function StudentProfileContent() {
     let mounted = true;
 
     const loadStudentProfile = async () => {
+      // Load profile sections independently so one failed request does not hide the profile.
       const [profileResult, ratingResult, reviewsResult, projectsResult, verificationResult] =
         await Promise.allSettled([
           getStudentProfile(),
@@ -173,6 +174,7 @@ function StudentProfileContent() {
     };
 
     loadStudentProfile();
+    // Refresh when returning from Settings or another tab where profile data changed.
     window.addEventListener("focus", loadStudentProfile);
 
     return () => {
@@ -181,7 +183,7 @@ function StudentProfileContent() {
     };
   }, []);
 
-  // Re-render whenever Settings saves to the store
+  // Re-render whenever Settings saves to the local profile store.
   useEffect(() => subscribeProfile(() => setProfileState(getProfile())), []);
 
   const profileView = buildStudentProfileViewProps({

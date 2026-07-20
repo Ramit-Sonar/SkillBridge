@@ -108,6 +108,7 @@ export function PasswordChangeForm() {
 
     try {
       setSaving(true);
+      // Password changes stay in the auth service so settings UI does not handle API details.
       await changePassword({
         oldPassword: current,
         newPassword: newPw,

@@ -8,6 +8,9 @@ import { Notification, type NotificationMessage } from "@/app/components/shared/
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Handles student/client login and routes each role to its dashboard.
+ */
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);

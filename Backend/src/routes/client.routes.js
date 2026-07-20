@@ -9,6 +9,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
 const clientRoles = authorizeRoles("client");
 
+// Client profile routes are private to the authenticated client account.
 router
   .route("/profile")
   .get(verifyJWT, clientRoles, getClientProfile)

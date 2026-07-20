@@ -11,6 +11,7 @@ const router = Router();
 const clientRoles = authorizeRoles("client");
 const studentRoles = authorizeRoles("student");
 
+// Review routes expose student reputation data and client review creation.
 router
   .route("/my-rating-summary")
   .get(verifyJWT, studentRoles, getStudentRatingSummary);

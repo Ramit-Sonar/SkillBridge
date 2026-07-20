@@ -76,6 +76,7 @@ const JOBS: AdminJob[] = [
   },
 ];
 
+// Admin jobs are currently local fixtures; removal only affects this screen state.
 const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; border: string }> =
   {
     open: { label: "Open", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },

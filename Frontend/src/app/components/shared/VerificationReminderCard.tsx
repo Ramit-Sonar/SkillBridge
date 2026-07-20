@@ -31,6 +31,7 @@ export function VerificationReminderCard({
 
     const loadVerificationStatus = async () => {
       try {
+        // Verification.status is authoritative; User.isVerified can lag after resubmission.
         const response = await getVerificationStatus();
 
         if (mounted) {

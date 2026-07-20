@@ -1,3 +1,6 @@
+/**
+ * Shared frontend domain types used across job browsing and detail views.
+ */
 export type JobCategoryId =
   | "web-dev"
   | "ui-ux"

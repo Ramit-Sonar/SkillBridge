@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { timelineSchema } from "../schemas/timeline.schema.js";
 
+/**
+ * Represents the accepted-application workspace shared by one student and client.
+ */
 const projectSchema = new mongoose.Schema(
   {
     job: {
@@ -91,6 +94,7 @@ function updateLastActivityAt() {
     update.$push?.timeline ||
     update.$addToSet?.timeline;
 
+  // Keep list sorting accurate whenever project activity changes through updates.
   if (hasActivityChange) {
     this.set({ lastActivityAt: new Date() });
   }

@@ -390,6 +390,7 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
         university: updatedProfile.university ?? university,
         skills: updatedProfile.skills ?? skills,
       });
+      // Notify the dashboard shell so avatar/name changes update immediately.
       window.dispatchEvent(new Event("skillbridge:user-updated"));
       setSaving(false);
       setSaved(true);
@@ -776,6 +777,7 @@ function VerificationSection({ onNotify }: { onNotify: (message: NotificationMes
     setSubmitted(true);
     setSubmittedStatus(submittedVerification.status);
     setVerification(submittedVerification);
+    // Reload from the API so the local status mirrors backend review state.
     reloadVerificationStatus();
   };
 

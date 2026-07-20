@@ -1,6 +1,9 @@
 import { ApiError } from "./ApiError.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "./cloudinary.js";
 
+/**
+ * Normalizes existing attachment metadata and newly uploaded Cloudinary files.
+ */
 export const normalizeSubmittedAttachments = (files) => {
   if (!Array.isArray(files)) return [];
 
@@ -65,6 +68,7 @@ export const uploadAttachments = async (uploadedFiles, submittedFiles) => {
 
     return attachments;
   } catch (error) {
+    // Roll back uploaded files when a later upload in the same request fails.
     await deleteAttachments(attachments);
     throw error;
   }

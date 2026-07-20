@@ -1,3 +1,6 @@
+/**
+ * Standard API error shape used by controllers and middleware.
+ */
 class ApiError extends Error {
   constructor(statusCode, message = "Something went wrong", errors = []) {
     super(message);

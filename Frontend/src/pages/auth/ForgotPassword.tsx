@@ -5,6 +5,9 @@ import { Zap, Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { forgotPassword } from "@/services/authService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
 
+/**
+ * Requests a password reset email for an existing account.
+ */
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");

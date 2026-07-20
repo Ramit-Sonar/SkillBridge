@@ -147,6 +147,7 @@ function mapJobFromApi(job: JobData): Job {
     : `NPR ${numericBudget.toLocaleString("en-IN")}`;
   const status = job.status === "closed" || job.status === "cancelled" ? job.status : "open";
 
+  // Normalize backend job records into the shape expected by manage-job cards.
   return {
     id: job._id ?? "",
     title: job.title,
@@ -272,6 +273,7 @@ function mapApplicantFromApi(applicant: ApplicantCard): Applicant {
   });
   const university = profileData.university || "University not provided";
 
+  // Applicant cards use the same profile builder as full student profiles.
   return {
     id: applicant.applicationId,
     name: profileData.name,
@@ -764,6 +766,7 @@ function ApplicationsPanel({
         const response = await getJobApplications(job.id);
         const applicantList = response.data.applicants.map(mapApplicantFromApi);
 
+        // Keep the parent job card and any open applicant workspace in sync.
         setApplicants(applicantList);
         onApplicantsChange(job.id, applicantList);
         setWorkspaceApplicant((current) => {
@@ -810,6 +813,7 @@ function ApplicationsPanel({
 
   useEffect(() => {
     const refreshApplicantData = () => {
+      // Refresh on focus so applicant decisions made elsewhere are reflected here.
       loadApplicants({ showLoading: false, preserveCurrentData: true });
 
       if (workspaceApplicant) {
@@ -839,6 +843,7 @@ function ApplicationsPanel({
         response.data.job.status === "closed" ||
         response.data.job.status === "cancelled"
       ) {
+        // Accepting an applicant closes the job on the backend.
         onJobStatusChange(response.data.job.jobId, response.data.job.status);
       }
 
@@ -1422,6 +1427,7 @@ export default function ManageJobsPage() {
         ? { ...job, applicants: applicantList, applicationCount: applicantList.length }
         : job;
 
+    // Update every open representation of the same job.
     setJobs((prev) => prev.map(updateJob));
     setDetailsJob((prev) => (prev ? updateJob(prev) : prev));
     setApplicationsJob((prev) => (prev ? updateJob(prev) : prev));

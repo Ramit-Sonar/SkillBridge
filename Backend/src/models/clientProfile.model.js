@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+/**
+ * Stores optional public-facing details for client accounts.
+ */
 const clientProfileSchema = new mongoose.Schema(
   {
     user: {

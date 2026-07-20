@@ -61,6 +61,9 @@ function getLatestSubmissionSummary(submission?: ProjectCardSubmission) {
   };
 }
 
+/**
+ * Shared project summary card that swaps partner context based on viewer role.
+ */
 export function ProjectCard({ project, role }: ProjectCardProps) {
   const navigate = useNavigate();
   const person = role === "student" ? project.client : project.student;

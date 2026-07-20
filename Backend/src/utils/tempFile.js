@@ -1,5 +1,8 @@
 import fs from "fs";
 
+/**
+ * Removes temporary upload files created by multer.
+ */
 export const removeTempFile = (filePath) => {
   if (!filePath || !fs.existsSync(filePath)) return;
 

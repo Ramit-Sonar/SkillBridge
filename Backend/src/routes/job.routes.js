@@ -18,6 +18,7 @@ import { removeTempFiles } from "../utils/tempFile.js";
 const router = Router();
 const clientRoles = authorizeRoles("client");
 const jobUpload = (req, res, next) => {
+  // Clean up temporary files when multer rejects an attachment.
   jobAttachmentUpload.array("attachments", 3)(req, res, (error) => {
     if (error) {
       removeTempFiles(req.files);

@@ -11,6 +11,9 @@ import applicationRouter from "./routes/application.routes.js";
 import projectRouter from "./routes/project.routes.js";
 import reviewRouter from "./routes/review.routes.js";
 
+/**
+ * Configures shared Express middleware and mounts all API route groups.
+ */
 const app = express();
 
 const configuredOrigins = (process.env.CORS_ORIGIN || "")
@@ -25,6 +28,7 @@ const devOrigins =
 
 const allowedOrigins = [...new Set([...configuredOrigins, ...devOrigins])];
 
+// Allow configured frontend origins while still supporting local Vite ports.
 app.use(
   cors({
     origin(origin, callback) {

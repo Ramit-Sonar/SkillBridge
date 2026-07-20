@@ -19,6 +19,7 @@ const projectRoles = authorizeRoles("student", "client");
 const clientRoles = authorizeRoles("client");
 const studentRoles = authorizeRoles("student");
 const deliverableAttachmentUpload = (req, res, next) => {
+  // Deliverable and revision attachments use the shared project upload policy.
   jobAttachmentUpload.array("attachments", 3)(req, res, (error) => {
     if (error) {
       removeTempFiles(req.files);

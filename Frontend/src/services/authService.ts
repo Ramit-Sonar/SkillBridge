@@ -2,6 +2,9 @@ import { refreshToken } from "./refreshToken";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users";
 
+/**
+ * Auth service methods call the user API and keep cookie-based sessions intact.
+ */
 type Role = "student" | "client" | "admin";
 
 export type AuthUser = {

@@ -32,6 +32,10 @@ import {
 } from "../services/projectResponse.service.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
+/**
+ * Handles project workspaces, deliverable submissions, approvals, and revisions.
+ * State changes are written with timeline events for both student and client views.
+ */
 const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
 
 const validateOptionalUrl = (value, fieldName) => {
@@ -190,6 +194,7 @@ const getMyProjects = asyncHandler(async (req, res) => {
   const ownerField = req.user.role === "student" ? "student" : "client";
   const partnerField = req.user.role === "student" ? "client" : "student";
 
+  // The same query serves both roles by swapping owner and partner fields.
   const projects = await Project.find({ [ownerField]: req.user._id })
     .select("_id job student client status completedAt lastActivityAt")
     .populate({
@@ -316,6 +321,7 @@ const getProjectById = asyncHandler(async (req, res) => {
       getStudentReviewProfileMap([studentId]),
     ]);
 
+    // Client workspaces include student trust signals beside the project data.
     partnerProfile = studentProfile;
     partnerVerification = verification;
     studentProjectProfile = studentProjectProfileMap.get(studentId) || null;
@@ -597,6 +603,7 @@ const approveDeliverable = asyncHandler(async (req, res) => {
     session = await mongoose.startSession();
     let responseData;
 
+    // Approval completes both the latest deliverable and the parent project together.
     await session.withTransaction(async () => {
       const currentProject = await Project.findById(projectId)
         .select("client status startedAt completedAt lastActivityAt timeline")
@@ -755,6 +762,7 @@ const requestRevision = asyncHandler(async (req, res) => {
     session = await mongoose.startSession();
     let responseData;
 
+    // Revision requests keep the project open while linking feedback to the latest deliverable.
     await session.withTransaction(async () => {
       const currentProject = await Project.findById(projectId)
         .select("client status startedAt completedAt lastActivityAt timeline")
@@ -938,6 +946,7 @@ const submitDeliverable = asyncHandler(async (req, res) => {
     session = await mongoose.startSession();
     let responseData;
 
+    // Deliverable submission resolves an open revision when this is a resubmission.
     await session.withTransaction(async () => {
       const currentProject = await Project.findById(projectId)
         .select("student status startedAt completedAt lastActivityAt timeline")

@@ -17,6 +17,9 @@ const buildEmptyRatingSummary = () => ({
   ratingDistribution: { ...emptyRatingDistribution },
 });
 
+/**
+ * Validates whether a client may leave the single review allowed for a project.
+ */
 const canReviewProject = async (projectId, clientId) => {
   if (!mongoose.isValidObjectId(projectId)) {
     throw new ApiError(400, "Invalid project id");
@@ -113,6 +116,7 @@ const getStudentRatingSummaryMap = async (studentIds) => {
   const objectIds = validStudentIds.map(
     (id) => new mongoose.Types.ObjectId(id)
   );
+  // Aggregate ratings once for all requested students instead of querying per profile card.
   const summaries = await Review.aggregate([
     {
       $match: {

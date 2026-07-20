@@ -7,6 +7,10 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 
+/**
+ * Handles account authentication, email verification, and password recovery.
+ * Controllers return sanitized user data and keep token rotation server-side.
+ */
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -76,6 +80,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const normalizedEmail = email.trim().toLowerCase();
   const loginSource = loginType === "admin" ? "admin" : "common";
 
+  // Keep admin and student/client login surfaces separated.
   // 2. FIND USER
   const user = await User.findOne({
     email: normalizedEmail,
@@ -194,6 +199,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh token is expired or used");
     }
 
+    // Rotate refresh tokens so a reused token is rejected on the next request.
     const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
       user._id
     );
@@ -360,6 +366,7 @@ const sendVerificationOtp = asyncHandler(async (req, res) => {
   const otp = crypto.randomInt(100000, 1000000).toString();
   const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
+  // Store pending registrations separately until email ownership is verified.
   let pendingUser = await PendingRegistration.findOne({
     email: normalizedEmail,
   });
@@ -440,6 +447,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
     throw new ApiError(400, "OTP expired.");
   }
 
+  // Compare hashes only; the raw OTP is never stored in MongoDB.
   const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
   if (hashedOtp !== pendingUser.verificationOtp) {
@@ -495,6 +503,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = user.generatePasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
+  // Email the raw token once while only the hashed token remains persisted.
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 

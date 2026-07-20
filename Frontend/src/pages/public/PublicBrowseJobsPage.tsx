@@ -34,7 +34,7 @@ export default function PublicBrowseJobsPage() {
         </div>
       </header>
 
-      {/* Browse jobs content — exact same component as student page */}
+      {/* Public browsing reuses the same job list behavior as the student dashboard. */}
       <main className="p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="mb-5">
           <h1 className="text-slate-900" style={{ fontSize: "1.25rem", fontWeight: 800 }}>

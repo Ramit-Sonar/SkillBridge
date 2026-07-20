@@ -11,6 +11,9 @@ type ProjectListContentProps = {
   onRetry: () => void;
 };
 
+/**
+ * Renders the shared project list states for both student and client dashboards.
+ */
 export function ProjectListContent({
   loading,
   loadError,

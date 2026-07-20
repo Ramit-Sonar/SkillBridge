@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { attachmentSchema } from "../schemas/attachment.schema.js";
 
+/**
+ * Stores client job posts and their public lifecycle state.
+ */
 const jobSchema = new mongoose.Schema(
   {
     client: {
@@ -82,6 +85,7 @@ const jobSchema = new mongoose.Schema(
 jobSchema.pre("init", function (data) {
   if (!Array.isArray(data.attachments)) return;
 
+  // Backfill older string attachments into the current attachment object shape.
   data.attachments = data.attachments
     .map((attachment) => {
       if (typeof attachment !== "string") return attachment;

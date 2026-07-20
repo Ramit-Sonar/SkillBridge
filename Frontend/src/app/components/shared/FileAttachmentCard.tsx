@@ -49,6 +49,7 @@ export function FileAttachmentCard({ attachment, canPreview = true, canDownload 
     setDownloadError("");
 
     try {
+      // Download through a blob so Cloudinary URLs save with the original filename.
       await downloadAttachment(attachment);
     } catch (error) {
       setDownloadError(

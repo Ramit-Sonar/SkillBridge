@@ -9,6 +9,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+/**
+ * Handles private profile updates and public student profile aggregation.
+ */
 const getStudentProfile = asyncHandler(async (req, res) => {
   const profile = await StudentProfile.findOne({ user: req.user._id });
 
@@ -90,6 +93,7 @@ const getPublicStudentProfile = asyncHandler(async (req, res) => {
     getStudentReviewProfileMap([studentId]),
   ]);
 
+  // Public profiles combine editable profile fields with computed trust metrics.
   const publicProfile = buildStudentSummary({
     student,
     studentProfile,

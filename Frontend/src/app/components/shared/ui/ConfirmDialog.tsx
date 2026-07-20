@@ -17,6 +17,9 @@ type ConfirmDialogProps = {
   busyDelayMs?: number;
 };
 
+/**
+ * Shared confirmation dialog for destructive or status-changing actions.
+ */
 export function ConfirmDialog({
   title,
   body,

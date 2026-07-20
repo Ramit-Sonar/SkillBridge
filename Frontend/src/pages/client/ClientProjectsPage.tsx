@@ -26,6 +26,7 @@ export default function ClientProjectsPage() {
   const [loadError, setLoadError] = useState("");
   const projects = projectData.projects;
 
+  // Load the authenticated client's project workspace summaries from the backend.
   const loadProjects = async () => {
     setLoading(true);
     setLoadError("");

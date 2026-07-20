@@ -18,6 +18,9 @@ const dashboardPaths = {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Keeps logged-in users from accidentally using public login/register screens.
+ */
 export default function PublicAuthGuard({ page, children }: PublicAuthGuardProps) {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);

@@ -20,6 +20,7 @@ const studentRoles = authorizeRoles("student");
 const clientRoles = authorizeRoles("client");
 const adminRoles = authorizeRoles("admin");
 
+// Admin review endpoints are mounted before user submission routes.
 router
   .route("/admin/students")
   .get(verifyJWT, adminRoles, getAdminStudentVerifications);

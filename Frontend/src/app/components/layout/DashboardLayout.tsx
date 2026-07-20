@@ -35,6 +35,9 @@ export type DashboardCurrentUser = AuthUser & {
 
 const DashboardCurrentUserContext = createContext<DashboardCurrentUser | null>(null);
 
+/**
+ * Exposes the authenticated dashboard user to nested profile and verification views.
+ */
 export function useDashboardCurrentUser() {
   return useContext(DashboardCurrentUserContext);
 }
@@ -780,6 +783,7 @@ export function DashboardLayout({
     };
 
     refreshCurrentUser();
+    // Profile and verification flows dispatch this after changing user-visible account data.
     window.addEventListener("skillbridge:user-updated", refreshCurrentUser);
 
     return () => {

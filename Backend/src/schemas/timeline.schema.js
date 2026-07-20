@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+/**
+ * Shared embedded schema for project activity events.
+ */
 export const timelineSchema = new mongoose.Schema(
   {
     type: {

@@ -7,6 +7,9 @@ const PROJECT_CREATED_MESSAGE = "Project created after application acceptance.";
 
 const getDocumentId = (document) => document?._id || document;
 
+/**
+ * Returns the latest deliverable for project state transitions and summaries.
+ */
 export const getLatestDeliverable = async (
   projectId,
   session = null,
@@ -96,6 +99,7 @@ export const getStudentCompletedProjectProfileMap = async (
 
   if (validStudentIds.length === 0) return new Map();
 
+  // Build profile metrics in one pass so applicant/public profile pages avoid per-student queries.
   const completedProjects = await Project.find({
     student: { $in: validStudentIds },
     status: "completed",
@@ -225,6 +229,7 @@ export const createProjectFromAcceptedApplication = async ({
     );
   }
 
+  // Enforce one project per accepted application/job even inside the transaction.
   const existingApplicationProject = await Project.exists({
     application: applicationId,
   }).session(session);

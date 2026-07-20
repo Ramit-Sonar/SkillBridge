@@ -13,6 +13,10 @@ import { buildClientSummary } from "../services/client.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
+/**
+ * Handles job posting, browsing, updates, and cancellation.
+ * Public job responses expose only safe client details.
+ */
 const VALID_JOB_CATEGORIES = [
   "web-dev",
   "ui-ux",
@@ -177,6 +181,7 @@ const createJob = asyncHandler(async (req, res) => {
     const verificationMap = await getClientVerificationMap([req.user._id]);
     const verificationStatus = verificationMap.get(req.user._id.toString());
 
+    // Only approved client verification records are allowed to create jobs.
     if (verificationStatus !== "approved") {
       throw new ApiError(
         403,
@@ -224,6 +229,7 @@ const getClientJobs = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .lean();
 
+  // Counts are aggregated separately so the job list stays compact.
   const applicationCounts = await Application.aggregate([
     {
       $match: {
@@ -291,6 +297,8 @@ const getAllOpenJobs = asyncHandler(async (req, res) => {
   const verificationMap = await getClientVerificationMap(
     jobs.map((job) => job.client?._id)
   );
+
+  // Browse cards should not expose private client profile fields.
   const publicJobs = jobs.map((job) => ({
     _id: job._id,
     title: job.title,
@@ -363,6 +371,7 @@ const getJobById = asyncHandler(async (req, res) => {
   }
 
   const jobResponse = { ...job };
+  // Authenticated users can see the richer client summary used by detail views.
   jobResponse.client = await buildClientSummary(job.client?._id || job.client);
 
   return res
@@ -429,6 +438,7 @@ const updateJob = asyncHandler(async (req, res) => {
     : null;
   const hasAcceptedApplication = Boolean(acceptedApplication);
 
+  // Once students have applied, keep the core job terms stable.
   if (hasAcceptedApplication) {
     throw new ApiError(400, "Jobs with accepted applications cannot be edited");
   }

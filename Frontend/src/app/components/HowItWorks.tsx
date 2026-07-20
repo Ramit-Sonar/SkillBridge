@@ -131,7 +131,7 @@ export function HowItWorks() {
                       {i + 1}
                     </span>
                   </div>
-                  {/* Vertical connector — mobile only */}
+                  {/* Mobile connector preserves the step sequence when the grid collapses. */}
                   {i < steps.length - 1 && (
                     <div
                       className="w-px flex-1 mt-2 lg:hidden"

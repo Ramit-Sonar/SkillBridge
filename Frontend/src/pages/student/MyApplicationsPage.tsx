@@ -160,6 +160,7 @@ function mapApplicationDetails(application: ApiApplicationDetails): Application 
   const client = job?.client;
   const jobTitle = job?.title ?? "Job unavailable";
 
+  // Detail view merges the submitted proposal with its related job/client summary.
   return {
     id: application.applicationId,
     jobTitle,
@@ -713,6 +714,7 @@ export default function MyApplicationsPage() {
       const withdrawnAt = formatDate(response.data.withdrawnAt);
       const updatedAt = formatDate(response.data.updatedAt);
 
+      // Keep both list and open detail panel synchronized after withdrawal.
       setApps((prev) =>
         prev.map((app) =>
           app.id === id

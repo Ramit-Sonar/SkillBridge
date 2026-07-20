@@ -29,6 +29,9 @@ import ClientSettingsPage from "../pages/client/ClientSettingsPage";
 import AuthenticationGuard from "./auth/AuthenticationGuard";
 import PublicAuthGuard from "./auth/PublicAuthGuard";
 
+/**
+ * Central route table for public pages, protected dashboards, and admin views.
+ */
 export const router = createBrowserRouter([
   {
     path: "/",

@@ -1,4 +1,4 @@
-// Lightweight reactive profile store — no external state library needed.
+// Lightweight reactive profile store with no external state library.
 // Settings writes here; profile views read from here.
 
 export interface ProfileData {
@@ -31,6 +31,7 @@ export function getProfile(): ProfileData {
 }
 
 export function setProfile(partial: Partial<ProfileData>) {
+  // Keep settings and profile preview synchronized without a global state library.
   _data = { ..._data, ...partial };
   _listeners.forEach((fn) => fn());
 }

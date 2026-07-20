@@ -22,6 +22,7 @@ const authenticatedRoles = authorizeRoles("student", "client");
 const currentUserRoles = authorizeRoles("student", "client", "admin");
 const logoutRoles = authorizeRoles("student", "client", "admin");
 
+// Authentication, account, and recovery routes for all user roles.
 router.route("/register").post(registerUser);
 
 router.route("/login").post(loginUser);

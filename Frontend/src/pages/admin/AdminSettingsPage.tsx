@@ -87,7 +87,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   );
 }
 
-// General
+// Platform settings are currently local-only, matching the existing admin UI behavior.
 
 function GeneralSection() {
   const [name, setName] = useState("SkillBridge");
@@ -156,7 +156,7 @@ function GeneralSection() {
   );
 }
 
-// Security
+// Security settings call the real password API while maintenance mode remains local UI state.
 
 function SecuritySection() {
   const [maintenance, setMaintenance] = useState(false);
@@ -321,8 +321,6 @@ function SecuritySection() {
     </div>
   );
 }
-
-// Main
 
 export default function AdminSettingsPage() {
   const [active, setActive] = useState<Section>("general");

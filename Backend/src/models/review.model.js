@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+/**
+ * Stores the one client review allowed for a completed project.
+ */
 const reviewSchema = new mongoose.Schema(
   {
     project: {

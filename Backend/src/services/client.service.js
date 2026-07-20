@@ -3,6 +3,9 @@ import { Job } from "../models/job.model.js";
 import { User } from "../models/user.model.js";
 import { Verification } from "../models/verification.model.js";
 
+/**
+ * Builds the public client summary shown in job detail cards.
+ */
 const buildClientSummary = async (userId) => {
   if (!userId) return null;
 
@@ -28,6 +31,7 @@ const buildClientSummary = async (userId) => {
     companyName: clientProfile?.companyName || "",
     website: clientProfile?.website || "",
     bio: clientProfile?.bio || "",
+    // Job detail badges rely on the verification record, not a cached user flag.
     verification: {
       status: verification?.status || null,
       verifiedAt: verification?.verifiedAt || null,

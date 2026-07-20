@@ -66,6 +66,7 @@ export interface ProfileViewProps {
   avatarUrl?: string;
 }
 
+// External links are normalized at render time so stored profile URLs can stay user-friendly.
 function SocialIcon({
   icon: Icon,
   label,

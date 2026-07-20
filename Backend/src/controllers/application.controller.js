@@ -20,6 +20,10 @@ import {
 } from "../services/project.service.js";
 import { getStudentReviewProfileMap } from "../services/review.service.js";
 
+/**
+ * Handles student applications and client review actions for job applicants.
+ * Acceptance is transactional because it also closes the job and creates a project.
+ */
 const submitApplication = asyncHandler(async (req, res) => {
   const uploadedFiles = req.files;
 
@@ -72,12 +76,12 @@ const submitApplication = asyncHandler(async (req, res) => {
       type: "student",
     }).select("status");
 
-    // if (verification?.status !== "approved") {
-    //   throw new ApiError(
-    //     403,
-    //     "Student verification is required before applying"
-    //   );
-    // }
+    if (verification?.status !== "approved") {
+      throw new ApiError(
+        403,
+        "Student verification is required before applying"
+      );
+    }
 
     const job = await Job.findById(jobId).select("client status");
 
@@ -252,6 +256,7 @@ const getJobApplications = asyncHandler(async (req, res) => {
     getStudentReviewProfileMap(studentIds),
   ]);
 
+  // Load profile, verification, project, and review data in batches for applicant cards.
   const studentProfileMap = new Map(
     studentProfiles.map((profile) => [profile.user.toString(), profile])
   );
@@ -356,6 +361,8 @@ const getApplicationById = asyncHandler(async (req, res) => {
     studentId ? getStudentCompletedProjectProfileMap([studentId]) : null,
     studentId ? getStudentReviewProfileMap([studentId]) : null,
   ]);
+
+  // The detail response combines the application with public student/client context.
   const applicationDetails = buildApplicationDetails({
     application,
     studentProfile,
@@ -473,6 +480,7 @@ const acceptApplication = asyncHandler(async (req, res) => {
   let responseData;
 
   try {
+    // Accepting one application closes the job and rejects other pending applicants atomically.
     await session.withTransaction(async () => {
       const application = await Application.findById(applicationId)
         .select("job status appliedAt")

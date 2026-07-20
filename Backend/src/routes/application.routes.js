@@ -17,6 +17,7 @@ const router = Router();
 const studentRoles = authorizeRoles("student");
 const clientRoles = authorizeRoles("client");
 const applicationAttachmentUpload = (req, res, next) => {
+  // Application uploads share job attachment limits and cleanup behavior.
   jobAttachmentUpload.array("attachments", 3)(req, res, (error) => {
     if (error) {
       removeTempFiles(req.files);

@@ -55,8 +55,9 @@ function InputField({
   );
 }
 
-// Main page
-
+/**
+ * Starts registration by requesting an email OTP before creating the account.
+ */
 export default function Register() {
   const navigate = useNavigate();
   const [role, setRole] = useState<"student" | "client">("student");
@@ -95,6 +96,7 @@ export default function Register() {
     setLoading(true);
 
     try {
+      // The backend stores this as a pending registration until OTP verification.
       await sendVerificationOtp({
         fullName: form.name,
         email: form.email,

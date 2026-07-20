@@ -26,6 +26,7 @@ export default function StudentProjectsPage() {
   const [loadError, setLoadError] = useState("");
   const projects = projectData.projects;
 
+  // Load the authenticated student's project workspace summaries from the backend.
   const loadProjects = async () => {
     setLoading(true);
     setLoadError("");

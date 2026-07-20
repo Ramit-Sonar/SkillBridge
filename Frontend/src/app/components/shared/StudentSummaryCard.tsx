@@ -48,7 +48,6 @@ export function StudentSummaryCard({
       whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
       className="bg-white border border-black/[0.06] hover:border-blue-200 rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200"
     >
-      {/* Row 1 — avatar + name + optional badge */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
@@ -84,7 +83,6 @@ export function StudentSummaryCard({
         {badge && <div className="shrink-0">{badge}</div>}
       </div>
 
-      {/* Row 2 — stats */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <Star className="w-3 h-3" fill="#F59E0B" color="#F59E0B" />
@@ -110,7 +108,6 @@ export function StudentSummaryCard({
         </span>
       </div>
 
-      {/* Row 3 — top skills */}
       <div className="flex flex-wrap gap-1.5">
         {topSkills.map((s) =>
           s.verified ? (
@@ -142,7 +139,6 @@ export function StudentSummaryCard({
         )}
       </div>
 
-      {/* Row 4 — actions + optional meta */}
       <div className="flex items-center justify-between pt-1 border-t border-black/[0.04]">
         {meta ? (
           <span className="text-slate-400" style={{ fontSize: "0.65rem" }}>

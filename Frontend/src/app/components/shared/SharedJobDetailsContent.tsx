@@ -1,5 +1,5 @@
 /**
- * Master reusable Job Details component — used in Browse Jobs, My Applications,
+ * Master reusable Job Details component used in Browse Jobs, My Applications,
  * Manage Jobs, Admin Jobs, and Projects. Only action buttons differ per context.
  */
 import { type ElementType, type ReactNode } from "react";
@@ -26,7 +26,7 @@ import {
 } from "../../../constants/job.constants";
 import { StatusBadge, type StatusBadgeConfig } from "./ui";
 
-// ── Category config ───────────────────────────────────────────────────────────
+// Category visuals are centralized so every job details surface uses the same badges.
 
 const CATEGORY_CONFIG: Record<
   string,
@@ -82,7 +82,7 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
-// ── Data interface ────────────────────────────────────────────────────────────
+// Shared shape accepted by every job details context.
 
 export type AttachedFile = FileAttachment;
 export type JobDisplayStatus = "open" | "closed" | "cancelled";
@@ -140,7 +140,7 @@ const JOB_STATUS_CFG: Record<JobDisplayStatus, StatusBadgeConfig> = {
   },
 };
 
-// ── Category badge ────────────────────────────────────────────────────────────
+// Unknown categories still render with a neutral searchable label.
 
 function CategoryBadge({ category }: { category: string }) {
   const categoryConfig = CATEGORY_CONFIG[category];
@@ -172,10 +172,6 @@ function CategoryBadge({ category }: { category: string }) {
     </div>
   );
 }
-
-// ── Attached file card ────────────────────────────────────────────────────────
-
-// ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
   job: JobDetailData;
@@ -394,7 +390,7 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
         )}
       </div>
 
-      {/* Sticky footer — action buttons (optional) */}
+      {/* Sticky footer keeps context-specific actions visible while details scroll. */}
       {actions && (
         <div className="p-4 border-t border-black/[0.05] flex gap-3 shrink-0">{actions}</div>
       )}

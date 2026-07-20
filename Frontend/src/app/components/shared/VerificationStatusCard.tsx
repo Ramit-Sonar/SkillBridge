@@ -20,6 +20,9 @@ type VerificationStatusConfig = {
   badge: StatusBadgeConfig;
 };
 
+/**
+ * Converts database statuses into the display statuses used by settings UI.
+ */
 export function getVerificationDisplayStatus(
   status: VerificationStatusValue
 ): VerificationDisplayStatus {

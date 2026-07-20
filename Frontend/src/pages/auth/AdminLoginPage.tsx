@@ -8,6 +8,9 @@ import { Notification, type NotificationMessage } from "@/app/components/shared/
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Handles the admin-only login surface separately from student/client login.
+ */
 export default function AdminLoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -21,6 +24,7 @@ export default function AdminLoginPage() {
       try {
         const response = await getCurrentUser();
 
+        // Existing admin sessions should enter the admin dashboard directly.
         if (response.data.role === "admin") {
           navigate("/admin/dashboard", { replace: true });
         }

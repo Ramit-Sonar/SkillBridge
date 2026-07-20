@@ -8,9 +8,13 @@ import { Notification, type NotificationMessage } from "@/app/components/shared/
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Completes registration by verifying the OTP sent from the register page.
+ */
 export default function VerifyEmailPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  // Register passes the email through route state so users cannot edit it here.
   const email = (location.state as { email?: string } | null)?.email ?? "";
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");

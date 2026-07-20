@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { attachmentSchema } from "../schemas/attachment.schema.js";
 
+/**
+ * Tracks a student's application lifecycle for one job.
+ */
 const applicationSchema = new mongoose.Schema(
   {
     job: {

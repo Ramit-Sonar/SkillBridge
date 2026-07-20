@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
+/**
+ * Stores platform users and pending email-verified registrations.
+ */
 const userSchema = new mongoose.Schema(
   {
     fullName: {
@@ -70,6 +73,7 @@ userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$")) return;
 
+  // Password hashing is centralized here for user creation and password resets.
   this.password = await bcrypt.hash(this.password, 10);
 });
 
@@ -107,6 +111,7 @@ userSchema.methods.generateRefreshToken = function () {
 userSchema.methods.generatePasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
 
+  // Persist only a hash so leaked database data cannot be used directly.
   this.passwordResetToken = crypto
     .createHash("sha256")
     .update(resetToken)

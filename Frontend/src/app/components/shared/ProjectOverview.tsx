@@ -27,6 +27,7 @@ type ProjectOverviewProps = {
   profileAction?: React.ReactNode;
 };
 
+// Keeps each project state metric visually consistent across both workspace roles.
 function StateItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="bg-slate-50 rounded-xl p-3 border border-black/[0.04] min-w-0">

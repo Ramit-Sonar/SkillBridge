@@ -3,6 +3,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Verification service keeps student/client KYC submissions and admin review calls together.
+ */
 export type VerificationData = {
   _id?: string;
   user?: string;

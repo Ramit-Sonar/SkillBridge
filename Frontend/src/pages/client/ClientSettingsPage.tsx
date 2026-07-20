@@ -224,6 +224,7 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
       });
       setSaving(false);
       setSaved(true);
+      // Notify dashboard chrome and shared cards to reload current account data.
       window.dispatchEvent(new Event("skillbridge:user-updated"));
       onNotify({ type: "success", text: "Profile updated successfully." });
       setTimeout(() => setSaved(false), 3000);
@@ -492,6 +493,7 @@ function KycSection({
       formData.append("phone", phone);
       formData.append("companyKyc", companyKyc);
 
+      // Rejected KYC updates may keep existing documents unless replacements are uploaded.
       if (citizenshipFront) {
         formData.append("citizenshipFront", citizenshipFront.file);
       }

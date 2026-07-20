@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+/**
+ * Shared embedded schema for files stored through Cloudinary.
+ */
 export const attachmentSchema = new mongoose.Schema(
   {
     url: {

@@ -53,9 +53,13 @@ function getWebsiteUrl(website?: string) {
     return trimmedWebsite;
   }
 
+  // Allow users to save domains without a protocol while keeping links clickable.
   return `https://${trimmedWebsite}`;
 }
 
+/**
+ * Displays the public client summary used inside job and project detail views.
+ */
 export function ClientInformationCard({ client }: { client: ClientCardData }) {
   const initials = client.fullName.slice(0, 2).toUpperCase();
   const joinedDate = formatJoinedDate(client.joined);

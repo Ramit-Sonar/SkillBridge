@@ -1,4 +1,4 @@
-// ── Verification requests ─────────────────────────────────────────────────────
+// Local admin fixtures used by admin pages that are not API-backed yet.
 
 export type VerificationStatus = "pending" | "approved" | "rejected";
 
@@ -62,7 +62,7 @@ export const VERIFICATION_REQUESTS: VerificationRequest[] = [
   },
 ];
 
-// ── Client KYC requests ───────────────────────────────────────────────────────
+// Client KYC entries mirror the admin verification card fields.
 
 export interface ClientKycRequest {
   id: string;
@@ -115,7 +115,7 @@ export const CLIENT_KYC_REQUESTS: ClientKycRequest[] = [
   },
 ];
 
-// ── Users ─────────────────────────────────────────────────────────────────────
+// User fixtures keep admin user-management screens renderable offline.
 
 export type UserRole = "student" | "client";
 export type UserStatus = "active" | "suspended";

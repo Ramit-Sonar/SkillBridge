@@ -7,6 +7,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Project service mirrors the project workspace API contract used by both roles.
+ */
 export type ProjectStatus = "active" | "submitted" | "revision_requested" | "completed";
 
 export type ProjectPerson = {
@@ -287,6 +290,7 @@ const parseProjectResponse = async <T>(
 ): Promise<ApiResponse<T>> => {
   const data = (await response.json()) as ApiResponse<T>;
 
+  // Keep response parsing consistent across project tabs and actions.
   if (!response.ok) {
     throw new Error(data.message || fallbackMessage);
   }
@@ -346,6 +350,7 @@ export const submitDeliverable = async (
 ): Promise<ApiResponse<SubmitDeliverableResponse>> => {
   const formData = new FormData();
 
+  // Deliverable URLs and files share one multipart request.
   formData.append("notes", data.notes);
   if (data.demoLink !== undefined) formData.append("demoLink", data.demoLink);
   if (data.repositoryLink !== undefined) formData.append("repositoryLink", data.repositoryLink);
@@ -370,6 +375,7 @@ export const requestRevision = async (
 ): Promise<ApiResponse<RequestRevisionResponse>> => {
   const formData = new FormData();
 
+  // Reference links are serialized because they are optional alongside file uploads.
   formData.append("message", data.message);
 
   if (data.referenceLinks !== undefined) {

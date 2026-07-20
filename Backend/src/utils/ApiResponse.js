@@ -1,3 +1,6 @@
+/**
+ * Standard success response envelope returned by API controllers.
+ */
 class ApiResponse {
   constructor(statusCode, data, message = "Success") {
     this.statusCode = statusCode;

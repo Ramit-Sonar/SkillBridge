@@ -35,6 +35,7 @@ export function FileUploadArea({
 
   const handleRaw = useCallback(
     (raw: File) => {
+      // Ignore duplicates and files over the per-form limit before they reach submit handlers.
       if (disabled || files.length >= maxFiles || files.find((file) => file.name === raw.name)) {
         return;
       }

@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+/**
+ * Stores editable public profile details for student accounts.
+ */
 const studentProfileSchema = new mongoose.Schema(
   {
     user: {

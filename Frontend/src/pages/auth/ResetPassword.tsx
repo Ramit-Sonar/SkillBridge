@@ -8,6 +8,9 @@ import { Notification, type NotificationMessage } from "@/app/components/shared/
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Consumes a password reset token from the route and sets a new password.
+ */
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const { token } = useParams();

@@ -10,6 +10,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
 const studentRoles = authorizeRoles("student");
 
+// Student profile routes expose private settings and public portfolio data.
 router.route("/public-profile/:studentId").get(getPublicStudentProfile);
 
 router

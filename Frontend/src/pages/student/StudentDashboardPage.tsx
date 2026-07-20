@@ -93,6 +93,7 @@ function StudentDashboardContent() {
       setDashboardError("");
 
       try {
+        // Dashboard totals come from the same APIs used by the full list pages.
         const [applicationsResponse, projectsResponse] = await Promise.all([
           getMyApplications(),
           getMyProjects(),
@@ -137,6 +138,7 @@ function StudentDashboardContent() {
 
     const loadVerificationStatus = async () => {
       try {
+        // Use verification status so resubmitted pending users are not shown as verified.
         const response = await getVerificationStatus();
 
         if (mounted) {

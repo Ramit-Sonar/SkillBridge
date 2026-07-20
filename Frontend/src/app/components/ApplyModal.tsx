@@ -128,6 +128,7 @@ export function ApplyModal({ job, onClose, onSubmitted, onError }: ApplyModalPro
     previouslyFocusedElement.current = document.activeElement as HTMLElement | null;
     closeButtonRef.current?.focus();
 
+    // Keep keyboard focus inside the modal while the application form is open.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !submitting) {
         onClose();
@@ -189,6 +190,7 @@ export function ApplyModal({ job, onClose, onSubmitted, onError }: ApplyModalPro
     setErrors({});
 
     try {
+      // Submit proposal text and optional files through the application service.
       const response = await submitApplication(job.id, {
         coverLetter: coverLetter.trim(),
         estimatedCompletionTime: estimatedTime.trim(),

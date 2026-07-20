@@ -7,6 +7,9 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
   ""
 );
 
+/**
+ * Application service owns student application and client applicant-review API calls.
+ */
 export type ApplicationStatus = "pending" | "accepted" | "rejected" | "withdrawn";
 
 export type ApplicationJobStatus = "open" | "closed" | "cancelled";
@@ -166,6 +169,7 @@ const parseApplicationResponse = async <T>(
 ): Promise<ApiResponse<T>> => {
   const data = (await response.json()) as ApiResponse<T>;
 
+  // Preserve backend error messages while keeping a stable fallback for UI copy.
   if (!response.ok) {
     throw new Error(data.message || fallbackMessage);
   }
@@ -179,6 +183,7 @@ export const submitApplication = async (
 ): Promise<ApiResponse<ApplicationSubmitResponse>> => {
   const formData = new FormData();
 
+  // Applications use multipart data so proposal attachments travel with the form.
   formData.append("coverLetter", payload.coverLetter);
   formData.append("estimatedCompletionTime", payload.estimatedCompletionTime);
   formData.append("whySuitable", payload.whySuitable);

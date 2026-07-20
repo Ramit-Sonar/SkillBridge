@@ -17,6 +17,7 @@ export function Notification({ message, onClose, duration = 2000 }: Notification
   useEffect(() => {
     if (!message) return;
 
+    // Auto-dismiss transient feedback while allowing callers to clear it early.
     const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
   }, [duration, message, onClose]);

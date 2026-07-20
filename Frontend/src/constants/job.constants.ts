@@ -1,5 +1,8 @@
 import type { JobCategoryId, JobDurationId } from "../types";
 
+/**
+ * Shared job labels and presentation constants used by job forms and cards.
+ */
 export const JOB_CATEGORIES: { value: JobCategoryId; label: string }[] = [
   { value: "web-dev", label: "Web Development" },
   { value: "ui-ux", label: "UI/UX Design" },
