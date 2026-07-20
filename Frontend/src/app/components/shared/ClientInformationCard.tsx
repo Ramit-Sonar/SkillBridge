@@ -86,17 +86,19 @@ export function ClientInformationCard({ client }: { client: ClientCardData }) {
           )}
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
-          <p className="text-slate-900 font-bold leading-tight" style={{ fontSize: "0.88rem" }}>
-            {client.fullName}
-          </p>
-          {isVerified && (
-            <div className="flex items-center gap-1 mt-1">
-              <CheckCircle className="w-3 h-3 text-emerald-600" />
-              <span className="text-emerald-600 font-semibold" style={{ fontSize: "0.62rem" }}>
-                Verified Client
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-slate-900 font-bold leading-tight" style={{ fontSize: "0.88rem" }}>
+              {client.fullName}
+            </p>
+            {isVerified && (
+              <span
+                className="inline-flex items-center gap-1 text-blue-600 font-semibold"
+                style={{ fontSize: "0.7rem" }}
+              >
+                <CheckCircle className="w-3.5 h-3.5" /> Verified
               </span>
-            </div>
-          )}
+            )}
+          </div>
           {client.location && (
             <div className="flex items-center gap-1 mt-1">
               <MapPin className="w-3 h-3 text-slate-400" />
