@@ -96,9 +96,6 @@ interface RoleConfig {
   bottomNav: NavItem[];
   paths: Partial<Record<DashboardNavId, string>>;
   user: {
-    initials: string;
-    name: string;
-    label: string;
     avatarClassName: string;
     labelColor: string;
   };
@@ -136,9 +133,6 @@ const roleConfig: Record<DashboardRole, RoleConfig> = {
       logout: "/",
     },
     user: {
-      initials: "RS",
-      name: "Ramit Sonar",
-      label: "Student",
       avatarClassName: "bg-gradient-to-br from-blue-600 to-teal-500",
       labelColor: "#2563EB",
     },
@@ -178,9 +172,6 @@ const roleConfig: Record<DashboardRole, RoleConfig> = {
       logout: "/",
     },
     user: {
-      initials: "AC",
-      name: "Dikshya Khanal",
-      label: "Client",
       avatarClassName: "bg-gradient-to-br from-blue-600 to-teal-500",
       labelColor: "#14B8A6",
     },
@@ -217,9 +208,6 @@ const roleConfig: Record<DashboardRole, RoleConfig> = {
       logout: "/admin/login",
     },
     user: {
-      initials: "AD",
-      name: "Admin",
-      label: "Administrator",
       avatarClassName: "bg-gradient-to-br from-amber-600 to-amber-500",
       labelColor: "#D97706",
     },
@@ -257,9 +245,9 @@ function Sidebar({
   const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
   const navigate = useNavigate();
   const config = roleConfig[role];
-  const displayName = currentUser?.fullName || config.user.name;
-  const displayRole = currentUser?.role ? formatRole(currentUser.role) : config.user.label;
-  const displayInitials = getInitials(displayName) || config.user.initials;
+  const displayName = currentUser?.fullName ?? "";
+  const displayRole = currentUser?.role ? formatRole(currentUser.role) : "";
+  const displayInitials = displayName ? getInitials(displayName) : "";
   const displayAvatar = currentUser?.avatar;
 
   const handleMouseEnter = () => {
@@ -523,9 +511,9 @@ function TopNavbar({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const config = roleConfig[role];
-  const displayName = currentUser?.fullName || config.user.name;
-  const displayRole = currentUser?.role ? formatRole(currentUser.role) : config.user.label;
-  const displayInitials = getInitials(displayName) || config.user.initials;
+  const displayName = currentUser?.fullName ?? "";
+  const displayRole = currentUser?.role ? formatRole(currentUser.role) : "";
+  const displayInitials = displayName ? getInitials(displayName) : "";
   const displayAvatar = currentUser?.avatar;
 
   useEffect(() => {
@@ -778,6 +766,7 @@ export function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState<DashboardNavId>(activeNav as DashboardNavId);
   const [currentUser, setCurrentUser] = useState<DashboardCurrentUser | null>(null);
+  const loggingOutRef = useRef(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
   useEffect(() => {
@@ -785,6 +774,7 @@ export function DashboardLayout({
 
     const refreshCurrentUser = () => {
       loadDashboardCurrentUser().then((user) => {
+        if (loggingOutRef.current) return;
         if (mounted) setCurrentUser(user);
       });
     };
@@ -800,14 +790,18 @@ export function DashboardLayout({
 
   const handleLogout = async () => {
     setNotification(null);
+    loggingOutRef.current = true;
+    setCurrentUser(null);
 
     try {
       await logoutUser();
-      setCurrentUser(null);
       setNotification({ type: "success", text: "Logout successful." });
       await wait(2000);
       navigate(role === "admin" ? "/admin/login" : "/", { replace: true });
     } catch (error) {
+      loggingOutRef.current = false;
+      const user = await loadDashboardCurrentUser();
+      setCurrentUser(user);
       console.error("Logout failed:", error);
       setNotification({
         type: "error",
