@@ -7,6 +7,8 @@ export interface VerificationRequest {
   name: string;
   initials: string;
   email: string;
+  role: "Student";
+  collegeName: string;
   university: string;
   studentId: string;
   submittedAt: string;
@@ -21,6 +23,8 @@ export const VERIFICATION_REQUESTS: VerificationRequest[] = [
     name: "Ramit Sharma",
     initials: "RS",
     email: "ramit.sharma@ku.edu.np",
+    role: "Student",
+    collegeName: "Kathmandu University",
     university: "Kathmandu University",
     studentId: "KU-2021-0342",
     submittedAt: "13 Jun 2026",
@@ -33,6 +37,8 @@ export const VERIFICATION_REQUESTS: VerificationRequest[] = [
     name: "Priya Sharma",
     initials: "PS",
     email: "priya.sharma@ku.edu.np",
+    role: "Student",
+    collegeName: "Kathmandu University",
     university: "Kathmandu University",
     studentId: "KU-2022-0188",
     submittedAt: "10 Jun 2026",
@@ -45,6 +51,8 @@ export const VERIFICATION_REQUESTS: VerificationRequest[] = [
     name: "Roshan Bhandari",
     initials: "RB",
     email: "roshan.bhandari@ncit.edu.np",
+    role: "Student",
+    collegeName: "NCIT",
     university: "NCIT",
     studentId: "NCIT-2022-211",
     submittedAt: "8 Jun 2026",
@@ -61,6 +69,7 @@ export interface ClientKycRequest {
   name: string;
   initials: string;
   email: string;
+  role: "Client";
   legalName: string;
   phone: string;
   companyName?: string;
@@ -74,6 +83,7 @@ export const CLIENT_KYC_REQUESTS: ClientKycRequest[] = [
     name: "Dikshya Khanal",
     initials: "DK",
     email: "dikshya@techventures.com",
+    role: "Client",
     legalName: "Dikshya Khanal",
     phone: "9841234567",
     companyName: "TechNova Pvt. Ltd.",
@@ -85,6 +95,7 @@ export const CLIENT_KYC_REQUESTS: ClientKycRequest[] = [
     name: "Vikram Nair",
     initials: "VN",
     email: "vikram@startuphub.io",
+    role: "Client",
     legalName: "Vikram Nair",
     phone: "9861234569",
     companyName: "StartupHub Pvt. Ltd.",
@@ -96,6 +107,7 @@ export const CLIENT_KYC_REQUESTS: ClientKycRequest[] = [
     name: "Meera Joshi",
     initials: "MJ",
     email: "meera.joshi@brandworks.com",
+    role: "Client",
     legalName: "Meera Joshi",
     phone: "9871234560",
     submittedAt: "5 Jun 2026",

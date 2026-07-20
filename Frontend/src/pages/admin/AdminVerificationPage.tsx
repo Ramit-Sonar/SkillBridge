@@ -62,6 +62,7 @@ function VerificationCard<
     id: string;
     name: string;
     initials: string;
+    role?: string;
     submittedAt: string;
     status: VerificationStatus;
   },
@@ -101,7 +102,7 @@ function VerificationCard<
               {item.name}
             </p>
             <p className="text-slate-500" style={{ fontSize: "0.68rem" }}>
-              Submitted {item.submittedAt}
+              {item.role ?? `Submitted ${item.submittedAt}`}
             </p>
           </div>
         </div>
@@ -695,11 +696,10 @@ export default function AdminVerificationPage() {
                 getMetaItems={(request) => [
                   {
                     icon: BookOpen,
-                    label: "University",
-                    value: request.university,
+                    label: "College Name",
+                    value: request.collegeName,
                   },
                   { icon: Hash, label: "Student ID", value: request.studentId },
-                  { icon: User, label: "Major", value: request.major },
                   {
                     icon: Clock,
                     label: "Submitted",
