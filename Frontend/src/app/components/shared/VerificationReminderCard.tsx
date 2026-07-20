@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { ShieldCheck } from "lucide-react";
 import { useDashboardCurrentUser } from "../layout/DashboardLayout";
+import { getVerificationStatus } from "../../../services/verificationService";
 
 interface Props {
   isVerified?: boolean;
@@ -16,9 +18,38 @@ export function VerificationReminderCard({
 }: Props) {
   const navigate = useNavigate();
   const currentUser = useDashboardCurrentUser();
-  const accountVerified = isVerified ?? currentUser?.isVerified ?? false;
+  const [verificationStatus, setVerificationStatus] = useState<
+    "pending" | "approved" | "rejected" | null
+  >(null);
+  const accountVerified =
+    isVerified === true || (isVerified === undefined && verificationStatus === "approved");
 
-  if (isVerified === undefined && !currentUser) return null;
+  useEffect(() => {
+    if (isVerified !== undefined || !currentUser?._id) return;
+
+    let mounted = true;
+
+    const loadVerificationStatus = async () => {
+      try {
+        const response = await getVerificationStatus();
+
+        if (mounted) {
+          setVerificationStatus(response.data?.status ?? null);
+        }
+      } catch {
+        if (mounted) {
+          setVerificationStatus(null);
+        }
+      }
+    };
+
+    loadVerificationStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser?._id, isVerified]);
+
   if (accountVerified) return null;
 
   return (

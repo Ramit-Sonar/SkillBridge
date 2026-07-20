@@ -14,6 +14,7 @@ import { APPLICATION_STATUS_CFG } from "../../app/components/shared/ApplicationD
 import { PROJECT_STATUS_CFG } from "../../app/data/projects";
 import { getMyProjects, type MyProjectsResponse } from "../../services/projectService";
 import { getMyApplications, type MyApplicationsResponse } from "../../services/applicationService";
+import { getVerificationStatus } from "../../services/verificationService";
 
 function formatAppliedDate(date?: string) {
   if (!date) return "Date not available";
@@ -36,7 +37,10 @@ function isActiveProjectStatus(status: string) {
 function StudentDashboardContent() {
   const navigate = useNavigate();
   const currentUser = useDashboardCurrentUser();
-  const isVerified = currentUser?.isVerified === true;
+  const [verificationStatus, setVerificationStatus] = useState<
+    "pending" | "approved" | "rejected" | null
+  >(null);
+  const isVerified = verificationStatus === "approved";
   const [projectData, setProjectData] = useState<MyProjectsResponse>({
     totalProjects: 0,
     projects: [],
@@ -125,6 +129,32 @@ function StudentDashboardContent() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?._id) return;
+
+    let mounted = true;
+
+    const loadVerificationStatus = async () => {
+      try {
+        const response = await getVerificationStatus();
+
+        if (mounted) {
+          setVerificationStatus(response.data?.status ?? null);
+        }
+      } catch {
+        if (mounted) {
+          setVerificationStatus(null);
+        }
+      }
+    };
+
+    loadVerificationStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser?._id]);
 
   return (
     <div className="flex flex-col gap-5">

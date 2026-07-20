@@ -110,6 +110,7 @@ import {
   type StudentReviewSummary,
 } from "../../services/reviewService";
 import { getStudentProfile } from "../../services/studentProfileService";
+import { getVerificationStatus } from "../../services/verificationService";
 
 function StudentProfileContent() {
   const currentUser = useDashboardCurrentUser();
@@ -118,14 +119,22 @@ function StudentProfileContent() {
   const [ratingSummary, setRatingSummary] = useState<StudentRatingSummary | null>(null);
   const [reviews, setReviews] = useState<StudentReviewSummary[]>([]);
   const [completedProjects, setCompletedProjects] = useState<ProjectSummary[]>([]);
+  const [verificationStatus, setVerificationStatus] = useState<
+    "pending" | "approved" | "rejected" | null
+  >(null);
 
   useEffect(() => {
     let mounted = true;
 
     const loadStudentProfile = async () => {
-      const [profileResult, ratingResult, reviewsResult, projectsResult] = await Promise.allSettled(
-        [getStudentProfile(), getStudentRatingSummary(), getStudentReviews(), getMyProjects()]
-      );
+      const [profileResult, ratingResult, reviewsResult, projectsResult, verificationResult] =
+        await Promise.allSettled([
+          getStudentProfile(),
+          getStudentRatingSummary(),
+          getStudentReviews(),
+          getMyProjects(),
+          getVerificationStatus(),
+        ]);
 
       if (!mounted) return;
 
@@ -155,6 +164,12 @@ function StudentProfileContent() {
           projectsResult.value.data.projects.filter((project) => project.status === "completed")
         );
       }
+
+      if (verificationResult.status === "fulfilled") {
+        setVerificationStatus(verificationResult.value.data?.status ?? null);
+      } else {
+        setVerificationStatus(null);
+      }
     };
 
     loadStudentProfile();
@@ -172,7 +187,7 @@ function StudentProfileContent() {
   const profileView = buildStudentProfileViewProps({
     user: currentUser,
     profile,
-    verified: currentUser?.isVerified === true,
+    verified: verificationStatus === "approved",
     ratingSummary,
     reviews,
     completedProjects,

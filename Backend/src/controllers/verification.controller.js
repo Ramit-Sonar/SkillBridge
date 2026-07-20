@@ -127,6 +127,7 @@ const submitStudentVerification = asyncHandler(async (req, res) => {
     verifiedAt: null,
     rejectionReason: "",
   });
+  await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
     .status(201)
@@ -228,6 +229,7 @@ const submitClientVerification = asyncHandler(async (req, res) => {
     verifiedAt: null,
     rejectionReason: "",
   });
+  await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
     .status(201)
@@ -461,6 +463,7 @@ const updateStudentVerification = asyncHandler(async (req, res) => {
   verification.rejectionReason = "";
 
   await verification.save();
+  await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
     .status(200)
@@ -571,6 +574,7 @@ const updateClientVerification = asyncHandler(async (req, res) => {
   verification.rejectionReason = "";
 
   await verification.save();
+  await User.findByIdAndUpdate(req.user._id, { isVerified: false });
 
   return res
     .status(200)

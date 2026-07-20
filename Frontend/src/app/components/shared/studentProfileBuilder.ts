@@ -105,13 +105,15 @@ function getAvatar(profile: ProfileSource, user?: UserProfileSource | null) {
   return user?.avatar || "";
 }
 
-function getVerified(profile: ProfileSource, fallbackVerified = false) {
+function getVerified(profile: ProfileSource, fallbackVerified?: boolean) {
+  if (fallbackVerified !== undefined) return fallbackVerified;
+
   if (profile && "verified" in profile) return Boolean(profile.verified);
   if (profile && "verification" in profile) {
     return profile.verification?.status === "approved" || Boolean(profile.verification?.verifiedAt);
   }
 
-  return fallbackVerified;
+  return false;
 }
 
 function getStatistics(profile: ProfileSource, ratingSummary?: StudentRatingSummary | null) {

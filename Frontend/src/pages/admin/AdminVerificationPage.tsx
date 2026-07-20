@@ -10,6 +10,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import {
+  ConfirmDialog,
   FilterChipGroup,
   Notification,
   SearchInput,
@@ -610,6 +611,12 @@ function VerificationListPanel<
   const [selected, setSelected] = useState<T | null>(null);
   const [processingId, setProcessingId] = useState("");
   const [processingAction, setProcessingAction] = useState<"approve" | "reject" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    id: string;
+    name: string;
+    action: "approve" | "reject";
+    closeDetails: boolean;
+  } | null>(null);
 
   const updateLocalStatus = (id: string, status: VerificationStatus) => {
     setItems((prev) =>
@@ -661,6 +668,38 @@ function VerificationListPanel<
     } finally {
       setProcessingId("");
       setProcessingAction(null);
+    }
+  };
+
+  const requestActionConfirmation = (id: string, action: "approve" | "reject") => {
+    if (processingId) return Promise.resolve(false);
+
+    const request = items.find((item) => item.id === id);
+
+    setConfirmAction({
+      id,
+      name: request?.name ?? "this user",
+      action,
+      closeDetails: selected?.id === id,
+    });
+
+    return Promise.resolve(false);
+  };
+
+  const confirmVerificationAction = async () => {
+    if (!confirmAction) return;
+
+    const success =
+      confirmAction.action === "approve"
+        ? await approve(confirmAction.id)
+        : await reject(confirmAction.id);
+
+    if (success) {
+      if (confirmAction.closeDetails) {
+        setSelected(null);
+      }
+
+      setConfirmAction(null);
     }
   };
 
@@ -727,8 +766,8 @@ function VerificationListPanel<
                   avatarGradient={avatarGradient}
                   metaItems={getMetaItems(item)}
                   onView={setSelected}
-                  onApprove={approve}
-                  onReject={reject}
+                  onApprove={(id) => requestActionConfirmation(id, "approve")}
+                  onReject={(id) => requestActionConfirmation(id, "reject")}
                   isProcessing={processingId === item.id}
                   processingAction={processingId === item.id ? processingAction : null}
                 />
@@ -743,11 +782,38 @@ function VerificationListPanel<
           renderDetailModal(
             items.find((request) => request.id === selected.id) ?? selected,
             () => setSelected(null),
-            approve,
-            reject,
+            (id) => requestActionConfirmation(id, "approve"),
+            (id) => requestActionConfirmation(id, "reject"),
             processingId === selected.id,
             processingId === selected.id ? processingAction : null
           )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmAction && (
+          <ConfirmDialog
+            align="center"
+            busyDelayMs={0}
+            icon={confirmAction.action === "approve" ? CheckCircle : XCircle}
+            iconBg={confirmAction.action === "approve" ? "#ECFDF5" : "#FEF2F2"}
+            iconColor={confirmAction.action === "approve" ? "#059669" : "#DC2626"}
+            title={
+              confirmAction.action === "approve" ? "Approve Verification?" : "Reject Verification?"
+            }
+            body={
+              confirmAction.action === "approve"
+                ? `Are you sure you want to approve ${confirmAction.name}'s verification request? This will mark the account as verified.`
+                : `Are you sure you want to reject ${confirmAction.name}'s verification request? The account will remain unverified.`
+            }
+            confirmLabel={confirmAction.action === "approve" ? "Approve" : "Reject"}
+            confirmColor={confirmAction.action === "approve" ? "#059669" : "#DC2626"}
+            loading={processingId === confirmAction.id}
+            onConfirm={confirmVerificationAction}
+            onClose={() => {
+              if (!processingId) setConfirmAction(null);
+            }}
+          />
+        )}
       </AnimatePresence>
     </>
   );
