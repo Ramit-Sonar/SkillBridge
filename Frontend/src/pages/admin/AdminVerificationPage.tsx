@@ -9,13 +9,11 @@
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
+import { type VerificationStatus } from "../../app/data/admin";
 import {
-  CLIENT_KYC_REQUESTS,
-  type ClientKycRequest,
-  type VerificationStatus,
-} from "../../app/data/admin";
-import {
+  getAdminClientVerifications,
   getAdminStudentVerifications,
+  type AdminClientVerification,
   type AdminStudentVerification,
 } from "../../services/verificationService";
 import {
@@ -360,7 +358,7 @@ function ClientDetailModal({
   onApprove,
   onReject,
 }: {
-  request: ClientKycRequest;
+  request: AdminClientVerification;
   onClose: () => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
@@ -419,7 +417,7 @@ function ClientDetailModal({
           </div>
 
           {/* Details grid */}
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 grid grid-cols-2 gap-3">
             {[
               { label: "Full Legal Name", value: request.legalName },
               { label: "Phone Number", value: request.phone },
@@ -446,31 +444,45 @@ function ClientDetailModal({
 
           {/* Documents */}
           <div className="grid grid-cols-2 gap-3">
-            <DocumentPlaceholder label="Citizenship Front Photo" />
-            <DocumentPlaceholder label="Selfie Holding Citizenship" />
+            <DocumentPlaceholder
+              label="Citizenship Front Photo"
+              fileUrl={request.citizenshipFront}
+            />
+            <DocumentPlaceholder
+              label="Selfie Holding Citizenship"
+              fileUrl={request.citizenshipSelfie}
+            />
           </div>
 
-          {request.companyName && (
+          {(request.companyName || request.companyRegistrationDocument) && (
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-3">
               <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
                 Company Information
               </p>
-              <div>
-                <p
-                  className="text-slate-400 font-semibold"
-                  style={{
-                    fontSize: "0.62rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                  }}
-                >
-                  Company Name
-                </p>
-                <p className="text-slate-900 font-semibold mt-0.5" style={{ fontSize: "0.78rem" }}>
-                  {request.companyName}
-                </p>
-              </div>
-              <DocumentPlaceholder label="Company Registration Doc" />
+              {request.companyName && (
+                <div>
+                  <p
+                    className="text-slate-400 font-semibold"
+                    style={{
+                      fontSize: "0.62rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    Company Name
+                  </p>
+                  <p
+                    className="text-slate-900 font-semibold mt-0.5"
+                    style={{ fontSize: "0.78rem" }}
+                  >
+                    {request.companyName}
+                  </p>
+                </div>
+              )}
+              <DocumentPlaceholder
+                label="Company Registration Doc"
+                fileUrl={request.companyRegistrationDocument}
+              />
             </div>
           )}
 
@@ -657,7 +669,7 @@ function VerificationListPanel<
 export default function AdminVerificationPage() {
   const [tab, setTab] = useState<"students" | "clients">("students");
   const [studentRequests, setStudentRequests] = useState<AdminStudentVerification[]>([]);
-  const [clientRequests, setClientRequests] = useState(CLIENT_KYC_REQUESTS);
+  const [clientRequests, setClientRequests] = useState<AdminClientVerification[]>([]);
 
   useEffect(() => {
     let ignore = false;
@@ -679,7 +691,25 @@ export default function AdminVerificationPage() {
       }
     };
 
+    const loadClientVerifications = async () => {
+      try {
+        const response = await getAdminClientVerifications();
+
+        if (ignore) return;
+
+        setClientRequests(
+          response.data.map((request) => ({
+            ...request,
+            submittedAt: formatSubmittedDate(request.submittedAt),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to load client verifications", error);
+      }
+    };
+
     loadStudentVerifications();
+    loadClientVerifications();
 
     return () => {
       ignore = true;
@@ -808,15 +838,13 @@ export default function AdminVerificationPage() {
                   { icon: User, label: "Legal Name", value: request.legalName },
                   { icon: Phone, label: "Phone", value: request.phone },
                   {
-                    icon: request.companyName ? Briefcase : Clock,
-                    label: request.companyName ? "Company" : "Submitted",
-                    value: request.companyName ?? request.submittedAt,
-                  },
-                  {
                     icon: Clock,
                     label: "Submitted",
                     value: request.submittedAt,
                   },
+                  ...(request.companyName
+                    ? [{ icon: Briefcase, label: "Company", value: request.companyName }]
+                    : []),
                 ]}
                 renderDetailModal={(item, onClose, onApprove, onReject) => (
                   <ClientDetailModal

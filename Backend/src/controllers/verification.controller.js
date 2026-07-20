@@ -35,6 +35,28 @@ const toAdminStudentVerification = (verification) => {
   };
 };
 
+const toAdminClientVerification = (verification) => {
+  const user = verification.user || {};
+  const fullName = user.fullName || "Unknown Client";
+
+  return {
+    id: verification._id,
+    name: fullName,
+    initials: getInitials(fullName),
+    email: user.email || "",
+    role: "Client",
+    status: verification.status,
+    legalName: verification.legalName || "",
+    phone: verification.phone || "",
+    companyName: verification.companyName || "",
+    citizenshipFront: verification.citizenshipFront || "",
+    citizenshipSelfie: verification.citizenshipSelfie || "",
+    companyRegistrationDocument:
+      verification.companyRegistrationDocument || "",
+    submittedAt: verification.submittedAt,
+  };
+};
+
 const submitStudentVerification = asyncHandler(async (req, res) => {
   const { university, studentId } = req.body || {};
 
@@ -116,7 +138,7 @@ const submitStudentVerification = asyncHandler(async (req, res) => {
 
 
 const submitClientVerification = asyncHandler(async (req, res) => {
-  const { legalName, phone } = req.body || {};
+  const { legalName, phone, companyKyc, companyName } = req.body || {};
 
   if (!req.user) {
     throw new ApiError(401, "User not authenticated");
@@ -195,6 +217,7 @@ const submitClientVerification = asyncHandler(async (req, res) => {
     status: "pending",
     legalName: legalName.trim(),
     phone: phone.trim(),
+    companyName: (companyKyc || companyName || "").trim(),
     citizenshipFront: citizenshipFront.url,
     citizenshipSelfie: citizenshipSelfie.url,
     companyRegistrationDocument,
@@ -276,6 +299,22 @@ const getAdminStudentVerificationById = asyncHandler(async (req, res) => {
         200,
         toAdminStudentVerification(verification),
         "Student verification fetched successfully"
+      )
+    );
+});
+
+const getAdminClientVerifications = asyncHandler(async (req, res) => {
+  const verifications = await Verification.find({ type: "client" })
+    .populate("user", "fullName email role avatar")
+    .sort({ submittedAt: -1, createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        verifications.map(toAdminClientVerification),
+        "Client verifications fetched successfully"
       )
     );
 });
@@ -372,7 +411,7 @@ const updateStudentVerification = asyncHandler(async (req, res) => {
 
 
 const updateClientVerification = asyncHandler(async (req, res) => {
-  const { legalName, phone } = req.body || {};
+  const { legalName, phone, companyKyc, companyName } = req.body || {};
 
   if (!req.user) {
     throw new ApiError(401, "User not authenticated");
@@ -457,6 +496,7 @@ const updateClientVerification = asyncHandler(async (req, res) => {
 
   verification.legalName = legalName.trim();
   verification.phone = phone.trim();
+  verification.companyName = (companyKyc || companyName || "").trim();
   verification.status = "pending";
   verification.submittedAt = new Date();
   verification.verifiedBy = null;
@@ -487,6 +527,7 @@ export {
   getVerificationStatus,
   getAdminStudentVerifications,
   getAdminStudentVerificationById,
+  getAdminClientVerifications,
   updateStudentVerification,
   updateClientVerification,
   updateVerification,

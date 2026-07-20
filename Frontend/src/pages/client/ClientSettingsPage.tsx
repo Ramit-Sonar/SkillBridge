@@ -436,6 +436,7 @@ function KycSection({
         if (response.data) {
           setLegalName(response.data.legalName ?? "");
           setPhone(response.data.phone ?? "");
+          setCompanyKyc(response.data.companyName ?? "");
         }
       } catch (error) {
         const message =
@@ -462,6 +463,9 @@ function KycSection({
     try {
       const response = await getVerificationStatus();
       setVerification(response.data);
+      if (response.data) {
+        setCompanyKyc(response.data.companyName ?? "");
+      }
       onStatusChange?.(getVerificationDisplayStatus(response.data?.status ?? null));
     } catch (error) {
       const message =

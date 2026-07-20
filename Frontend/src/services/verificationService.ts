@@ -16,6 +16,7 @@ export type VerificationData = {
   phone?: string;
   citizenshipFront?: string;
   citizenshipSelfie?: string;
+  companyName?: string;
   companyRegistrationDocument?: string;
   submittedAt?: string;
   verifiedAt?: string;
@@ -37,6 +38,22 @@ export type AdminStudentVerification = {
   studentId: string;
   collegeIdCard: string;
   studentSelfie: string;
+  submittedAt: string;
+};
+
+export type AdminClientVerification = {
+  id: string;
+  name: string;
+  initials: string;
+  email: string;
+  role: "Client";
+  status: "pending" | "approved" | "rejected";
+  legalName: string;
+  phone: string;
+  companyName: string;
+  citizenshipFront: string;
+  citizenshipSelfie: string;
+  companyRegistrationDocument: string;
   submittedAt: string;
 };
 
@@ -121,6 +138,23 @@ export const getAdminStudentVerificationById = async (
   verificationId: string
 ): Promise<ApiResponse<AdminStudentVerification>> => {
   const response = await fetch(`${API_URL}/verification/admin/students/${verificationId}`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const getAdminClientVerifications = async (): Promise<
+  ApiResponse<AdminClientVerification[]>
+> => {
+  const response = await fetch(`${API_URL}/verification/admin/clients`, {
     method: "GET",
     credentials: "include",
   });

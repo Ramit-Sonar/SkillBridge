@@ -57,6 +57,12 @@ const verificationSchema = new mongoose.Schema(
       default: "",
     },
 
+    companyName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     citizenshipFront: {
       type: String,
       default: "",
