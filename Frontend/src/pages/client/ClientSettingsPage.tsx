@@ -1,5 +1,5 @@
 ﻿import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   DashboardLayout,
   useDashboardCurrentUser,
@@ -26,18 +26,14 @@ import {
   type VerificationStatusValue,
 } from "../../app/components/shared/VerificationStatusCard";
 import { PasswordChangeForm } from "../../app/components/shared/PasswordChangeForm";
-import {
-  ConfirmDialog,
-  Notification,
-  type NotificationMessage,
-} from "../../app/components/shared/ui";
+import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import {
   getVerificationStatus,
   submitClientVerification,
   updateClientVerification,
   type VerificationData,
 } from "../../services/verificationService";
-import { User, ShieldCheck, Lock, Check, Upload, Trash2, AlertCircle } from "lucide-react";
+import { User, ShieldCheck, Lock, Check, Upload, AlertCircle } from "lucide-react";
 
 // Nav
 
@@ -597,123 +593,123 @@ function KycSection({
               {status === "rejected" && verification?.rejectionReason && (
                 <VerificationRejectionReason reason={verification.rejectionReason} />
               )}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel text="Legal Name" required />
-              <input
-                value={legalName}
-                onChange={(e) => setLegalName(e.target.value)}
-                placeholder="Enter your full legal name"
-                disabled={submitting}
-                className={inputCls}
-                style={{ fontSize: "0.875rem" }}
-              />
-              <ErrorMsg msg={errors.legalName ?? ""} />
-            </div>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <FieldLabel text="Legal Name" required />
+                  <input
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    placeholder="Enter your full legal name"
+                    disabled={submitting}
+                    className={inputCls}
+                    style={{ fontSize: "0.875rem" }}
+                  />
+                  <ErrorMsg msg={errors.legalName ?? ""} />
+                </div>
 
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel text="Phone Number" required />
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="98XXXXXXXX"
-                disabled={submitting}
-                className={inputCls}
-                style={{ fontSize: "0.875rem" }}
-              />
-              <ErrorMsg msg={errors.phone ?? ""} />
-            </div>
+                <div className="flex flex-col gap-1.5">
+                  <FieldLabel text="Phone Number" required />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="98XXXXXXXX"
+                    disabled={submitting}
+                    className={inputCls}
+                    style={{ fontSize: "0.875rem" }}
+                  />
+                  <ErrorMsg msg={errors.phone ?? ""} />
+                </div>
 
-            <FileUpload
-              label="Citizenship Front"
-              hint="Upload a clear photo of the front side of your citizenship document."
-              file={citizenshipFront}
-              onFile={setCitizenshipFront}
-              onRemove={() => setCitizenshipFront(null)}
-              disabled={submitting}
-            />
-            <ErrorMsg msg={errors.citizenshipFront ?? ""} />
+                <FileUpload
+                  label="Citizenship Front"
+                  hint="Upload a clear photo of the front side of your citizenship document."
+                  file={citizenshipFront}
+                  onFile={setCitizenshipFront}
+                  onRemove={() => setCitizenshipFront(null)}
+                  disabled={submitting}
+                />
+                <ErrorMsg msg={errors.citizenshipFront ?? ""} />
 
-            <FileUpload
-              label="Citizenship Selfie"
-              hint="Take a selfie clearly showing your face alongside your citizenship document."
-              file={citizenshipSelfie}
-              onFile={setCitizenshipSelfie}
-              onRemove={() => setCitizenshipSelfie(null)}
-              disabled={submitting}
-            />
-            <ErrorMsg msg={errors.citizenshipSelfie ?? ""} />
+                <FileUpload
+                  label="Citizenship Selfie"
+                  hint="Take a selfie clearly showing your face alongside your citizenship document."
+                  file={citizenshipSelfie}
+                  onFile={setCitizenshipSelfie}
+                  onRemove={() => setCitizenshipSelfie(null)}
+                  disabled={submitting}
+                />
+                <ErrorMsg msg={errors.citizenshipSelfie ?? ""} />
 
-            <div className="flex flex-col gap-1.5">
-              <FieldLabel text="Company Name" />
-              <input
-                value={companyKyc}
-                onChange={(e) => setCompanyKyc(e.target.value)}
-                placeholder="Company name (optional)"
-                disabled={submitting}
-                className={inputCls}
-                style={{ fontSize: "0.875rem" }}
-              />
-            </div>
+                <div className="flex flex-col gap-1.5">
+                  <FieldLabel text="Company Name" />
+                  <input
+                    value={companyKyc}
+                    onChange={(e) => setCompanyKyc(e.target.value)}
+                    placeholder="Company name (optional)"
+                    disabled={submitting}
+                    className={inputCls}
+                    style={{ fontSize: "0.875rem" }}
+                  />
+                </div>
 
-            <FileUpload
-              label="Company Registration Document (if required)"
-              hint="Upload your company registration document if you are posting as a company."
-              file={companyRegistration}
-              onFile={setCompanyRegistration}
-              onRemove={() => setCompanyRegistration(null)}
-              required={false}
-              disabled={submitting}
-            />
+                <FileUpload
+                  label="Company Registration Document (if required)"
+                  hint="Upload your company registration document if you are posting as a company."
+                  file={companyRegistration}
+                  onFile={setCompanyRegistration}
+                  onRemove={() => setCompanyRegistration(null)}
+                  required={false}
+                  disabled={submitting}
+                />
 
-            {Object.keys(errors).length > 0 && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                <p className="text-red-600" style={{ fontSize: "0.78rem" }}>
-                  Please complete all required fields.
-                </p>
-              </div>
-            )}
-
-            <div className="pt-1 border-t border-black/[0.05]">
-              <button
-                type="submit"
-                disabled={
-                  status === "rejected"
-                    ? !canUpdateDocuments || submitting
-                    : !canSubmitDocuments || submitting
-                }
-                className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all ${
-                  ((status === "rejected" ? canUpdateDocuments : canSubmitDocuments) &&
-                    !submitting)
-                    ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
-                    : "bg-slate-100 text-slate-300 cursor-not-allowed"
-                }`}
-                style={{ fontSize: "0.9rem" }}
-              >
-                {submitting ? (
-                  <>
-                    <motion.span
-                      className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-                    />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    {status === "rejected" ? "Update Verification" : "Submit Verification"}
-                  </>
+                {Object.keys(errors).length > 0 && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <p className="text-red-600" style={{ fontSize: "0.78rem" }}>
+                      Please complete all required fields.
+                    </p>
+                  </div>
                 )}
-              </button>
-            </div>
-          </form>
-        </VerificationDocumentsSection>
-      ) : (
-        <VerificationHelpMessage status={status} />
-      )}
+
+                <div className="pt-1 border-t border-black/[0.05]">
+                  <button
+                    type="submit"
+                    disabled={
+                      status === "rejected"
+                        ? !canUpdateDocuments || submitting
+                        : !canSubmitDocuments || submitting
+                    }
+                    className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all ${
+                      (status === "rejected" ? canUpdateDocuments : canSubmitDocuments) &&
+                      !submitting
+                        ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                        : "bg-slate-100 text-slate-300 cursor-not-allowed"
+                    }`}
+                    style={{ fontSize: "0.9rem" }}
+                  >
+                    {submitting ? (
+                      <>
+                        <motion.span
+                          className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                        />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        {status === "rejected" ? "Update Verification" : "Submit Verification"}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </VerificationDocumentsSection>
+          ) : (
+            <VerificationHelpMessage status={status} />
+          )}
         </>
       )}
     </div>
@@ -723,9 +719,6 @@ function KycSection({
 // Account Settings
 
 function AccountSection() {
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [, setDeleting] = useState(false);
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -738,47 +731,6 @@ function AccountSection() {
       </div>
 
       <PasswordChangeForm />
-
-      <div className="pt-4 border-t border-red-200">
-        <p className="text-red-600 font-semibold mb-1" style={{ fontSize: "0.875rem" }}>
-          Delete Account
-        </p>
-        <p className="text-slate-500 mb-3 leading-relaxed" style={{ fontSize: "0.78rem" }}>
-          Deleting your account will permanently remove your jobs, projects, and account data. This
-          cannot be undone.
-        </p>
-        <button
-          type="button"
-          onClick={() => setDeleteModal(true)}
-          className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold px-4 py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
-          style={{ fontSize: "0.82rem" }}
-        >
-          <Trash2 className="w-3.5 h-3.5" /> Delete Account
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {deleteModal && (
-          <ConfirmDialog
-            title="Delete Account"
-            body="Are you sure you want to permanently delete your account? This action cannot be undone."
-            confirmLabel="Delete Account"
-            confirmColor="#DC2626"
-            icon={Trash2}
-            iconBg="#FEF2F2"
-            iconColor="#DC2626"
-            busyDelayMs={0}
-            onClose={() => setDeleteModal(false)}
-            onConfirm={() => {
-              setDeleting(true);
-              setTimeout(() => {
-                setDeleting(false);
-                setDeleteModal(false);
-              }, 1200);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -23,17 +23,10 @@ import {
   type VerificationStatusValue,
 } from "../../app/components/shared/VerificationStatusCard";
 import { PasswordChangeForm } from "../../app/components/shared/PasswordChangeForm";
-import {
-  ConfirmDialog,
-  Notification,
-  type NotificationMessage,
-} from "../../app/components/shared/ui";
+import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import { getStudentProfile, updateStudentProfile } from "../../services/studentProfileService";
 import { updateAccountDetails, uploadAvatar } from "../../services/authService";
-import {
-  getVerificationStatus,
-  type VerificationData,
-} from "../../services/verificationService";
+import { getVerificationStatus, type VerificationData } from "../../services/verificationService";
 import {
   User,
   Link2,
@@ -47,7 +40,6 @@ import {
   Github,
   Linkedin,
   Globe,
-  Trash2,
   AlertCircle,
 } from "lucide-react";
 
@@ -803,27 +795,27 @@ function VerificationSection({ onNotify }: { onNotify: (message: NotificationMes
         <VerificationErrorMessage message={verificationError} />
       ) : (
         <>
-      <VerificationStatusCard status={verificationStatus} />
-      {submitted ? (
-        <VerificationDocumentsSection>
-          <VerificationSubmittedState status={submittedStatus} />
-        </VerificationDocumentsSection>
-      ) : canSubmit ? (
-        <VerificationDocumentsSection>
-          {verificationStatus === "rejected" && verification?.rejectionReason && (
-            <VerificationRejectionReason reason={verification.rejectionReason} />
+          <VerificationStatusCard status={verificationStatus} />
+          {submitted ? (
+            <VerificationDocumentsSection>
+              <VerificationSubmittedState status={submittedStatus} />
+            </VerificationDocumentsSection>
+          ) : canSubmit ? (
+            <VerificationDocumentsSection>
+              {verificationStatus === "rejected" && verification?.rejectionReason && (
+                <VerificationRejectionReason reason={verification.rejectionReason} />
+              )}
+              <VerificationForm
+                initialUniversity={verification?.collegeName ?? ""}
+                initialStudentId={verification?.studentId ?? ""}
+                mode={verificationStatus === "rejected" ? "update" : "submit"}
+                onSubmitted={handleSubmitted}
+                onNotify={onNotify}
+              />
+            </VerificationDocumentsSection>
+          ) : (
+            <VerificationHelpMessage status={verificationStatus} />
           )}
-          <VerificationForm
-            initialUniversity={verification?.collegeName ?? ""}
-            initialStudentId={verification?.studentId ?? ""}
-            mode={verificationStatus === "rejected" ? "update" : "submit"}
-            onSubmitted={handleSubmitted}
-            onNotify={onNotify}
-          />
-        </VerificationDocumentsSection>
-      ) : (
-        <VerificationHelpMessage status={verificationStatus} />
-      )}
         </>
       )}
     </div>
@@ -833,9 +825,6 @@ function VerificationSection({ onNotify }: { onNotify: (message: NotificationMes
 // Account Settings
 
 function AccountSection() {
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [, setDeleting] = useState(false);
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -848,48 +837,6 @@ function AccountSection() {
       </div>
 
       <PasswordChangeForm />
-
-      {/* Danger zone */}
-      <div className="pt-4 border-t border-red-200">
-        <p className="text-red-600 font-semibold mb-1" style={{ fontSize: "0.875rem" }}>
-          Delete Account
-        </p>
-        <p className="text-slate-500 mb-3 leading-relaxed" style={{ fontSize: "0.78rem" }}>
-          Permanently removes your profile, projects, applications, and all account data. This
-          cannot be undone.
-        </p>
-        <button
-          type="button"
-          onClick={() => setDeleteModal(true)}
-          className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold px-4 py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
-          style={{ fontSize: "0.82rem" }}
-        >
-          <Trash2 className="w-3.5 h-3.5" /> Delete Account
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {deleteModal && (
-          <ConfirmDialog
-            title="Delete Account"
-            body="Are you sure you want to permanently delete your account? This action cannot be undone."
-            confirmLabel="Delete Account"
-            confirmColor="#DC2626"
-            icon={Trash2}
-            iconBg="#FEF2F2"
-            iconColor="#DC2626"
-            busyDelayMs={0}
-            onClose={() => setDeleteModal(false)}
-            onConfirm={() => {
-              setDeleting(true);
-              setTimeout(() => {
-                setDeleting(false);
-                setDeleteModal(false);
-              }, 1200);
-            }}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
