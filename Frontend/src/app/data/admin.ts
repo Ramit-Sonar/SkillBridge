@@ -127,8 +127,22 @@ export interface PlatformUser {
   email: string;
   role: UserRole;
   status: UserStatus;
+  verificationStatus: VerificationStatus;
   joinedAt: string;
   projectCount: number;
+  reportsReceived: number;
+  pendingReports: number;
+  avatar?: string;
+  location?: string;
+  headline?: string;
+  education?: string;
+  university?: string;
+  bio: string;
+  skills?: { name: string; verified: boolean }[];
+  companyName?: string;
+  website?: string;
+  jobsPosted?: number;
+  projectsCompleted?: number;
 }
 
 export const PLATFORM_USERS: PlatformUser[] = [
@@ -139,8 +153,22 @@ export const PLATFORM_USERS: PlatformUser[] = [
     email: "priya.sharma@ku.edu.np",
     role: "student",
     status: "active",
+    verificationStatus: "approved",
     joinedAt: "1 Mar 2026",
     projectCount: 5,
+    reportsReceived: 0,
+    pendingReports: 0,
+    location: "Kathmandu, Nepal",
+    headline: "Frontend Developer focused on React and UI polish",
+    education: "BSc CSIT - 3rd Year",
+    university: "Kathmandu University",
+    bio: "Priya builds clean React interfaces for student projects and small business dashboards.",
+    skills: [
+      { name: "React", verified: true },
+      { name: "TypeScript", verified: true },
+      { name: "UI/UX", verified: false },
+      { name: "Tailwind CSS", verified: true },
+    ],
   },
   {
     id: "u4",
@@ -149,8 +177,21 @@ export const PLATFORM_USERS: PlatformUser[] = [
     email: "manisha.poudel@bu.edu.np",
     role: "student",
     status: "suspended",
+    verificationStatus: "pending",
     joinedAt: "12 Mar 2026",
     projectCount: 1,
+    reportsReceived: 3,
+    pendingReports: 2,
+    location: "Pokhara, Nepal",
+    headline: "Graphic design student exploring brand identity work",
+    education: "Bachelor in Design - 2nd Year",
+    university: "Boston International College",
+    bio: "Manisha works on logo concepts, presentation design, and beginner-friendly brand kits.",
+    skills: [
+      { name: "Canva", verified: true },
+      { name: "Brand Design", verified: false },
+      { name: "Presentation Design", verified: true },
+    ],
   },
   {
     id: "u6",
@@ -159,8 +200,17 @@ export const PLATFORM_USERS: PlatformUser[] = [
     email: "anil.c@techventures.com",
     role: "client",
     status: "active",
+    verificationStatus: "approved",
     joinedAt: "2 Feb 2026",
     projectCount: 8,
+    reportsReceived: 2,
+    pendingReports: 1,
+    location: "Lalitpur, Nepal",
+    companyName: "TechVentures Nepal",
+    website: "techventures.com.np",
+    bio: "TechVentures Nepal hires students for practical web, documentation, and internal tool projects.",
+    jobsPosted: 12,
+    projectsCompleted: 8,
   },
 ];
 
@@ -170,9 +220,12 @@ export type ReportStatus = "pending" | "resolved" | "dismissed";
 
 export interface UserReport {
   id: string;
+  reporterUserId: string;
   reporterName: string;
   reporterInitials: string;
   reporterAvatar?: string;
+  reporterRole: UserRole;
+  reportedUserId: string;
   reportedUserName: string;
   reportedUserRole: UserRole;
   reason: string;
@@ -184,8 +237,11 @@ export interface UserReport {
 export const USER_REPORTS: UserReport[] = [
   {
     id: "r1",
+    reporterUserId: "u1",
     reporterName: "Priya Sharma",
     reporterInitials: "PS",
+    reporterRole: "student",
+    reportedUserId: "u6",
     reportedUserName: "Anil Chakraborty",
     reportedUserRole: "client",
     reason: "Scam / Fraud",
@@ -196,8 +252,11 @@ export const USER_REPORTS: UserReport[] = [
   },
   {
     id: "r2",
+    reporterUserId: "u6",
     reporterName: "Anil Chakraborty",
     reporterInitials: "AC",
+    reporterRole: "client",
+    reportedUserId: "u4",
     reportedUserName: "Manisha Poudel",
     reportedUserRole: "student",
     reason: "Spam",
@@ -208,8 +267,11 @@ export const USER_REPORTS: UserReport[] = [
   },
   {
     id: "r3",
+    reporterUserId: "u6",
     reporterName: "Dikshya Khanal",
     reporterInitials: "DK",
+    reporterRole: "client",
+    reportedUserId: "v1",
     reportedUserName: "Ramit Sharma",
     reportedUserRole: "student",
     reason: "Fake Profile",
@@ -220,8 +282,11 @@ export const USER_REPORTS: UserReport[] = [
   },
   {
     id: "r4",
+    reporterUserId: "v6",
     reporterName: "Roshan Bhandari",
     reporterInitials: "RB",
+    reporterRole: "student",
+    reportedUserId: "ck4",
     reportedUserName: "Meera Joshi",
     reportedUserRole: "client",
     reason: "Inappropriate Behavior",

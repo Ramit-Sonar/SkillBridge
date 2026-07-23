@@ -1,25 +1,70 @@
-﻿import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import {
+  Briefcase,
+  Calendar,
+  Eye,
+  FileWarning,
+  GraduationCap,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
-import { PLATFORM_USERS, type PlatformUser, type UserStatus } from "../../app/data/admin";
-import { Users, CheckCircle, Ban, Briefcase, GraduationCap, Calendar } from "lucide-react";
+import {
+  PLATFORM_USERS,
+  type PlatformUser,
+  type UserStatus,
+  type VerificationStatus,
+} from "../../app/data/admin";
+import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
-const STATUS_CFG: Record<UserStatus, { label: string; color: string; bg: string; border: string }> =
-  {
-    active: {
-      label: "Active",
-      color: "#059669",
-      bg: "#ECFDF5",
-      border: "#6EE7B7",
-    },
-    suspended: {
-      label: "Suspended",
-      color: "#DC2626",
-      bg: "#FEF2F2",
-      border: "#FECACA",
-    },
-  };
+const STATUS_CFG: Record<
+  UserStatus,
+  { label: string; color: string; bg: string; border: string; dot: string }
+> = {
+  active: {
+    label: "Active",
+    color: "#059669",
+    bg: "#ECFDF5",
+    border: "#6EE7B7",
+    dot: "#10B981",
+  },
+  suspended: {
+    label: "Suspended",
+    color: "#DC2626",
+    bg: "#FEF2F2",
+    border: "#FECACA",
+    dot: "#EF4444",
+  },
+};
+
+const VERIFICATION_CFG: Record<
+  VerificationStatus,
+  { label: string; color: string; bg: string; border: string; dot: string }
+> = {
+  pending: {
+    label: "Pending Verification",
+    color: "#D97706",
+    bg: "#FFFBEB",
+    border: "#FDE68A",
+    dot: "#F59E0B",
+  },
+  approved: {
+    label: "Verified",
+    color: "#2563EB",
+    bg: "#EFF6FF",
+    border: "#BFDBFE",
+    dot: "#2563EB",
+  },
+  rejected: {
+    label: "Verification Rejected",
+    color: "#DC2626",
+    bg: "#FEF2F2",
+    border: "#FECACA",
+    dot: "#EF4444",
+  },
+};
 
 const ROLE_CFG = {
   student: {
@@ -38,121 +83,112 @@ const ROLE_CFG = {
   },
 };
 
-function UserCard({
-  user,
-  onToggleStatus,
-}: {
-  user: PlatformUser;
-  onToggleStatus: (id: string) => void;
-}) {
+function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: () => void }) {
   const statusCfg = STATUS_CFG[user.status];
+  const verificationCfg = VERIFICATION_CFG[user.verificationStatus];
   const roleCfg = ROLE_CFG[user.role];
   const RoleIcon = roleCfg.icon;
+  const ReportsIcon = user.pendingReports > 0 ? FileWarning : ShieldCheck;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.07)" }}
-      className="bg-white rounded-2xl border border-black/[0.06] shadow-sm hover:border-blue-200 p-5 flex flex-col gap-4 transition-all duration-300"
+      whileHover={{ y: -2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}
+      className="bg-white rounded-2xl border border-black/[0.06] shadow-sm hover:border-blue-200 p-4 flex flex-col gap-3 transition-all duration-300"
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <div
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0"
+            className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
             style={{ fontSize: "0.65rem" }}
           >
-            {user.initials}
+            {user.avatar ? (
+              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              user.initials
+            )}
           </div>
-          <div>
-            <p className="text-slate-900 font-bold" style={{ fontSize: "0.875rem" }}>
+          <div className="min-w-0">
+            <p className="text-slate-900 font-bold truncate" style={{ fontSize: "0.86rem" }}>
               {user.name}
             </p>
-            <p className="text-slate-500" style={{ fontSize: "0.72rem" }}>
+            <p className="text-slate-500 truncate" style={{ fontSize: "0.7rem" }}>
               {user.email}
             </p>
           </div>
         </div>
-        <StatusBadge config={statusCfg} style={{ fontSize: "0.6rem" }} />
+        <StatusBadge config={statusCfg} style={{ fontSize: "0.58rem" }} />
       </div>
 
-      {/* Meta */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <span
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold"
           style={{
             background: roleCfg.bg,
             color: roleCfg.color,
             borderColor: roleCfg.border,
-            fontSize: "0.68rem",
+            fontSize: "0.66rem",
           }}
         >
           <RoleIcon className="w-3 h-3" /> {roleCfg.label}
         </span>
-        <div className="flex items-center gap-1.5 text-slate-400">
-          <Briefcase className="w-3.5 h-3.5" />
-          <span style={{ fontSize: "0.72rem" }}>
-            {user.projectCount} project{user.projectCount !== 1 ? "s" : ""}
-          </span>
+        <StatusBadge config={verificationCfg} style={{ fontSize: "0.58rem" }} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-slate-50 rounded-xl border border-black/[0.04] p-2.5">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <ReportsIcon className="w-3.5 h-3.5" />
+            <span className="font-semibold" style={{ fontSize: "0.62rem" }}>
+              Reports
+            </span>
+          </div>
+          <p className="text-slate-900 font-bold mt-1" style={{ fontSize: "0.78rem" }}>
+            {user.reportsReceived}
+            <span className="text-slate-400 font-semibold ml-1" style={{ fontSize: "0.62rem" }}>
+              total
+            </span>
+          </p>
         </div>
-        <div className="flex items-center gap-1.5 text-slate-400">
-          <Calendar className="w-3.5 h-3.5" />
-          <span style={{ fontSize: "0.72rem" }}>Joined {user.joinedAt}</span>
+        <div className="bg-slate-50 rounded-xl border border-black/[0.04] p-2.5">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <Calendar className="w-3.5 h-3.5" />
+            <span className="font-semibold" style={{ fontSize: "0.62rem" }}>
+              Joined
+            </span>
+          </div>
+          <p className="text-slate-900 font-semibold mt-1" style={{ fontSize: "0.72rem" }}>
+            {user.joinedAt}
+          </p>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        {user.status === "active" ? (
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onToggleStatus(user.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-red-50 text-red-600 font-semibold py-2 rounded-xl border border-red-200 hover:bg-red-600 hover:text-white transition-all"
-            style={{ fontSize: "0.75rem" }}
-          >
-            <Ban className="w-3.5 h-3.5" /> Suspend User
-          </motion.button>
-        ) : (
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onToggleStatus(user.id)}
-            className="flex-1 flex items-center justify-center gap-1.5 bg-emerald-50 text-emerald-600 font-semibold py-2 rounded-xl border border-emerald-300 hover:bg-emerald-600 hover:text-white transition-all"
-            style={{ fontSize: "0.75rem" }}
-          >
-            <CheckCircle className="w-3.5 h-3.5" /> Activate User
-          </motion.button>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={onViewDetails}
+        className="w-full flex items-center justify-center gap-1.5 bg-blue-50 text-blue-600 font-semibold py-2 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors"
+        style={{ fontSize: "0.75rem" }}
+      >
+        <Eye className="w-3.5 h-3.5" /> View Details
+      </button>
     </motion.div>
   );
 }
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState(PLATFORM_USERS);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "client">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
-
-  // Admin user status is simulated locally until user moderation has an API.
-  const toggle = (id: string) =>
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? {
-              ...u,
-              status: u.status === "active" ? ("suspended" as const) : ("active" as const),
-            }
-          : u
-      )
-    );
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const users = PLATFORM_USERS;
+  const selectedUser = users.find((user) => user.id === selectedUserId) ?? null;
 
   const filtered = users.filter((u) => {
     const q = search.toLowerCase();
     const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+
     return (
       matchSearch &&
       (roleFilter === "all" || u.role === roleFilter) &&
@@ -169,7 +205,7 @@ export default function AdminUsersPage() {
               Platform Users
             </h2>
             <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.78rem" }}>
-              Manage all students and clients on SkillBridge.
+              Manage student and client accounts from one admin view.
             </p>
           </div>
           <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
@@ -180,7 +216,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
-        <SearchInput value={search} onChange={setSearch} placeholder="Search by name or email…" />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search by name or email..." />
 
         <div className="flex flex-wrap gap-2">
           <FilterChipGroup
@@ -224,20 +260,26 @@ export default function AdminUsersPage() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence>
-              {filtered.map((u, i) => (
+              {filtered.map((user, i) => (
                 <motion.div
-                  key={u.id}
+                  key={user.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.05 }}
                 >
-                  <UserCard user={u} onToggleStatus={toggle} />
+                  <UserCard user={user} onViewDetails={() => setSelectedUserId(user.id)} />
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedUser && (
+          <AdminUserProfileModal user={selectedUser} onClose={() => setSelectedUserId(null)} />
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
