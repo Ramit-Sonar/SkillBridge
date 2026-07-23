@@ -177,7 +177,7 @@ export const PLATFORM_USERS: PlatformUser[] = [
     email: "manisha.poudel@bu.edu.np",
     role: "student",
     status: "suspended",
-    verificationStatus: "approved",
+    verificationStatus: "pending",
     joinedAt: "12 Mar 2026",
     projectCount: 1,
     reportsReceived: 3,

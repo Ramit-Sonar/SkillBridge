@@ -4,8 +4,10 @@ import { Calendar, CheckCircle, Eye, Flag, User, X, XCircle } from "lucide-react
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
 import {
+  CLIENT_KYC_REQUESTS,
   PLATFORM_USERS,
   USER_REPORTS,
+  VERIFICATION_REQUESTS,
   type PlatformUser,
   type ReportStatus,
   type UserReport,
@@ -47,6 +49,12 @@ function getReportedUser(report: UserReport): PlatformUser {
   const matchedUser = PLATFORM_USERS.find(
     (user) => user.id === report.reportedUserId || user.name === report.reportedUserName
   );
+  const matchedStudentVerification = VERIFICATION_REQUESTS.find(
+    (student) => student.id === report.reportedUserId || student.name === report.reportedUserName
+  );
+  const matchedClientVerification = CLIENT_KYC_REQUESTS.find(
+    (client) => client.id === report.reportedUserId || client.name === report.reportedUserName
+  );
 
   if (matchedUser) return matchedUser;
 
@@ -63,7 +71,7 @@ function getReportedUser(report: UserReport): PlatformUser {
       email: "student.profile@skillbridge.local",
       role: "student",
       status: "active",
-      verificationStatus: "approved",
+      verificationStatus: matchedStudentVerification?.status ?? "pending",
       joinedAt: "18 Apr 2026",
       projectCount: 2,
       reportsReceived: 1,
@@ -93,7 +101,7 @@ function getReportedUser(report: UserReport): PlatformUser {
     email: "client.profile@skillbridge.local",
     role: "client",
     status: "active",
-    verificationStatus: "approved",
+    verificationStatus: matchedClientVerification?.status ?? "pending",
     joinedAt: "9 May 2026",
     projectCount: 3,
     reportsReceived: 1,
