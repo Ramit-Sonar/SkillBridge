@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Briefcase,
@@ -12,16 +12,27 @@ import {
   XCircle,
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
+import {
+  FilterChipGroup,
+  Notification,
+  SearchInput,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import {
   CLIENT_KYC_REQUESTS,
   PLATFORM_USERS,
-  USER_REPORTS,
   VERIFICATION_REQUESTS,
   type PlatformUser,
   type ReportStatus,
   type UserReport,
 } from "../../app/data/admin";
+import {
+  dismissReport,
+  getReportById,
+  getReports,
+  resolveReport,
+} from "../../services/reportService";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const REPORT_STATUS_CFG: Record<
@@ -229,14 +240,21 @@ function DetailBlock({ label, children }: { label: string; children: React.React
 
 function ReportDetailsModal({
   report,
+  actionLoading,
   onClose,
   onViewReportedUser,
+  onResolve,
+  onDismiss,
 }: {
   report: UserReport;
+  actionLoading: "resolve" | "dismiss" | null;
   onClose: () => void;
   onViewReportedUser: () => void;
+  onResolve: () => void;
+  onDismiss: () => void;
 }) {
   const cfg = REPORT_STATUS_CFG[report.status];
+  const canUpdateStatus = report.status === "pending" && !actionLoading;
 
   return (
     <motion.div
@@ -335,17 +353,23 @@ function ReportDetailsModal({
           </button>
           <button
             type="button"
+            disabled={!canUpdateStatus}
+            onClick={onResolve}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors"
             style={{ fontSize: "0.82rem" }}
           >
-            <CheckCircle className="w-4 h-4" /> Resolve
+            <CheckCircle className="w-4 h-4" />{" "}
+            {actionLoading === "resolve" ? "Resolving..." : "Resolve"}
           </button>
           <button
             type="button"
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            disabled={!canUpdateStatus}
+            onClick={onDismiss}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-60"
             style={{ fontSize: "0.82rem" }}
           >
-            <XCircle className="w-4 h-4" /> Dismiss
+            <XCircle className="w-4 h-4" />{" "}
+            {actionLoading === "dismiss" ? "Dismissing..." : "Dismiss"}
           </button>
         </div>
       </motion.div>
@@ -356,10 +380,32 @@ function ReportDetailsModal({
 export default function AdminReportsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [selectedReport, setSelectedReport] = useState<UserReport | null>(null);
   const [profileUser, setProfileUser] = useState<PlatformUser | null>(null);
-  const reports = USER_REPORTS;
-  const selectedReport = reports.find((report) => report.id === selectedReportId) ?? null;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notification, setNotification] = useState<NotificationMessage>(null);
+  const [reportAction, setReportAction] = useState<"resolve" | "dismiss" | null>(null);
+
+  const loadReports = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await getReports();
+      setReports(response.data.reports);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Reports could not be loaded.");
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
 
   const filteredReports = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -374,6 +420,67 @@ export default function AdminReportsPage() {
       return matchesSearch && (statusFilter === "all" || report.status === statusFilter);
     });
   }, [reports, search, statusFilter]);
+
+  const handleViewReport = async (reportId: string) => {
+    try {
+      const response = await getReportById(reportId);
+      setSelectedReport(response.data);
+      setProfileUser(null);
+    } catch (viewError) {
+      setNotification({
+        type: "error",
+        text:
+          viewError instanceof Error ? viewError.message : "Report details could not be loaded.",
+      });
+    }
+  };
+
+  const updateReportInState = (updatedReport: UserReport) => {
+    setReports((currentReports) =>
+      currentReports.map((report) => (report.id === updatedReport.id ? updatedReport : report))
+    );
+    setSelectedReport(updatedReport);
+  };
+
+  const handleResolveReport = async () => {
+    if (!selectedReport || reportAction) return;
+
+    setReportAction("resolve");
+
+    try {
+      const response = await resolveReport(selectedReport.id);
+      updateReportInState(response.data);
+      setNotification({ type: "success", text: response.message });
+    } catch (resolveError) {
+      setNotification({
+        type: "error",
+        text:
+          resolveError instanceof Error ? resolveError.message : "Report could not be resolved.",
+      });
+    } finally {
+      setReportAction(null);
+    }
+  };
+
+  const handleDismissReport = async () => {
+    if (!selectedReport || reportAction) return;
+
+    setReportAction("dismiss");
+
+    try {
+      const response = await dismissReport(selectedReport.id);
+      updateReportInState(response.data);
+      setNotification({ type: "success", text: response.message });
+    } catch (dismissError) {
+      setNotification({
+        type: "error",
+        text:
+          dismissError instanceof Error ? dismissError.message : "Report could not be dismissed.",
+      });
+    } finally {
+      setReportAction(null);
+    }
+  };
 
   return (
     <DashboardLayout role="admin" title="Reports" activeNav="reports">
@@ -428,7 +535,32 @@ export default function AdminReportsPage() {
           showZeroCounts={true}
         />
 
-        {filteredReports.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <motion.span
+              className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-red-500"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+            <p className="text-slate-400" style={{ fontSize: "0.82rem" }}>
+              Loading reports...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
+              <Flag className="w-9 h-9 text-slate-300" />
+            </div>
+            <div>
+              <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
+                {error}
+              </p>
+              <p className="text-slate-500 mt-1" style={{ fontSize: "0.85rem" }}>
+                Please try again later.
+              </p>
+            </div>
+          </div>
+        ) : filteredReports.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
               <Flag className="w-9 h-9 text-slate-300" />
@@ -449,7 +581,7 @@ export default function AdminReportsPage() {
                 <ReportCard
                   key={report.id}
                   report={report}
-                  onView={() => setSelectedReportId(report.id)}
+                  onView={() => handleViewReport(report.id)}
                 />
               ))}
             </AnimatePresence>
@@ -461,8 +593,11 @@ export default function AdminReportsPage() {
         {selectedReport && !profileUser && (
           <ReportDetailsModal
             report={selectedReport}
-            onClose={() => setSelectedReportId(null)}
+            actionLoading={reportAction}
+            onClose={() => setSelectedReport(null)}
             onViewReportedUser={() => setProfileUser(getReportedUser(selectedReport))}
+            onResolve={handleResolveReport}
+            onDismiss={handleDismissReport}
           />
         )}
 
@@ -475,6 +610,7 @@ export default function AdminReportsPage() {
           />
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }

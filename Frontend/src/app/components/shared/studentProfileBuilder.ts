@@ -23,6 +23,8 @@ type BasicProfileFields = {
 };
 
 type BasicProfileSource = BasicProfileFields & {
+  id?: string;
+  studentId?: string;
   name?: string;
   fullName?: string;
   initials?: string;
@@ -106,6 +108,13 @@ function getAvatar(profile: ProfileSource, user?: UserProfileSource | null) {
   if (profile && "avatar" in profile && profile.avatar) return profile.avatar;
 
   return user?.avatar || "";
+}
+
+function getProfileId(profile: ProfileSource) {
+  if (profile && "id" in profile && profile.id) return profile.id;
+  if (profile && "studentId" in profile && profile.studentId) return profile.studentId;
+
+  return undefined;
 }
 
 function getVerified(profile: ProfileSource, fallbackVerified?: boolean) {
@@ -228,6 +237,7 @@ export function buildStudentProfileViewProps({
 
   // The profile page accepts data from settings, applications, projects, and public profile APIs.
   return {
+    id: getProfileId(profile),
     name,
     initials:
       profile && "initials" in profile && profile.initials ? profile.initials : getInitials(name),

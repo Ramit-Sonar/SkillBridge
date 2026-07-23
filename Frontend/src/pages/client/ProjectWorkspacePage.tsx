@@ -1219,6 +1219,7 @@ export default function ProjectWorkspacePage() {
                   View Student Profile
                 </button>
                 <ReportUserAction
+                  reportedUserId={studentProfile.id}
                   reportedUserName={studentProfile.name}
                   reportedUserRole="student"
                 />

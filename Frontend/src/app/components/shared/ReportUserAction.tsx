@@ -1,7 +1,12 @@
 import { useId, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertCircle, CheckCircle2, Flag, X } from "lucide-react";
+import { AlertCircle, Flag, X } from "lucide-react";
 import { Notification, type NotificationMessage } from "./ui";
+import {
+  submitReport,
+  type ReportReason,
+  type SubmitReportPayload,
+} from "../../../services/reportService";
 
 const REPORT_REASONS = [
   "Scam / Fraud",
@@ -12,19 +17,8 @@ const REPORT_REASONS = [
   "Other",
 ] as const;
 
-type ReportReason = (typeof REPORT_REASONS)[number];
-
-type DummyReport = {
-  id: string;
-  reportedUserName: string;
-  reportedUserRole: string;
-  reason: ReportReason;
-  description: string;
-  submittedAt: string;
-  status: "pending";
-};
-
 type ReportUserActionProps = {
+  reportedUserId?: string;
   reportedUserName: string;
   reportedUserRole: "student" | "client" | "user";
   className?: string;
@@ -32,15 +26,17 @@ type ReportUserActionProps = {
 };
 
 function ReportUserModal({
+  reportedUserId,
   reportedUserName,
   reportedUserRole,
   onClose,
   onSubmitted,
 }: {
+  reportedUserId?: string;
   reportedUserName: string;
-  reportedUserRole: string;
+  reportedUserRole: SubmitReportPayload["reportedUserRole"];
   onClose: () => void;
-  onSubmitted: (report: DummyReport) => void;
+  onSubmitted: () => void;
 }) {
   const [reason, setReason] = useState<ReportReason | "">("");
   const [description, setDescription] = useState("");
@@ -67,17 +63,20 @@ function ReportUserModal({
     setBusy(true);
     setError("");
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    onSubmitted({
-      id: `dummy-report-${Date.now()}`,
-      reportedUserName,
-      reportedUserRole,
-      reason,
-      description: description.trim(),
-      submittedAt: new Date().toISOString(),
-      status: "pending",
-    });
+    try {
+      await submitReport({
+        reportedUserId,
+        reportedUserName,
+        reportedUserRole,
+        reason,
+        description: description.trim(),
+      });
+      onSubmitted();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Report could not be submitted.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -228,6 +227,7 @@ function ReportUserModal({
 }
 
 export function ReportUserAction({
+  reportedUserId,
   reportedUserName,
   reportedUserRole,
   className = "w-full flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-colors",
@@ -236,8 +236,7 @@ export function ReportUserAction({
   const [open, setOpen] = useState(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
-  const handleSubmitted = (report: DummyReport) => {
-    console.info("Dummy report submitted:", report);
+  const handleSubmitted = () => {
     setOpen(false);
     setNotification({
       type: "success",
@@ -259,6 +258,7 @@ export function ReportUserAction({
       <AnimatePresence>
         {open && (
           <ReportUserModal
+            reportedUserId={reportedUserId}
             reportedUserName={reportedUserName}
             reportedUserRole={reportedUserRole}
             onClose={() => setOpen(false)}

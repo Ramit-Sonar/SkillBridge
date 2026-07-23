@@ -203,7 +203,11 @@ export function ClientInformationCard({
       {showReportAction && (
         <>
           <div className="h-px bg-slate-200" />
-          <ReportUserAction reportedUserName={client.fullName} reportedUserRole="client" />
+          <ReportUserAction
+            reportedUserId={client.id}
+            reportedUserName={client.fullName}
+            reportedUserRole="client"
+          />
         </>
       )}
     </div>

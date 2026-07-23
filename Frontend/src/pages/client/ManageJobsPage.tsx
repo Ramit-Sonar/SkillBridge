@@ -620,6 +620,7 @@ function ApplicantWorkspaceModal({
                     application={applicationData}
                     action={
                       <ReportUserAction
+                        reportedUserId={profileData.id}
                         reportedUserName={applicant.name}
                         reportedUserRole="student"
                       />

@@ -44,6 +44,7 @@ export interface ProfileCertificate {
 }
 
 export interface ProfileViewProps {
+  id?: string;
   name: string;
   initials: string;
   headline: string;
@@ -622,7 +623,11 @@ export function StudentProfileView({
       <ProfileOverview profile={profile} />
       {showReport && (
         <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-4">
-          <ReportUserAction reportedUserName={profile.name} reportedUserRole="student" />
+          <ReportUserAction
+            reportedUserId={profile.id}
+            reportedUserName={profile.name}
+            reportedUserRole="student"
+          />
         </div>
       )}
       <About bio={profile.bio} />
