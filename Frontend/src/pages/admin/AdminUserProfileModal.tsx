@@ -60,6 +60,20 @@ const VERIFICATION_STATUS_CFG: Record<VerificationStatus, StatusBadgeConfig> = {
   },
 };
 
+function formatAdminDate(value?: string) {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function buildAdminStudentProfile(user: PlatformUser) {
   return buildStudentProfileViewProps({
     user: {
@@ -180,7 +194,7 @@ function AdminInformation({
         </AdminMetric>
         <AdminMetric label="Joined Date">
           <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
-            {user.joinedAt}
+            {formatAdminDate(user.joinedAt)}
           </p>
         </AdminMetric>
       </div>

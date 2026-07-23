@@ -1,9 +1,7 @@
 import type { PlatformUser } from "./adminService";
+import { getApiBaseUrl } from "./apiConfig";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
-  /\/users\/?$/,
-  ""
-);
+const API_URL = getApiBaseUrl();
 
 export type ReportReason =
   "Scam / Fraud" | "Fake Profile" | "Harassment" | "Spam" | "Inappropriate Behavior" | "Other";
@@ -82,7 +80,22 @@ const parseReportResponse = async <T>(
   response: Response,
   fallbackMessage: string
 ): Promise<ApiResponse<T>> => {
-  const data = (await response.json()) as ApiResponse<T>;
+  const contentType = response.headers.get("content-type") || "";
+  const responseText = await response.text();
+
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      `${fallbackMessage} The API returned a non-JSON response. Please make sure the backend server is running and VITE_API_URL points to the backend API.`
+    );
+  }
+
+  let data: ApiResponse<T>;
+
+  try {
+    data = JSON.parse(responseText) as ApiResponse<T>;
+  } catch {
+    throw new Error(fallbackMessage);
+  }
 
   if (!response.ok) {
     throw new Error(data.message || fallbackMessage);

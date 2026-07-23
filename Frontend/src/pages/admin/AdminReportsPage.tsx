@@ -12,7 +12,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
 import {
   FilterChipGroup,
   Notification,
@@ -147,7 +146,7 @@ function ReportCard({ report, onView }: { report: UserReport; onView: () => void
           </span>
           <span className="inline-flex items-center gap-1.5 text-slate-400">
             <Calendar className="w-3.5 h-3.5" />
-            <span style={{ fontSize: "0.7rem" }}>{report.submittedAt}</span>
+            <span style={{ fontSize: "0.7rem" }}>{formatReportDate(report.submittedAt)}</span>
           </span>
         </div>
       </div>
@@ -311,26 +310,6 @@ function ReportDetailsModal({
             <p className="text-slate-600 leading-relaxed mt-2" style={{ fontSize: "0.8rem" }}>
               {report.description}
             </p>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-black/[0.06] p-4">
-            <p className="text-slate-900 font-bold" style={{ fontSize: "0.82rem" }}>
-              Evidence
-            </p>
-            {report.attachments && report.attachments.length > 0 ? (
-              <div className="flex flex-col gap-2 mt-3">
-                {report.attachments.map((attachment) => (
-                  <FileAttachmentCard
-                    key={`${attachment.originalName}-${attachment.url}`}
-                    attachment={attachment}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate-400 mt-2" style={{ fontSize: "0.78rem" }}>
-                No evidence was attached.
-              </p>
-            )}
           </div>
         </div>
 

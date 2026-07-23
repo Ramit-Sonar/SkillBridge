@@ -66,7 +66,7 @@ const reportSchema = new Schema(
   { timestamps: true }
 );
 
-reportSchema.pre("validate", function (next) {
+reportSchema.pre("validate", function () {
   if (
     this.reporter &&
     this.reportedUser &&
@@ -95,7 +95,6 @@ reportSchema.pre("validate", function (next) {
     }
   }
 
-  next();
 });
 
 reportSchema.index({ reportedUser: 1, status: 1 });

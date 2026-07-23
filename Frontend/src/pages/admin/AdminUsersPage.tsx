@@ -63,6 +63,20 @@ const ROLE_CFG = {
   },
 };
 
+function formatAdminDate(value?: string) {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: () => void }) {
   const statusCfg = STATUS_CFG[user.status];
   const roleCfg = ROLE_CFG[user.role];
@@ -149,7 +163,7 @@ function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: 
             </span>
           </div>
           <p className="text-slate-900 font-semibold mt-1" style={{ fontSize: "0.72rem" }}>
-            {user.joinedAt}
+            {formatAdminDate(user.joinedAt)}
           </p>
         </div>
       </div>
