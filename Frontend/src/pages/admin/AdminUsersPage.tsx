@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Briefcase,
   Calendar,
+  CheckCircle,
   Eye,
   FileWarning,
   GraduationCap,
@@ -11,12 +12,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
-import {
-  PLATFORM_USERS,
-  type PlatformUser,
-  type UserStatus,
-  type VerificationStatus,
-} from "../../app/data/admin";
+import { PLATFORM_USERS, type PlatformUser, type UserStatus } from "../../app/data/admin";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const STATUS_CFG: Record<
@@ -32,33 +28,6 @@ const STATUS_CFG: Record<
   },
   suspended: {
     label: "Suspended",
-    color: "#DC2626",
-    bg: "#FEF2F2",
-    border: "#FECACA",
-    dot: "#EF4444",
-  },
-};
-
-const VERIFICATION_CFG: Record<
-  VerificationStatus,
-  { label: string; color: string; bg: string; border: string; dot: string }
-> = {
-  pending: {
-    label: "Pending Verification",
-    color: "#D97706",
-    bg: "#FFFBEB",
-    border: "#FDE68A",
-    dot: "#F59E0B",
-  },
-  approved: {
-    label: "Verified",
-    color: "#2563EB",
-    bg: "#EFF6FF",
-    border: "#BFDBFE",
-    dot: "#2563EB",
-  },
-  rejected: {
-    label: "Verification Rejected",
     color: "#DC2626",
     bg: "#FEF2F2",
     border: "#FECACA",
@@ -85,10 +54,10 @@ const ROLE_CFG = {
 
 function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: () => void }) {
   const statusCfg = STATUS_CFG[user.status];
-  const verificationCfg = VERIFICATION_CFG[user.verificationStatus];
   const roleCfg = ROLE_CFG[user.role];
   const RoleIcon = roleCfg.icon;
   const ReportsIcon = user.pendingReports > 0 ? FileWarning : ShieldCheck;
+  const isVerified = user.verificationStatus === "approved";
 
   return (
     <motion.div
@@ -111,9 +80,12 @@ function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: 
             )}
           </div>
           <div className="min-w-0">
-            <p className="text-slate-900 font-bold truncate" style={{ fontSize: "0.86rem" }}>
-              {user.name}
-            </p>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="text-slate-900 font-bold truncate" style={{ fontSize: "0.86rem" }}>
+                {user.name}
+              </p>
+              {isVerified && <CheckCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+            </div>
             <p className="text-slate-500 truncate" style={{ fontSize: "0.7rem" }}>
               {user.email}
             </p>
@@ -134,7 +106,6 @@ function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: 
         >
           <RoleIcon className="w-3 h-3" /> {roleCfg.label}
         </span>
-        <StatusBadge config={verificationCfg} style={{ fontSize: "0.58rem" }} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
