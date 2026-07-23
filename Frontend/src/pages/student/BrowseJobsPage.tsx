@@ -142,6 +142,7 @@ function mapSharedJobDetails(job: JobDetailData): SharedJobDetailData {
     postedAt: job.postedAt,
     recommended: job.recommended,
     attachedFiles: job.attachedFiles,
+    clientId: job.client?.id,
     clientName: job.client?.fullName,
     clientAvatar: job.client?.avatar,
     clientLocation: job.client?.location,

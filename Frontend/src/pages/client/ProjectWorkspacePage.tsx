@@ -153,6 +153,7 @@ function getJobStatus(status?: string): "open" | "closed" | "cancelled" {
 }
 
 type WorkspacePerson = {
+  id?: string;
   name: string;
   initials: string;
   avatar?: string;
@@ -185,10 +186,11 @@ type ProjectWorkspaceSnapshot = {
   canSubmitDeliverables: boolean;
 };
 
-function getProjectPerson(name?: string, avatar = ""): WorkspacePerson | null {
+function getProjectPerson(name?: string, avatar = "", id?: string): WorkspacePerson | null {
   if (!name) return null;
 
   return {
+    id,
     name,
     initials: getInitials(name),
     avatar,
@@ -210,10 +212,12 @@ function mapWorkspaceProject(
     role === "client"
       ? getProjectPerson(
           workspace.studentProfile?.name || partnerName,
-          workspace.studentProfile?.avatarUrl
+          workspace.studentProfile?.avatarUrl,
+          workspace.studentProfile?.id || partner?.id
         )
       : null;
-  const client = role === "student" ? getProjectPerson(partnerName, partnerAvatar) : null;
+  const client =
+    role === "student" ? getProjectPerson(partnerName, partnerAvatar, partner?.id) : null;
   const budget = Number(workspace.job.budget);
   const budgetLabel = Number.isNaN(budget) ? String(workspace.job.budget) : budget.toLocaleString();
 
@@ -245,6 +249,7 @@ function mapWorkspaceProject(
       postedAt: formatWorkspaceDate(workspace.job.postedAt),
       attachedFiles: workspace.job.attachedFiles,
       clientName: workspace.job.clientName,
+      clientId: workspace.job.clientId,
       clientInitials: workspace.job.clientInitials,
       clientAvatar: workspace.job.clientAvatar,
       clientLocation: workspace.job.clientLocation,
@@ -1226,6 +1231,7 @@ export default function ProjectWorkspacePage() {
               </div>
             ) : role === "student" && projectData.client ? (
               <ReportUserAction
+                reportedUserId={projectData.client.id}
                 reportedUserName={projectData.client.name}
                 reportedUserRole="client"
               />

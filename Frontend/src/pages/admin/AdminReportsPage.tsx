@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
+import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
 import {
   FilterChipGroup,
   Notification,
@@ -20,19 +21,14 @@ import {
   type NotificationMessage,
 } from "../../app/components/shared/ui";
 import {
-  CLIENT_KYC_REQUESTS,
-  PLATFORM_USERS,
-  VERIFICATION_REQUESTS,
-  type PlatformUser,
-  type ReportStatus,
-  type UserReport,
-} from "../../app/data/admin";
-import {
   dismissReport,
   getReportById,
   getReports,
   resolveReport,
+  type ReportStatus,
+  type UserReport,
 } from "../../services/reportService";
+import { getUserDetails, type PlatformUser } from "../../services/userManagementService";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const REPORT_STATUS_CFG: Record<
@@ -63,7 +59,10 @@ const REPORT_STATUS_CFG: Record<
 };
 
 function getRoleLabel(role: UserReport["reportedUserRole"]) {
-  return role === "student" ? "Student" : "Client";
+  if (role === "student") return "Student";
+  if (role === "client") return "Client";
+
+  return "User";
 }
 
 const ROLE_CFG = {
@@ -81,77 +80,14 @@ const ROLE_CFG = {
     border: "#DDD6FE",
     icon: Briefcase,
   },
+  user: {
+    label: "User",
+    color: "#64748B",
+    bg: "#F8FAFC",
+    border: "#CBD5E1",
+    icon: User,
+  },
 };
-
-function getReportedUser(report: UserReport): PlatformUser {
-  const matchedUser = PLATFORM_USERS.find(
-    (user) => user.id === report.reportedUserId || user.name === report.reportedUserName
-  );
-  const matchedStudentVerification = VERIFICATION_REQUESTS.find(
-    (student) => student.id === report.reportedUserId || student.name === report.reportedUserName
-  );
-  const matchedClientVerification = CLIENT_KYC_REQUESTS.find(
-    (client) => client.id === report.reportedUserId || client.name === report.reportedUserName
-  );
-
-  if (matchedUser) return matchedUser;
-
-  if (report.reportedUserRole === "student") {
-    return {
-      id: report.reportedUserId,
-      name: report.reportedUserName,
-      initials: report.reportedUserName
-        .split(" ")
-        .map((part) => part.charAt(0))
-        .join("")
-        .slice(0, 2)
-        .toUpperCase(),
-      email: "student.profile@skillbridge.local",
-      role: "student",
-      status: "active",
-      verificationStatus: matchedStudentVerification?.status ?? "pending",
-      joinedAt: "18 Apr 2026",
-      projectCount: 2,
-      reportsReceived: 1,
-      pendingReports: report.status === "pending" ? 1 : 0,
-      location: "Kathmandu, Nepal",
-      headline: "Student freelancer building practical project experience",
-      education: "Bachelor in Computer Science",
-      university: "Kathmandu University",
-      bio: "This student profile is dummy admin data prepared for report investigation screens.",
-      skills: [
-        { name: "React", verified: true },
-        { name: "Documentation", verified: false },
-        { name: "Communication", verified: true },
-      ],
-    };
-  }
-
-  return {
-    id: report.reportedUserId,
-    name: report.reportedUserName,
-    initials: report.reportedUserName
-      .split(" ")
-      .map((part) => part.charAt(0))
-      .join("")
-      .slice(0, 2)
-      .toUpperCase(),
-    email: "client.profile@skillbridge.local",
-    role: "client",
-    status: "active",
-    verificationStatus: matchedClientVerification?.status ?? "pending",
-    joinedAt: "9 May 2026",
-    projectCount: 3,
-    reportsReceived: 1,
-    pendingReports: report.status === "pending" ? 1 : 0,
-    location: "Lalitpur, Nepal",
-    companyName: "BrandWorks Studio",
-    website: "brandworks.com.np",
-    bio: "This client profile is dummy admin data prepared for report investigation screens.",
-    jobsPosted: 5,
-    projectsCompleted: 3,
-  };
-}
 
 function ReportCard({ report, onView }: { report: UserReport; onView: () => void }) {
   const cfg = REPORT_STATUS_CFG[report.status];
@@ -236,6 +172,20 @@ function DetailBlock({ label, children }: { label: string; children: React.React
       <div className="mt-1">{children}</div>
     </div>
   );
+}
+
+function formatReportDate(date?: string | null) {
+  if (!date) return "";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return date;
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function ReportDetailsModal({
@@ -327,9 +277,30 @@ function ReportDetailsModal({
             </DetailBlock>
             <DetailBlock label="Submitted Date">
               <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
-                {report.submittedAt}
+                {formatReportDate(report.submittedAt)}
               </p>
             </DetailBlock>
+            {report.handledBy && (
+              <DetailBlock label="Handled By">
+                <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+                  {report.handledBy.fullName}
+                </p>
+              </DetailBlock>
+            )}
+            {report.resolvedAt && (
+              <DetailBlock label="Resolved Date">
+                <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+                  {formatReportDate(report.resolvedAt)}
+                </p>
+              </DetailBlock>
+            )}
+            {report.dismissedAt && (
+              <DetailBlock label="Dismissed Date">
+                <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+                  {formatReportDate(report.dismissedAt)}
+                </p>
+              </DetailBlock>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-black/[0.06] p-4">
@@ -339,6 +310,26 @@ function ReportDetailsModal({
             <p className="text-slate-600 leading-relaxed mt-2" style={{ fontSize: "0.8rem" }}>
               {report.description}
             </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-black/[0.06] p-4">
+            <p className="text-slate-900 font-bold" style={{ fontSize: "0.82rem" }}>
+              Evidence
+            </p>
+            {report.attachments && report.attachments.length > 0 ? (
+              <div className="flex flex-col gap-2 mt-3">
+                {report.attachments.map((attachment) => (
+                  <FileAttachmentCard
+                    key={`${attachment.originalName}-${attachment.url}`}
+                    attachment={attachment}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 mt-2" style={{ fontSize: "0.78rem" }}>
+                No evidence was attached.
+              </p>
+            )}
           </div>
         </div>
 
@@ -431,6 +422,23 @@ export default function AdminReportsPage() {
         type: "error",
         text:
           viewError instanceof Error ? viewError.message : "Report details could not be loaded.",
+      });
+    }
+  };
+
+  const handleViewReportedUser = async () => {
+    if (!selectedReport) return;
+
+    try {
+      const response = await getUserDetails(selectedReport.reportedUserId);
+      setProfileUser(response.data);
+    } catch (profileError) {
+      setNotification({
+        type: "error",
+        text:
+          profileError instanceof Error
+            ? profileError.message
+            : "User profile could not be loaded.",
       });
     }
   };
@@ -595,7 +603,7 @@ export default function AdminReportsPage() {
             report={selectedReport}
             actionLoading={reportAction}
             onClose={() => setSelectedReport(null)}
-            onViewReportedUser={() => setProfileUser(getReportedUser(selectedReport))}
+            onViewReportedUser={handleViewReportedUser}
             onResolve={handleResolveReport}
             onDismiss={handleDismissReport}
           />
@@ -604,6 +612,7 @@ export default function AdminReportsPage() {
         {profileUser && (
           <AdminUserProfileModal
             user={profileUser}
+            onUserUpdated={setProfileUser}
             onClose={() => {
               setProfileUser(null);
             }}

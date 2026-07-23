@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Briefcase,
@@ -11,8 +11,19 @@ import {
   Users,
 } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
-import { PLATFORM_USERS, type PlatformUser, type UserStatus } from "../../app/data/admin";
+import {
+  FilterChipGroup,
+  Notification,
+  SearchInput,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
+import {
+  getUserDetails,
+  getUsers,
+  type PlatformUser,
+  type UserStatus,
+} from "../../services/userManagementService";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const STATUS_CFG: Record<
@@ -159,9 +170,30 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "student" | "client">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | UserStatus>("all");
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const users = PLATFORM_USERS;
-  const selectedUser = users.find((user) => user.id === selectedUserId) ?? null;
+  const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notification, setNotification] = useState<NotificationMessage>(null);
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await getUsers();
+      setUsers(response.data.users);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Users could not be loaded.");
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const filtered = users.filter((u) => {
     const q = search.toLowerCase();
@@ -173,6 +205,28 @@ export default function AdminUsersPage() {
       (statusFilter === "all" || u.status === statusFilter)
     );
   });
+
+  const handleViewDetails = async (userId: string) => {
+    try {
+      const response = await getUserDetails(userId);
+      setSelectedUser(response.data);
+    } catch (detailsError) {
+      setNotification({
+        type: "error",
+        text:
+          detailsError instanceof Error
+            ? detailsError.message
+            : "User details could not be loaded.",
+      });
+    }
+  };
+
+  const handleUserUpdated = (updatedUser: PlatformUser) => {
+    setUsers((currentUsers) =>
+      currentUsers.map((user) => (user.id === updatedUser.id ? updatedUser : user))
+    );
+    setSelectedUser(updatedUser);
+  };
 
   return (
     <DashboardLayout role="admin" title="Users" activeNav="users">
@@ -221,7 +275,32 @@ export default function AdminUsersPage() {
           />
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <motion.span
+              className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+            <p className="text-slate-400" style={{ fontSize: "0.82rem" }}>
+              Loading users...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
+              <Users className="w-9 h-9 text-slate-300" />
+            </div>
+            <div>
+              <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
+                {error}
+              </p>
+              <p className="text-slate-500 mt-1" style={{ fontSize: "0.85rem" }}>
+                Please try again later.
+              </p>
+            </div>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
               <Users className="w-9 h-9 text-slate-300" />
@@ -245,7 +324,7 @@ export default function AdminUsersPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.05 }}
                 >
-                  <UserCard user={user} onViewDetails={() => setSelectedUserId(user.id)} />
+                  <UserCard user={user} onViewDetails={() => handleViewDetails(user.id)} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -255,9 +334,14 @@ export default function AdminUsersPage() {
 
       <AnimatePresence>
         {selectedUser && (
-          <AdminUserProfileModal user={selectedUser} onClose={() => setSelectedUserId(null)} />
+          <AdminUserProfileModal
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+            onUserUpdated={handleUserUpdated}
+          />
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }

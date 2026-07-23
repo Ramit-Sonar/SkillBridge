@@ -1,10 +1,14 @@
 import { Router } from "express";
 import {
+  activateAdminUser,
   createReport,
   dismissReport,
+  getAdminUserById,
+  getAdminUsers,
   getReportById,
   getReports,
   resolveReport,
+  suspendAdminUser,
 } from "../controllers/report.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
@@ -33,6 +37,24 @@ router
   .route("/")
   .post(verifyJWT, reportSubmitterRoles, reportAttachmentUpload, createReport)
   .get(verifyJWT, adminRoles, getReports);
+
+// GET /api/v1/reports/admin/users -> getAdminUsers powers admin user cards.
+router.route("/admin/users").get(verifyJWT, adminRoles, getAdminUsers);
+
+// GET /api/v1/reports/admin/users/:userId -> getAdminUserById powers shared profile modals.
+router
+  .route("/admin/users/:userId")
+  .get(verifyJWT, adminRoles, getAdminUserById);
+
+// PATCH /api/v1/reports/admin/users/:userId/suspend -> suspendAdminUser disables an account.
+router
+  .route("/admin/users/:userId/suspend")
+  .patch(verifyJWT, adminRoles, suspendAdminUser);
+
+// PATCH /api/v1/reports/admin/users/:userId/activate -> activateAdminUser restores an account.
+router
+  .route("/admin/users/:userId/activate")
+  .patch(verifyJWT, adminRoles, activateAdminUser);
 
 // GET /api/v1/reports/:reportId -> getReportById returns one admin report detail.
 router.route("/:reportId").get(verifyJWT, adminRoles, getReportById);

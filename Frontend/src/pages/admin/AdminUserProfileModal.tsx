@@ -4,8 +4,20 @@ import { AlertTriangle, Ban, UserCheck, X } from "lucide-react";
 import { ClientInformationCard } from "../../app/components/shared/ClientInformationCard";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
-import { ConfirmDialog, StatusBadge, type StatusBadgeConfig } from "../../app/components/shared/ui";
-import type { PlatformUser, UserStatus, VerificationStatus } from "../../app/data/admin";
+import {
+  ConfirmDialog,
+  Notification,
+  StatusBadge,
+  type NotificationMessage,
+  type StatusBadgeConfig,
+} from "../../app/components/shared/ui";
+import {
+  activateUser,
+  suspendUser,
+  type PlatformUser,
+  type UserStatus,
+  type VerificationStatus,
+} from "../../services/userManagementService";
 
 const ACCOUNT_STATUS_CFG: Record<UserStatus, StatusBadgeConfig> = {
   active: {
@@ -55,6 +67,7 @@ function buildAdminStudentProfile(user: PlatformUser) {
       avatar: user.avatar,
     },
     profile: {
+      id: user.id,
       fullName: user.name,
       initials: user.initials,
       avatar: user.avatar,
@@ -67,24 +80,32 @@ function buildAdminStudentProfile(user: PlatformUser) {
         status: user.verificationStatus,
         verifiedAt: user.verificationStatus === "approved" ? user.joinedAt : null,
       },
-      statistics: {
-        averageRating: 0,
-        reviewCount: 0,
-        ratingDistribution: {
-          1: 0,
-          2: 0,
-          3: 0,
-          4: 0,
-          5: 0,
-        },
-        completedProjectsCount: user.projectCount,
-      },
-      completedProjects: [],
-      latestReviews: [],
+      github: user.github,
+      linkedin: user.linkedin,
+      portfolio: user.portfolio,
+      statistics: user.ratingSummary
+        ? {
+            ...user.ratingSummary,
+            completedProjectsCount: user.projectCount,
+          }
+        : {
+            averageRating: 0,
+            reviewCount: 0,
+            ratingDistribution: {
+              1: 0,
+              2: 0,
+              3: 0,
+              4: 0,
+              5: 0,
+            },
+            completedProjectsCount: user.projectCount,
+          },
+      completedProjects: user.completedProjects ?? [],
+      latestReviews: user.latestReviews ?? [],
     },
     verified: user.verificationStatus === "approved",
-    completedProjects: [],
-    reviews: [],
+    completedProjects: user.completedProjects ?? [],
+    reviews: user.latestReviews ?? [],
   });
 }
 
@@ -99,9 +120,33 @@ function AdminMetric({ label, children }: { label: string; children: React.React
   );
 }
 
-function AdminInformation({ user }: { user: PlatformUser }) {
+function AdminInformation({
+  user,
+  onUserUpdated,
+  onNotify,
+}: {
+  user: PlatformUser;
+  onUserUpdated: (user: PlatformUser) => void;
+  onNotify: (message: NotificationMessage) => void;
+}) {
   const [confirmAction, setConfirmAction] = useState<"suspend" | "activate" | null>(null);
   const isActive = user.status === "active";
+
+  const handleAccountStatusChange = async (action: "suspend" | "activate") => {
+    try {
+      const response =
+        action === "suspend" ? await suspendUser(user.id) : await activateUser(user.id);
+
+      onUserUpdated(response.data);
+      onNotify({ type: "success", text: response.message });
+      setConfirmAction(null);
+    } catch (error) {
+      onNotify({
+        type: "error",
+        text: error instanceof Error ? error.message : "User status could not be updated.",
+      });
+    }
+  };
 
   return (
     <section className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
@@ -165,13 +210,12 @@ function AdminInformation({ user }: { user: PlatformUser }) {
             body={
               <>
                 Are you sure you want to suspend{" "}
-                <strong className="text-slate-900">{user.name}</strong>? This is a frontend-only
-                confirmation for now.
+                <strong className="text-slate-900">{user.name}</strong>?
               </>
             }
             confirmLabel="Suspend User"
             confirmColor="#DC2626"
-            onConfirm={() => setConfirmAction(null)}
+            onConfirm={() => handleAccountStatusChange("suspend")}
             onClose={() => setConfirmAction(null)}
             icon={AlertTriangle}
             iconBg="#FEF2F2"
@@ -186,13 +230,12 @@ function AdminInformation({ user }: { user: PlatformUser }) {
             body={
               <>
                 Are you sure you want to activate{" "}
-                <strong className="text-slate-900">{user.name}</strong>? This is a frontend-only
-                confirmation for now.
+                <strong className="text-slate-900">{user.name}</strong>?
               </>
             }
             confirmLabel="Activate User"
             confirmColor="#059669"
-            onConfirm={() => setConfirmAction(null)}
+            onConfirm={() => handleAccountStatusChange("activate")}
             onClose={() => setConfirmAction(null)}
             icon={UserCheck}
             iconBg="#ECFDF5"
@@ -208,11 +251,18 @@ function AdminInformation({ user }: { user: PlatformUser }) {
 export function AdminUserProfileModal({
   user,
   onClose,
+  onUserUpdated,
 }: {
   user: PlatformUser;
   onClose: () => void;
+  onUserUpdated?: (user: PlatformUser) => void;
 }) {
   const isStudent = user.role === "student";
+  const [notification, setNotification] = useState<NotificationMessage>(null);
+
+  const handleUserUpdated = (updatedUser: PlatformUser) => {
+    onUserUpdated?.(updatedUser);
+  };
 
   return (
     <motion.div
@@ -264,6 +314,7 @@ export function AdminUserProfileModal({
             ) : (
               <ClientInformationCard
                 client={{
+                  id: user.id,
                   fullName: user.name,
                   avatar: user.avatar,
                   location: user.location,
@@ -277,15 +328,21 @@ export function AdminUserProfileModal({
                   statistics: {
                     jobsPosted: user.jobsPosted,
                     projectsCompleted: user.projectsCompleted,
+                    activeProjects: user.activeProjects,
                   },
                 }}
               />
             )}
 
-            <AdminInformation user={user} />
+            <AdminInformation
+              user={user}
+              onUserUpdated={handleUserUpdated}
+              onNotify={setNotification}
+            />
           </div>
         </div>
       </motion.div>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </motion.div>
   );
 }

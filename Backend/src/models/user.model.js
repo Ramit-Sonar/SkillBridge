@@ -50,6 +50,12 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    accountStatus: {
+      type: String,
+      enum: ["active", "suspended"],
+      default: "active",
+    },
+
     refreshToken: {
       type: String,
       default: "",
@@ -71,7 +77,8 @@ const userSchema = new mongoose.Schema(
 
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
-  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$")) return;
+  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$"))
+    return;
 
   // Password hashing is centralized here for user creation and password resets.
   this.password = await bcrypt.hash(this.password, 10);
@@ -82,30 +89,30 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 };
 
 userSchema.methods.generateAccessToken = function () {
-    return jwt.sign(
-        {
-            _id: this._id,
-            email: this.email,
-            role: this.role
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
-        }
-    );
+  return jwt.sign(
+    {
+      _id: this._id,
+      email: this.email,
+      role: this.role,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+    }
+  );
 };
 
 userSchema.methods.generateRefreshToken = function () {
-    return jwt.sign(
-        {
-            _id: this._id,
-            nonce: crypto.randomUUID()
-        },
-        process.env.REFRESH_TOKEN_SECRET,
-        {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
-        }
-    );
+  return jwt.sign(
+    {
+      _id: this._id,
+      nonce: crypto.randomUUID(),
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+    }
+  );
 };
 
 userSchema.methods.generatePasswordResetToken = function () {
@@ -168,7 +175,8 @@ const pendingRegistrationSchema = new mongoose.Schema(
 
 pendingRegistrationSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
-  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$")) return;
+  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$"))
+    return;
 
   this.password = await bcrypt.hash(this.password, 10);
 });

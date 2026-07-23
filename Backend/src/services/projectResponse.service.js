@@ -264,6 +264,7 @@ export const buildProjectWorkspace = ({
           ...(viewerRole === "student" && project.client
             ? {
                 clientName: project.client.fullName,
+                clientId: project.client._id?.toString(),
                 clientInitials: getInitials(project.client.fullName),
                 clientAvatar: project.client.avatar || "",
                 clientLocation: partnerProfile?.location || "",

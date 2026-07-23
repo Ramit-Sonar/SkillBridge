@@ -112,6 +112,7 @@ export type ProjectWorkspaceJob = {
   complexity?: "small" | "medium";
   postedAt: string;
   attachedFiles: JobAttachment[];
+  clientId?: string;
   clientName?: string;
   clientInitials?: string;
   clientAvatar?: string;

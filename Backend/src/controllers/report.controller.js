@@ -5,7 +5,12 @@ import {
   REPORT_STATUSES,
 } from "../models/report.model.js";
 import { User } from "../models/user.model.js";
-import { buildReportSummary } from "../services/report.service.js";
+import {
+  buildReportSummary,
+  getAdminUserDetailsData,
+  getAdminUsersData,
+  updateAdminUserAccountStatus,
+} from "../services/report.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
@@ -18,9 +23,18 @@ import { removeTempFiles } from "../utils/tempFile.js";
  */
 const populateReportUsers = (query) =>
   query
-    .populate("reporter", "_id fullName email role avatar profileCompleted")
-    .populate("reportedUser", "_id fullName email role avatar profileCompleted")
-    .populate("handledBy", "_id fullName email role avatar profileCompleted");
+    .populate(
+      "reporter",
+      "_id fullName email role avatar accountStatus profileCompleted"
+    )
+    .populate(
+      "reportedUser",
+      "_id fullName email role avatar accountStatus profileCompleted"
+    )
+    .populate(
+      "handledBy",
+      "_id fullName email role avatar accountStatus profileCompleted"
+    );
 
 const escapeSearchRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -276,10 +290,83 @@ const dismissReport = asyncHandler(async (req, res) => {
     );
 });
 
+const getAdminUsers = asyncHandler(async (req, res) => {
+  const users = await getAdminUsersData();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalUsers: users.length,
+        users,
+      },
+      "Users fetched successfully"
+    )
+  );
+});
+
+const getAdminUserById = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const user = await getAdminUserDetailsData(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User fetched successfully"));
+});
+
+const suspendAdminUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const user = await updateAdminUserAccountStatus(userId, "suspended");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User suspended successfully"));
+});
+
+const activateAdminUser = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const user = await updateAdminUserAccountStatus(userId, "active");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User activated successfully"));
+});
+
 export {
+  activateAdminUser,
   createReport,
   dismissReport,
   getReportById,
   getReports,
+  getAdminUserById,
+  getAdminUsers,
   resolveReport,
+  suspendAdminUser,
 };
