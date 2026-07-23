@@ -6,6 +6,7 @@ const mockSelect = (value) => ({
 
 const findByIdMock = jest.fn();
 const findOneMock = jest.fn();
+const findVerificationMock = jest.fn();
 const countDocumentsMock = jest.fn();
 
 jest.unstable_mockModule("../../src/models/user.model.js", () => ({
@@ -23,6 +24,12 @@ jest.unstable_mockModule("../../src/models/clientProfile.model.js", () => ({
 jest.unstable_mockModule("../../src/models/job.model.js", () => ({
   Job: {
     countDocuments: countDocumentsMock,
+  },
+}));
+
+jest.unstable_mockModule("../../src/models/verification.model.js", () => ({
+  Verification: {
+    findOne: findVerificationMock,
   },
 }));
 
@@ -54,12 +61,17 @@ describe("buildClientSummary", () => {
         bio: "We build useful software products.",
       })
     );
+    findVerificationMock.mockReturnValue(mockSelect(null));
     countDocumentsMock.mockResolvedValue(8);
 
     const summary = await buildClientSummary(userId);
 
     expect(findByIdMock).toHaveBeenCalledWith(userId);
     expect(findOneMock).toHaveBeenCalledWith({ user: userId });
+    expect(findVerificationMock).toHaveBeenCalledWith({
+      user: userId,
+      type: "client",
+    });
     expect(countDocumentsMock).toHaveBeenCalledWith({ client: userId });
     expect(summary).toEqual({
       id: userId,

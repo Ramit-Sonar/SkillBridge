@@ -6,11 +6,13 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/u
 /**
  * Verification service keeps student/client KYC submissions and admin review calls together.
  */
+export type VerificationStatus = "pending" | "approved" | "rejected";
+
 export type VerificationData = {
   _id?: string;
   user?: string;
   type?: "student" | "client";
-  status?: "pending" | "approved" | "rejected";
+  status?: VerificationStatus;
   collegeName?: string;
   studentId?: string;
   collegeIdCard?: string;
@@ -40,7 +42,7 @@ export type AdminStudentVerification = {
   email: string;
   role: "Student";
   avatar?: string;
-  status: "pending" | "approved" | "rejected";
+  status: VerificationStatus;
   collegeName: string;
   studentId: string;
   collegeIdCard: string;
@@ -54,7 +56,7 @@ export type AdminClientVerification = {
   initials: string;
   email: string;
   role: "Client";
-  status: "pending" | "approved" | "rejected";
+  status: VerificationStatus;
   legalName: string;
   phone: string;
   companyName: string;

@@ -17,7 +17,6 @@ import {
   StatusBadge,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
-import { type VerificationStatus } from "../../app/data/admin";
 import {
   approveVerification,
   getAdminClientVerifications,
@@ -25,6 +24,7 @@ import {
   rejectVerification,
   type AdminClientVerification,
   type AdminStudentVerification,
+  type VerificationStatus,
 } from "../../services/verificationService";
 import {
   GraduationCap,
