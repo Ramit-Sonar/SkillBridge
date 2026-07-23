@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import {
+  getAdminDashboardSummaryData,
   getAdminUserDetailsData,
   getAdminUsersData,
   updateAdminUserAccountStatus,
@@ -24,6 +25,16 @@ const getAdminUsers = asyncHandler(async (req, res) => {
       "Users fetched successfully"
     )
   );
+});
+
+const getAdminDashboardSummary = asyncHandler(async (req, res) => {
+  const summary = await getAdminDashboardSummaryData();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, summary, "Admin dashboard fetched successfully")
+    );
 });
 
 const getAdminUserById = asyncHandler(async (req, res) => {
@@ -80,4 +91,10 @@ const activateAdminUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User activated successfully"));
 });
 
-export { activateAdminUser, getAdminUserById, getAdminUsers, suspendAdminUser };
+export {
+  activateAdminUser,
+  getAdminDashboardSummary,
+  getAdminUserById,
+  getAdminUsers,
+  suspendAdminUser,
+};

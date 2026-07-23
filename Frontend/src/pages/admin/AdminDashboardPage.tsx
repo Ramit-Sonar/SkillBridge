@@ -1,12 +1,17 @@
 ﻿import { useNavigate } from "react-router";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { VERIFICATION_REQUESTS, CLIENT_KYC_REQUESTS, PLATFORM_USERS } from "../../app/data/admin";
 import { GraduationCap, Users, ArrowRight, Clock, CheckCircle, Folder } from "lucide-react";
 import { WelcomeCard } from "../../app/components/shared/WelcomeCard";
 import { StatGrid } from "../../app/components/shared/StatCard";
 import { QuickActionsGrid } from "../../app/components/shared/QuickActionCard";
 import { SectionCard } from "../../app/components/shared/SectionCard";
+import {
+  getAdminDashboardSummary,
+  type AdminDashboardSummary,
+  type AdminPendingTask,
+} from "../../services/adminService";
 
 // Admin shortcuts are kept local because navigation is the only behavior here.
 
@@ -34,28 +39,65 @@ function QuickActionsSection() {
   return <QuickActionsGrid actions={actions} columns="sm:grid-cols-2" />;
 }
 
-// Pending tasks still read from local fixtures until this dashboard is API-backed.
+const emptyDashboardSummary: AdminDashboardSummary = {
+  pendingVerifications: 0,
+  totalStudents: 0,
+  totalClients: 0,
+  activeProjects: 0,
+  pendingTasks: [],
+};
 
-function PendingTasks() {
+function formatDashboardDate(value?: string) {
+  if (!value) return "Not submitted";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function PendingTasks({
+  tasks,
+  loading,
+  error,
+}: {
+  tasks: AdminPendingTask[];
+  loading: boolean;
+  error: string;
+}) {
   const navigate = useNavigate();
-  const tasks = VERIFICATION_REQUESTS.filter((v) => v.status === "pending")
-    .slice(0, 5)
-    .map((v) => ({
-      id: v.id,
-      icon: Clock,
-      iconColor: "#D97706",
-      iconBg: "#FEF3C7",
-      text: `${v.name} submitted a student verification request`,
-      time: v.submittedAt,
-      path: "/admin/students",
-    }));
 
   return (
     <SectionCard
       title="Pending Tasks"
       subtitle={`${tasks.length} item${tasks.length !== 1 ? "s" : ""} require your attention`}
     >
-      {tasks.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <motion.span
+            className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-600"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-slate-400" style={{ fontSize: "0.82rem" }}>
+            Loading dashboard...
+          </p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <Clock className="w-5 h-5 text-red-500" />
+          </div>
+          <p className="text-slate-500" style={{ fontSize: "0.82rem" }}>
+            {error}
+          </p>
+        </div>
+      ) : tasks.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
             <CheckCircle className="w-5 h-5 text-emerald-600" />
@@ -67,7 +109,6 @@ function PendingTasks() {
       ) : (
         <div className="flex flex-col gap-0">
           {tasks.map((task, i) => {
-            const Icon = task.icon;
             const isLast = i === tasks.length - 1;
             return (
               <motion.div
@@ -78,9 +119,9 @@ function PendingTasks() {
               >
                 <div
                   className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ background: task.iconBg }}
+                  style={{ background: "#FEF3C7" }}
                 >
-                  <Icon className="w-3.5 h-3.5" style={{ color: task.iconColor }} />
+                  <Clock className="w-3.5 h-3.5" style={{ color: "#D97706" }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p
@@ -90,7 +131,7 @@ function PendingTasks() {
                     {task.text}
                   </p>
                   <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.68rem" }}>
-                    {task.time}
+                    {formatDashboardDate(task.submittedAt)}
                   </p>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-300 shrink-0 mt-1" />
@@ -105,16 +146,34 @@ function PendingTasks() {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [summary, setSummary] = useState<AdminDashboardSummary>(emptyDashboardSummary);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const studentPending = VERIFICATION_REQUESTS.filter((v) => v.status === "pending").length;
-  const clientPending = CLIENT_KYC_REQUESTS.filter((c) => c.status === "pending").length;
-  const pending = studentPending + clientPending;
-  const students = PLATFORM_USERS.filter((u) => u.role === "student").length;
-  const clients = PLATFORM_USERS.filter((u) => u.role === "client").length;
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await getAdminDashboardSummary();
+      setSummary(response.data);
+    } catch (dashboardError) {
+      setSummary(emptyDashboardSummary);
+      setError(
+        dashboardError instanceof Error ? dashboardError.message : "Dashboard could not be loaded."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const stats = [
     {
-      value: pending,
+      value: summary.pendingVerifications,
       label: "Pending Verifications",
       icon: GraduationCap,
       color: "#D97706",
@@ -122,7 +181,7 @@ export default function AdminDashboard() {
       onClick: () => navigate("/admin/students"),
     },
     {
-      value: students,
+      value: summary.totalStudents,
       label: "Total Students",
       icon: Users,
       color: "#2563EB",
@@ -130,7 +189,7 @@ export default function AdminDashboard() {
       onClick: () => navigate("/admin/users"),
     },
     {
-      value: clients,
+      value: summary.totalClients,
       label: "Total Clients",
       icon: Folder,
       color: "#7C3AED",
@@ -138,7 +197,7 @@ export default function AdminDashboard() {
       onClick: () => navigate("/admin/users"),
     },
     {
-      value: 1,
+      value: summary.activeProjects,
       label: "Active Projects",
       icon: CheckCircle,
       color: "#059669",
@@ -163,7 +222,7 @@ export default function AdminDashboard() {
         />
         <StatGrid stats={stats} />
         <QuickActionsSection />
-        <PendingTasks />
+        <PendingTasks tasks={summary.pendingTasks} loading={loading} error={error} />
       </div>
     </DashboardLayout>
   );

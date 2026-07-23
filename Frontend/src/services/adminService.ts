@@ -48,6 +48,24 @@ export type UsersResponse = {
   users: PlatformUser[];
 };
 
+export type AdminPendingTask = {
+  id: string;
+  name: string;
+  initials: string;
+  type: "student" | "client";
+  text: string;
+  submittedAt: string;
+  path: string;
+};
+
+export type AdminDashboardSummary = {
+  pendingVerifications: number;
+  totalStudents: number;
+  totalClients: number;
+  activeProjects: number;
+  pendingTasks: AdminPendingTask[];
+};
+
 const parseAdminResponse = async <T>(
   response: Response,
   fallbackMessage: string
@@ -59,6 +77,15 @@ const parseAdminResponse = async <T>(
   }
 
   return data;
+};
+
+export const getAdminDashboardSummary = async (): Promise<ApiResponse<AdminDashboardSummary>> => {
+  const response = await fetch(`${API_URL}/admin/dashboard`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return parseAdminResponse<AdminDashboardSummary>(response, "Failed to fetch admin dashboard.");
 };
 
 export const getUsers = async (): Promise<ApiResponse<UsersResponse>> => {

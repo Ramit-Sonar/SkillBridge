@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   activateAdminUser,
+  getAdminDashboardSummary,
   getAdminUserById,
   getAdminUsers,
   suspendAdminUser,
@@ -10,6 +11,9 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
 const adminRoles = authorizeRoles("admin");
+
+// GET /api/v1/admin/dashboard -> getAdminDashboardSummary powers admin overview cards.
+router.route("/dashboard").get(verifyJWT, adminRoles, getAdminDashboardSummary);
 
 // GET /api/v1/admin/users -> getAdminUsers powers admin user cards.
 router.route("/users").get(verifyJWT, adminRoles, getAdminUsers);

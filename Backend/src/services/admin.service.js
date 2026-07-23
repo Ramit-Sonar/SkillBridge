@@ -172,6 +172,53 @@ const getClientStatsMap = async (clientIds) => {
   return statsMap;
 };
 
+const buildPendingTaskSummary = (verification) => {
+  const user = verification.user || {};
+  const fullName = user.fullName || "Unknown User";
+  const roleLabel =
+    verification.type === "client" ? "client KYC" : "student verification";
+
+  return {
+    id: verification._id.toString(),
+    name: fullName,
+    initials: getInitials(fullName),
+    type: verification.type,
+    text: `${fullName} submitted a ${roleLabel} request`,
+    submittedAt: verification.submittedAt || verification.createdAt,
+    path: verification.type === "client" ? "/admin/clients" : "/admin/students",
+  };
+};
+
+const getAdminDashboardSummaryData = async () => {
+  const [
+    pendingVerifications,
+    pendingVerificationCount,
+    studentCount,
+    clientCount,
+    activeProjectCount,
+  ] = await Promise.all([
+    Verification.find({ status: "pending" })
+      .populate("user", "fullName avatar role")
+      .sort({ submittedAt: -1, createdAt: -1 })
+      .limit(5)
+      .lean(),
+    Verification.countDocuments({ status: "pending" }),
+    User.countDocuments({ role: "student" }),
+    User.countDocuments({ role: "client" }),
+    Project.countDocuments({ status: { $ne: "completed" } }),
+  ]);
+
+  const pendingTasks = pendingVerifications.map(buildPendingTaskSummary);
+
+  return {
+    pendingVerifications: pendingVerificationCount,
+    totalStudents: studentCount,
+    totalClients: clientCount,
+    activeProjects: activeProjectCount,
+    pendingTasks,
+  };
+};
+
 const buildAdminUserSummary = ({
   user,
   verification,
@@ -328,6 +375,7 @@ const updateAdminUserAccountStatus = async (userId, accountStatus) => {
 };
 
 export {
+  getAdminDashboardSummaryData,
   getAdminUserDetailsData,
   getAdminUsersData,
   updateAdminUserAccountStatus,
