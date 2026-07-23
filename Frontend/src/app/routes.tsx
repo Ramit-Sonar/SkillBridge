@@ -5,6 +5,7 @@ import AdminLoginPage from "../pages/auth/AdminLoginPage";
 import AdminDashboard from "../pages/admin/AdminDashboardPage";
 import AdminVerificationPage from "../pages/admin/AdminVerificationPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
+import AdminReportsPage from "../pages/admin/AdminReportsPage";
 import AdminSettingsPage from "../pages/admin/AdminSettingsPage";
 import Register from "../pages/auth/Register";
 import PublicProfilePage from "../pages/public/PublicProfilePage";
@@ -203,6 +204,14 @@ export const router = createBrowserRouter([
     element: (
       <AuthenticationGuard allowedRole="admin">
         <AdminJobsPage />
+      </AuthenticationGuard>
+    ),
+  },
+  {
+    path: "admin/reports",
+    element: (
+      <AuthenticationGuard allowedRole="admin">
+        <AdminReportsPage />
       </AuthenticationGuard>
     ),
   },

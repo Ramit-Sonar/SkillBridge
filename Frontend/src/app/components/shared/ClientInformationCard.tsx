@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Star,
 } from "lucide-react";
+import { ReportUserAction } from "./ReportUserAction";
 
 export interface ClientCardData {
   id?: string;
@@ -60,7 +61,13 @@ function getWebsiteUrl(website?: string) {
 /**
  * Displays the public client summary used inside job and project detail views.
  */
-export function ClientInformationCard({ client }: { client: ClientCardData }) {
+export function ClientInformationCard({
+  client,
+  showReportAction = false,
+}: {
+  client: ClientCardData;
+  showReportAction?: boolean;
+}) {
   const initials = client.fullName.slice(0, 2).toUpperCase();
   const joinedDate = formatJoinedDate(client.joined);
   const websiteUrl = getWebsiteUrl(client.website);
@@ -190,6 +197,13 @@ export function ClientInformationCard({ client }: { client: ClientCardData }) {
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {showReportAction && (
+        <>
+          <div className="h-px bg-slate-200" />
+          <ReportUserAction reportedUserName={client.fullName} reportedUserRole="client" />
         </>
       )}
     </div>

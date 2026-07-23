@@ -13,6 +13,7 @@ import {
   StudentProfileView,
   type ProfileViewProps,
 } from "../../app/components/shared/StudentProfileView";
+import { ReportUserAction } from "../../app/components/shared/ReportUserAction";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
@@ -615,7 +616,15 @@ function ApplicantWorkspaceModal({
                   exit={{ opacity: 0, x: 12 }}
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <ReadOnlyApplicationView application={applicationData} />
+                  <ReadOnlyApplicationView
+                    application={applicationData}
+                    action={
+                      <ReportUserAction
+                        reportedUserName={applicant.name}
+                        reportedUserRole="student"
+                      />
+                    }
+                  />
                 </motion.div>
               ) : (
                 <motion.div
@@ -626,7 +635,7 @@ function ApplicantWorkspaceModal({
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   className="p-5"
                 >
-                  <StudentProfileView profile={profileData} />
+                  <StudentProfileView profile={profileData} showReport={true} />
                 </motion.div>
               )}
             </AnimatePresence>

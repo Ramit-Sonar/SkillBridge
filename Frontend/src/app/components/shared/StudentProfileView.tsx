@@ -1,6 +1,7 @@
 import { useState, type ElementType } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Award, Briefcase, CheckCircle, Github, Globe, Linkedin, Star } from "lucide-react";
+import { ReportUserAction } from "./ReportUserAction";
 
 export interface ProfileProject {
   id: string;
@@ -611,6 +612,7 @@ function Reviews({
 
 export function StudentProfileView({
   profile,
+  showReport = false,
 }: {
   profile: ProfileViewProps;
   showReport?: boolean;
@@ -618,6 +620,11 @@ export function StudentProfileView({
   return (
     <div className="flex flex-col gap-4">
       <ProfileOverview profile={profile} />
+      {showReport && (
+        <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-4">
+          <ReportUserAction reportedUserName={profile.name} reportedUserRole="student" />
+        </div>
+      )}
       <About bio={profile.bio} />
       <Skills skills={profile.skills} />
       <Portfolio projects={profile.projects ?? []} />

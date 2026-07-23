@@ -420,7 +420,7 @@ function ViewDetailsPanel({
                   exit={{ opacity: 0, x: 12 }}
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <SharedJobDetailsContent job={app.job} />
+                  <SharedJobDetailsContent job={app.job} showClientReportAction={true} />
                 </motion.div>
               ) : (
                 <motion.div

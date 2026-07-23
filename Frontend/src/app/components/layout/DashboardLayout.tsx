@@ -6,6 +6,7 @@ import {
   Briefcase,
   ChevronDown,
   FileText,
+  Flag,
   Folder,
   GraduationCap,
   LayoutDashboard,
@@ -74,6 +75,7 @@ type DashboardNavId =
   | "projects"
   | "users"
   | "jobs"
+  | "reports"
   | "students"
   | "settings"
   | "logout";
@@ -193,6 +195,7 @@ const roleConfig: Record<DashboardRole, RoleConfig> = {
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "users", label: "Users", icon: Users },
       { id: "jobs", label: "Jobs", icon: Briefcase },
+      { id: "reports", label: "Reports", icon: Flag },
       {
         id: "students",
         label: "Verification Management",
@@ -207,6 +210,7 @@ const roleConfig: Record<DashboardRole, RoleConfig> = {
       students: "/admin/students",
       users: "/admin/users",
       jobs: "/admin/jobs",
+      reports: "/admin/reports",
       settings: "/admin/settings",
       logout: "/admin/login",
     },

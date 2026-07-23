@@ -163,3 +163,71 @@ export const PLATFORM_USERS: PlatformUser[] = [
     projectCount: 8,
   },
 ];
+
+// Report fixtures power the Phase 1 admin reporting UI until backend reporting exists.
+
+export type ReportStatus = "pending" | "resolved" | "dismissed";
+
+export interface UserReport {
+  id: string;
+  reporterName: string;
+  reporterInitials: string;
+  reporterAvatar?: string;
+  reportedUserName: string;
+  reportedUserRole: UserRole;
+  reason: string;
+  description: string;
+  submittedAt: string;
+  status: ReportStatus;
+}
+
+export const USER_REPORTS: UserReport[] = [
+  {
+    id: "r1",
+    reporterName: "Priya Sharma",
+    reporterInitials: "PS",
+    reportedUserName: "Anil Chakraborty",
+    reportedUserRole: "client",
+    reason: "Scam / Fraud",
+    description:
+      "The client asked me to continue work outside SkillBridge and requested payment through a private wallet link.",
+    submittedAt: "19 Jul 2026",
+    status: "pending",
+  },
+  {
+    id: "r2",
+    reporterName: "Anil Chakraborty",
+    reporterInitials: "AC",
+    reportedUserName: "Manisha Poudel",
+    reportedUserRole: "student",
+    reason: "Spam",
+    description:
+      "The applicant repeatedly sent the same proposal message across multiple unrelated jobs.",
+    submittedAt: "17 Jul 2026",
+    status: "resolved",
+  },
+  {
+    id: "r3",
+    reporterName: "Dikshya Khanal",
+    reporterInitials: "DK",
+    reportedUserName: "Ramit Sharma",
+    reportedUserRole: "student",
+    reason: "Fake Profile",
+    description:
+      "Portfolio links shown in the profile appear to belong to another developer and do not match the applicant's submitted work.",
+    submittedAt: "15 Jul 2026",
+    status: "pending",
+  },
+  {
+    id: "r4",
+    reporterName: "Roshan Bhandari",
+    reporterInitials: "RB",
+    reportedUserName: "Meera Joshi",
+    reportedUserRole: "client",
+    reason: "Inappropriate Behavior",
+    description:
+      "The client used insulting language during project feedback and refused to discuss changes professionally.",
+    submittedAt: "11 Jul 2026",
+    status: "dismissed",
+  },
+];

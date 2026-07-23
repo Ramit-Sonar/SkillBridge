@@ -41,6 +41,7 @@ import {
   StudentProfileView,
   type ProfileViewProps,
 } from "../../app/components/shared/StudentProfileView";
+import { ReportUserAction } from "../../app/components/shared/ReportUserAction";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { Timeline } from "../../app/components/shared/Timeline";
 import {
@@ -648,7 +649,7 @@ function StudentProfileModal({
         </div>
         <div className="flex-1 overflow-y-auto p-5">
           <div className="w-full max-w-xl mx-auto">
-            <StudentProfileView profile={profile} />
+            <StudentProfileView profile={profile} showReport={true} />
           </div>
         </div>
       </motion.div>
@@ -1208,14 +1209,25 @@ export default function ProjectWorkspacePage() {
           action={renderOverviewAction()}
           profileAction={
             role === "client" && studentProfile ? (
-              <button
-                type="button"
-                onClick={() => setShowStudentProfile(true)}
-                className="w-full flex items-center justify-center gap-2 bg-white text-blue-600 font-semibold py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors"
-                style={{ fontSize: "0.82rem" }}
-              >
-                View Student Profile
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowStudentProfile(true)}
+                  className="w-full flex items-center justify-center gap-2 bg-white text-blue-600 font-semibold py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors"
+                  style={{ fontSize: "0.82rem" }}
+                >
+                  View Student Profile
+                </button>
+                <ReportUserAction
+                  reportedUserName={studentProfile.name}
+                  reportedUserRole="student"
+                />
+              </div>
+            ) : role === "student" && projectData.client ? (
+              <ReportUserAction
+                reportedUserName={projectData.client.name}
+                reportedUserRole="client"
+              />
             ) : null
           }
         />
@@ -1250,7 +1262,11 @@ export default function ProjectWorkspacePage() {
     if (activeTab === "job") {
       return (
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm overflow-hidden">
-          <SharedJobDetailsContent job={projectData.job} showClientCard={role === "student"} />
+          <SharedJobDetailsContent
+            job={projectData.job}
+            showClientCard={role === "student"}
+            showClientReportAction={role === "student"}
+          />
         </section>
       );
     }

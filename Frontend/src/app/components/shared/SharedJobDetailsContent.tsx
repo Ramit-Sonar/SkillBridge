@@ -179,9 +179,16 @@ interface Props {
   actions?: ReactNode;
   /** Set false for client's own Manage Jobs panel */
   showClientCard?: boolean;
+  /** Enables the student-facing dummy report action on the client card. */
+  showClientReportAction?: boolean;
 }
 
-export function SharedJobDetailsContent({ job, actions, showClientCard = true }: Props) {
+export function SharedJobDetailsContent({
+  job,
+  actions,
+  showClientCard = true,
+  showClientReportAction = false,
+}: Props) {
   const durLabel =
     JOB_DURATION_LABELS[job.duration as keyof typeof JOB_DURATION_LABELS] ?? job.duration;
 
@@ -386,6 +393,7 @@ export function SharedJobDetailsContent({ job, actions, showClientCard = true }:
                 averageRating: job.clientRating,
               },
             }}
+            showReportAction={showClientReportAction}
           />
         )}
       </div>

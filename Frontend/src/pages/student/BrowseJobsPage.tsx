@@ -497,11 +497,13 @@ function JobDetailPanel({
   onClose,
   onApply,
   hasApplied,
+  showReportAction,
 }: {
   job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
   hasApplied: boolean;
+  showReportAction: boolean;
 }) {
   return (
     <motion.div
@@ -531,6 +533,7 @@ function JobDetailPanel({
       </div>
       <SharedJobDetailsContent
         job={mapSharedJobDetails(job)}
+        showClientReportAction={showReportAction}
         actions={
           <>
             <ApplyJobButton hasApplied={hasApplied} onApply={onApply} label="Apply Now" />
@@ -555,11 +558,13 @@ function MobileDetailModal({
   onClose,
   onApply,
   hasApplied,
+  showReportAction,
 }: {
   job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
   hasApplied: boolean;
+  showReportAction: boolean;
 }) {
   return (
     <AnimatePresence>
@@ -591,6 +596,7 @@ function MobileDetailModal({
           </div>
           <SharedJobDetailsContent
             job={mapSharedJobDetails(job)}
+            showClientReportAction={showReportAction}
             actions={
               <ApplyJobButton
                 hasApplied={hasApplied}
@@ -1222,6 +1228,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
               onClose={handleCloseDetails}
               onApply={() => handleApply(detailsJob.id)}
               hasApplied={submittedJobIds.includes(detailsJob.id)}
+              showReportAction={!isGuest}
             />
           )}
         </AnimatePresence>
@@ -1249,6 +1256,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
             onClose={handleCloseDetails}
             onApply={() => handleApply(detailsJob.id)}
             hasApplied={submittedJobIds.includes(detailsJob.id)}
+            showReportAction={!isGuest}
           />
         )}
         {showGuestModal && (
