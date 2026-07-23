@@ -1,9 +1,10 @@
-import { motion } from "motion/react";
-import { Ban, UserCheck, X } from "lucide-react";
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { AlertTriangle, Ban, UserCheck, X } from "lucide-react";
 import { ClientInformationCard } from "../../app/components/shared/ClientInformationCard";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
-import { StatusBadge, type StatusBadgeConfig } from "../../app/components/shared/ui";
+import { ConfirmDialog, StatusBadge, type StatusBadgeConfig } from "../../app/components/shared/ui";
 import type { PlatformUser, UserStatus, VerificationStatus } from "../../app/data/admin";
 
 const ACCOUNT_STATUS_CFG: Record<UserStatus, StatusBadgeConfig> = {
@@ -99,6 +100,9 @@ function AdminMetric({ label, children }: { label: string; children: React.React
 }
 
 function AdminInformation({ user }: { user: PlatformUser }) {
+  const [confirmAction, setConfirmAction] = useState<"suspend" | "activate" | null>(null);
+  const isActive = user.status === "active";
+
   return (
     <section className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
       <div>
@@ -134,22 +138,69 @@ function AdminInformation({ user }: { user: PlatformUser }) {
         </AdminMetric>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 pt-1">
+      {isActive ? (
         <button
           type="button"
-          className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
+          onClick={() => setConfirmAction("suspend")}
+          className="w-full flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
           style={{ fontSize: "0.85rem" }}
         >
           <Ban className="w-4 h-4" /> Suspend User
         </button>
+      ) : (
         <button
           type="button"
-          className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+          onClick={() => setConfirmAction("activate")}
+          className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
           style={{ fontSize: "0.85rem" }}
         >
           <UserCheck className="w-4 h-4" /> Activate User
         </button>
-      </div>
+      )}
+
+      <AnimatePresence>
+        {confirmAction === "suspend" && (
+          <ConfirmDialog
+            title="Suspend User"
+            body={
+              <>
+                Are you sure you want to suspend{" "}
+                <strong className="text-slate-900">{user.name}</strong>? This is a frontend-only
+                confirmation for now.
+              </>
+            }
+            confirmLabel="Suspend User"
+            confirmColor="#DC2626"
+            onConfirm={() => setConfirmAction(null)}
+            onClose={() => setConfirmAction(null)}
+            icon={AlertTriangle}
+            iconBg="#FEF2F2"
+            iconColor="#EF4444"
+            busyDelayMs={0}
+          />
+        )}
+
+        {confirmAction === "activate" && (
+          <ConfirmDialog
+            title="Activate User"
+            body={
+              <>
+                Are you sure you want to activate{" "}
+                <strong className="text-slate-900">{user.name}</strong>? This is a frontend-only
+                confirmation for now.
+              </>
+            }
+            confirmLabel="Activate User"
+            confirmColor="#059669"
+            onConfirm={() => setConfirmAction(null)}
+            onClose={() => setConfirmAction(null)}
+            icon={UserCheck}
+            iconBg="#ECFDF5"
+            iconColor="#059669"
+            busyDelayMs={0}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }
