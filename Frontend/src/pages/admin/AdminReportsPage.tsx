@@ -93,7 +93,7 @@ function getReportedUser(report: UserReport): PlatformUser {
     email: "client.profile@skillbridge.local",
     role: "client",
     status: "active",
-    verificationStatus: "pending",
+    verificationStatus: "approved",
     joinedAt: "9 May 2026",
     projectCount: 3,
     reportsReceived: 1,

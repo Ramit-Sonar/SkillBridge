@@ -84,7 +84,14 @@ function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: 
               <p className="text-slate-900 font-bold truncate" style={{ fontSize: "0.86rem" }}>
                 {user.name}
               </p>
-              {isVerified && <CheckCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+              {isVerified && (
+                <span
+                  className="inline-flex items-center gap-1 text-blue-600 font-semibold shrink-0"
+                  style={{ fontSize: "0.72rem" }}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" /> Verified
+                </span>
+              )}
             </div>
             <p className="text-slate-500 truncate" style={{ fontSize: "0.7rem" }}>
               {user.email}
