@@ -7,9 +7,7 @@ import {
 import { User } from "../models/user.model.js";
 import {
   buildReportSummary,
-  getAdminUserDetailsData,
-  getAdminUsersData,
-  updateAdminUserAccountStatus,
+  getReportedUserDetailsData,
 } from "../services/report.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -204,6 +202,24 @@ const getReportById = asyncHandler(async (req, res) => {
     );
 });
 
+const getReportedUserDetails = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const user = await getReportedUserDetailsData(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Reported user fetched successfully"));
+});
+
 const resolveReport = asyncHandler(async (req, res) => {
   const { reportId } = req.params;
 
@@ -290,83 +306,11 @@ const dismissReport = asyncHandler(async (req, res) => {
     );
 });
 
-const getAdminUsers = asyncHandler(async (req, res) => {
-  const users = await getAdminUsersData();
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        totalUsers: users.length,
-        users,
-      },
-      "Users fetched successfully"
-    )
-  );
-});
-
-const getAdminUserById = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-
-  if (!mongoose.isValidObjectId(userId)) {
-    throw new ApiError(400, "Invalid user id");
-  }
-
-  const user = await getAdminUserDetailsData(userId);
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User fetched successfully"));
-});
-
-const suspendAdminUser = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-
-  if (!mongoose.isValidObjectId(userId)) {
-    throw new ApiError(400, "Invalid user id");
-  }
-
-  const user = await updateAdminUserAccountStatus(userId, "suspended");
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User suspended successfully"));
-});
-
-const activateAdminUser = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-
-  if (!mongoose.isValidObjectId(userId)) {
-    throw new ApiError(400, "Invalid user id");
-  }
-
-  const user = await updateAdminUserAccountStatus(userId, "active");
-
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "User activated successfully"));
-});
-
 export {
-  activateAdminUser,
   createReport,
   dismissReport,
   getReportById,
   getReports,
-  getAdminUserById,
-  getAdminUsers,
+  getReportedUserDetails,
   resolveReport,
-  suspendAdminUser,
 };

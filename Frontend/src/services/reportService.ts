@@ -1,3 +1,5 @@
+import type { PlatformUser } from "./adminService";
+
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
   /\/users\/?$/,
   ""
@@ -145,6 +147,17 @@ export const getReportById = async (reportId: string): Promise<ApiResponse<UserR
   });
 
   return parseReportResponse<UserReport>(response, "Failed to fetch report.");
+};
+
+export const getReportedUserDetails = async (
+  userId: string
+): Promise<ApiResponse<PlatformUser>> => {
+  const response = await fetch(`${API_URL}/reports/users/${userId}`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return parseReportResponse<PlatformUser>(response, "Failed to fetch reported user details.");
 };
 
 export const resolveReport = async (reportId: string): Promise<ApiResponse<UserReport>> => {

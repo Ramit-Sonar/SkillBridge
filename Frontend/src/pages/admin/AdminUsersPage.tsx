@@ -23,7 +23,7 @@ import {
   getUsers,
   type PlatformUser,
   type UserStatus,
-} from "../../services/userManagementService";
+} from "../../services/adminService";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const STATUS_CFG: Record<

@@ -23,12 +23,13 @@ import {
 import {
   dismissReport,
   getReportById,
+  getReportedUserDetails,
   getReports,
   resolveReport,
   type ReportStatus,
   type UserReport,
 } from "../../services/reportService";
-import { getUserDetails, type PlatformUser } from "../../services/userManagementService";
+import type { PlatformUser } from "../../services/adminService";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const REPORT_STATUS_CFG: Record<
@@ -430,7 +431,7 @@ export default function AdminReportsPage() {
     if (!selectedReport) return;
 
     try {
-      const response = await getUserDetails(selectedReport.reportedUserId);
+      const response = await getReportedUserDetails(selectedReport.reportedUserId);
       setProfileUser(response.data);
     } catch (profileError) {
       setNotification({
@@ -612,6 +613,7 @@ export default function AdminReportsPage() {
         {profileUser && (
           <AdminUserProfileModal
             user={profileUser}
+            readOnly
             onUserUpdated={setProfileUser}
             onClose={() => {
               setProfileUser(null);
