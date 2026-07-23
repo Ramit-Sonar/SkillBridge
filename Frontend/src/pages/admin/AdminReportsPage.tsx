@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Calendar, CheckCircle, Eye, Flag, User, X, XCircle } from "lucide-react";
+import {
+  Briefcase,
+  Calendar,
+  CheckCircle,
+  Eye,
+  Flag,
+  GraduationCap,
+  User,
+  X,
+  XCircle,
+} from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { FilterChipGroup, SearchInput, StatusBadge } from "../../app/components/shared/ui";
 import {
@@ -44,6 +54,23 @@ const REPORT_STATUS_CFG: Record<
 function getRoleLabel(role: UserReport["reportedUserRole"]) {
   return role === "student" ? "Student" : "Client";
 }
+
+const ROLE_CFG = {
+  student: {
+    label: "Student",
+    color: "#2563EB",
+    bg: "#EFF6FF",
+    border: "#BFDBFE",
+    icon: GraduationCap,
+  },
+  client: {
+    label: "Client",
+    color: "#7C3AED",
+    bg: "#F5F3FF",
+    border: "#DDD6FE",
+    icon: Briefcase,
+  },
+};
 
 function getReportedUser(report: UserReport): PlatformUser {
   const matchedUser = PLATFORM_USERS.find(
@@ -117,6 +144,8 @@ function getReportedUser(report: UserReport): PlatformUser {
 
 function ReportCard({ report, onView }: { report: UserReport; onView: () => void }) {
   const cfg = REPORT_STATUS_CFG[report.status];
+  const roleCfg = ROLE_CFG[report.reportedUserRole];
+  const RoleIcon = roleCfg.icon;
 
   return (
     <motion.div
@@ -149,10 +178,15 @@ function ReportCard({ report, onView }: { report: UserReport; onView: () => void
             </p>
           </div>
           <span
-            className="shrink-0 rounded-lg bg-slate-50 border border-slate-200 px-2 py-1 text-slate-500 font-semibold"
-            style={{ fontSize: "0.62rem" }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-semibold shrink-0"
+            style={{
+              background: roleCfg.bg,
+              color: roleCfg.color,
+              borderColor: roleCfg.border,
+              fontSize: "0.66rem",
+            }}
           >
-            {getRoleLabel(report.reportedUserRole)}
+            <RoleIcon className="w-3 h-3" /> {roleCfg.label}
           </span>
         </div>
 
