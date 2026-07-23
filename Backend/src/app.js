@@ -10,6 +10,7 @@ import verificationRouter from "./routes/verification.routes.js";
 import applicationRouter from "./routes/application.routes.js";
 import projectRouter from "./routes/project.routes.js";
 import reviewRouter from "./routes/review.routes.js";
+import reportRouter from "./routes/report.routes.js";
 
 /**
  * Configures shared Express middleware and mounts all API route groups.
@@ -56,6 +57,7 @@ app.use("/api/v1/verification", verificationRouter);
 app.use("/api/v1/applications", applicationRouter);
 app.use("/api/v1/projects", projectRouter);
 app.use("/api/v1/reviews", reviewRouter);
+app.use("/api/v1/reports", reportRouter);
 
 app.use(globalErrorHandler);
 
