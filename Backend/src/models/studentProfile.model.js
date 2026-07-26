@@ -82,6 +82,13 @@ const studentProfileSchema = new mongoose.Schema(
       },
     ],
 
+    verifiedSkills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+
     github: {
       type: String,
       trim: true,

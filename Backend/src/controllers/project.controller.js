@@ -13,6 +13,7 @@ import {
   getOpenRevision,
   getStudentCompletedProjectProfileMap,
   updateProjectActivity,
+  verifyStudentSkillsForCompletedProject,
 } from "../services/project.service.js";
 import { getStudentReviewProfileMap } from "../services/review.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -313,7 +314,7 @@ const getProjectById = asyncHandler(async (req, res) => {
     ] = await Promise.all([
       StudentProfile.findOne({ user: studentId })
         .select(
-          "bio education university skills github linkedin portfolio certificates"
+          "bio education university skills verifiedSkills github linkedin portfolio certificates"
         )
         .lean(),
       Verification.findOne({ user: studentId, type: "student" })
@@ -608,7 +609,9 @@ const approveDeliverable = asyncHandler(async (req, res) => {
     // Approval completes both the latest deliverable and the parent project together.
     await session.withTransaction(async () => {
       const currentProject = await Project.findById(projectId)
-        .select("client status startedAt completedAt lastActivityAt timeline")
+        .select(
+          "client student job status startedAt completedAt lastActivityAt timeline"
+        )
         .session(session);
 
       if (!currentProject) {
@@ -689,6 +692,11 @@ const approveDeliverable = asyncHandler(async (req, res) => {
         },
         session
       );
+
+      await verifyStudentSkillsForCompletedProject({
+        project: updatedProject,
+        session,
+      });
 
       responseData = buildApproveDeliverableResponse({
         project: updatedProject,

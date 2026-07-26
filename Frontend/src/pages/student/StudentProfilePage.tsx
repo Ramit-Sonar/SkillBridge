@@ -146,6 +146,7 @@ function StudentProfileContent() {
           education: profileData.education ?? "",
           university: profileData.university ?? "",
           skills: profileData.skills ?? [],
+          verifiedSkills: profileData.verifiedSkills ?? [],
           github: profileData.github ?? "",
           linkedin: profileData.linkedin ?? "",
           portfolio: profileData.portfolio ?? "",

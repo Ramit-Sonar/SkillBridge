@@ -70,7 +70,8 @@ export type StudentSummary = {
     bio?: string;
     education: string;
     university: string;
-    skills: string[];
+    skills: (string | { name: string; verified: boolean })[];
+    verifiedSkills?: string[];
     github?: string;
     linkedin?: string;
     portfolio: string;

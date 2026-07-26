@@ -23,6 +23,7 @@ type BasicProfileFields = {
   education?: string;
   university?: string;
   skills?: (string | { name: string; verified: boolean })[];
+  verifiedSkills?: string[];
   github?: string;
   linkedin?: string;
   portfolio?: string;
@@ -150,9 +151,24 @@ function getStatistics(profile: ProfileSource, ratingSummary?: StudentRatingSumm
   };
 }
 
-function mapSkills(skills?: (string | { name: string; verified: boolean })[]) {
+function normalizeSkillName(skill = "") {
+  return skill.trim().toLowerCase();
+}
+
+function mapSkills(
+  skills?: (string | { name: string; verified: boolean })[],
+  verifiedSkills?: string[]
+) {
+  const verifiedSet = new Set((verifiedSkills || []).map(normalizeSkillName).filter(Boolean));
+
   return (skills || []).map((skill) =>
-    typeof skill === "string" ? { name: skill, verified: false } : skill
+    typeof skill === "string"
+      ? { name: skill, verified: verifiedSet.has(normalizeSkillName(skill)) }
+      : {
+          ...skill,
+          verified:
+            skill.verified || verifiedSet.has(normalizeSkillName(skill.name)),
+        }
   );
 }
 
@@ -270,7 +286,7 @@ export function buildStudentProfileViewProps({
     university,
     bio: nestedProfile?.bio || fallbackBio,
     verified: getVerified(profile, verified),
-    skills: mapSkills(nestedProfile?.skills),
+    skills: mapSkills(nestedProfile?.skills, nestedProfile?.verifiedSkills),
     rating: statistics.averageRating,
     reviewCount: statistics.reviewCount,
     ratingDistribution: statistics.ratingDistribution,

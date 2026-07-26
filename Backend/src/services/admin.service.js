@@ -7,7 +7,10 @@ import { Project } from "../models/project.model.js";
 import { Report } from "../models/report.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
 import { Verification } from "../models/verification.model.js";
-import { getStudentCompletedProjectProfileMap } from "./project.service.js";
+import {
+  buildProfileSkillList,
+  getStudentCompletedProjectProfileMap,
+} from "./project.service.js";
 import { getStudentReviewProfileMap } from "./review.service.js";
 
 const JOB_MODERATION_REASONS = [
@@ -297,10 +300,10 @@ const buildAdminUserSummary = ({
     summary.github = studentProfile?.github || "";
     summary.linkedin = studentProfile?.linkedin || "";
     summary.portfolio = studentProfile?.portfolio || "";
-    summary.skills = (studentProfile?.skills || []).map((skill) => ({
-      name: skill,
-      verified: false,
-    }));
+    summary.skills = buildProfileSkillList(
+      studentProfile?.skills,
+      studentProfile?.verifiedSkills
+    );
     summary.ratingSummary = studentReviewProfile?.ratingSummary || null;
     summary.completedProjects = studentProjectProfile?.completedProjects || [];
     summary.latestReviews = studentReviewProfile?.latestReviews || [];

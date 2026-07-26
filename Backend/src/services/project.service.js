@@ -1,11 +1,39 @@
 import { Project } from "../models/project.model.js";
 import { Deliverable } from "../models/deliverable.model.js";
+import { Job } from "../models/job.model.js";
 import { Revision } from "../models/revision.model.js";
+import { StudentProfile } from "../models/studentProfile.model.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const PROJECT_CREATED_MESSAGE = "Project created after application acceptance.";
+export const SKILL_VERIFICATION_THRESHOLD = 1;
 
 const getDocumentId = (document) => document?._id || document;
+const normalizeSkillName = (skill = "") => skill.trim().toLowerCase();
+
+export const buildProfileSkillList = (skills = [], verifiedSkills = []) => {
+  const verifiedSet = new Set(
+    (verifiedSkills || []).map(normalizeSkillName).filter(Boolean)
+  );
+
+  return (skills || [])
+    .map((skill) => {
+      if (typeof skill === "string") {
+        return {
+          name: skill,
+          verified: verifiedSet.has(normalizeSkillName(skill)),
+        };
+      }
+
+      return {
+        name: skill?.name || "",
+        verified:
+          Boolean(skill?.verified) ||
+          verifiedSet.has(normalizeSkillName(skill?.name || "")),
+      };
+    })
+    .filter((skill) => skill.name);
+};
 
 /**
  * Returns the latest deliverable for project state transitions and summaries.
@@ -41,6 +69,107 @@ export const getOpenRevision = async (projectId, session = null) => {
   }
 
   return query;
+};
+
+export const verifyStudentSkillsForCompletedProject = async ({
+  project,
+  session = null,
+}) => {
+  if (!project?.student || !project?.job) return [];
+
+  const profileQuery = StudentProfile.findOne({ user: project.student });
+  const jobQuery = Job.findById(project.job).select("skills").lean();
+
+  if (session) {
+    profileQuery.session(session);
+    jobQuery.session(session);
+  }
+
+  const [studentProfile, currentJob] = await Promise.all([
+    profileQuery,
+    jobQuery,
+  ]);
+
+  if (!studentProfile || !currentJob?.skills?.length) return [];
+
+  const currentJobSkillSet = new Set(
+    currentJob.skills.map(normalizeSkillName).filter(Boolean)
+  );
+  const verifiedSkillSet = new Set(
+    (studentProfile.verifiedSkills || [])
+      .map(normalizeSkillName)
+      .filter(Boolean)
+  );
+
+  const eligibleSkills = (studentProfile.skills || [])
+    .map((skill) => ({
+      name: skill,
+      normalized: normalizeSkillName(skill),
+    }))
+    .filter(
+      (skill) =>
+        skill.normalized &&
+        currentJobSkillSet.has(skill.normalized) &&
+        !verifiedSkillSet.has(skill.normalized)
+    );
+
+  if (eligibleSkills.length === 0) return [];
+
+  const completedProjectsQuery = Project.find({
+    student: project.student,
+    status: "completed",
+  })
+    .select("job")
+    .populate({
+      path: "job",
+      select: "skills",
+    })
+    .lean();
+
+  if (session) {
+    completedProjectsQuery.session(session);
+  }
+
+  const completedProjects = await completedProjectsQuery;
+  const completedCountBySkill = new Map(
+    eligibleSkills.map((skill) => [skill.normalized, 0])
+  );
+
+  completedProjects.forEach((completedProject) => {
+    const completedJobSkillSet = new Set(
+      (completedProject.job?.skills || [])
+        .map(normalizeSkillName)
+        .filter(Boolean)
+    );
+
+    eligibleSkills.forEach((skill) => {
+      if (completedJobSkillSet.has(skill.normalized)) {
+        completedCountBySkill.set(
+          skill.normalized,
+          completedCountBySkill.get(skill.normalized) + 1
+        );
+      }
+    });
+  });
+
+  const newlyVerifiedSkills = eligibleSkills
+    .filter(
+      (skill) =>
+        completedCountBySkill.get(skill.normalized) >=
+        SKILL_VERIFICATION_THRESHOLD
+    )
+    .map((skill) => skill.name);
+
+  if (newlyVerifiedSkills.length === 0) return [];
+
+  studentProfile.verifiedSkills = [
+    ...(studentProfile.verifiedSkills || []),
+    ...newlyVerifiedSkills,
+  ];
+
+  await studentProfile.save(session ? { session } : {});
+
+  return newlyVerifiedSkills;
 };
 
 const buildLatestDeliverableMap = async (projectIds) => {

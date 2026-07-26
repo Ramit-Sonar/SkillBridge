@@ -1,3 +1,5 @@
+import { buildProfileSkillList } from "./project.service.js";
+
 const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
 
 /**
@@ -100,7 +102,10 @@ const buildWorkspaceStudentProfile = ({
 }) => {
   if (!student) return null;
 
-  const skills = studentProfile?.skills || [];
+  const skills = buildProfileSkillList(
+    studentProfile?.skills,
+    studentProfile?.verifiedSkills
+  );
   const ratingSummary = studentReviewProfile?.ratingSummary || null;
   const completedProjectsCount =
     studentProjectProfile?.completedProjectsCount || 0;
@@ -114,10 +119,7 @@ const buildWorkspaceStudentProfile = ({
     university: studentProfile?.university || "",
     bio: studentProfile?.bio || "",
     verified: studentVerification?.status === "approved",
-    skills: skills.map((skill) => ({
-      name: skill,
-      verified: false,
-    })),
+    skills,
     github: studentProfile?.github || "",
     linkedin: studentProfile?.linkedin || "",
     portfolio: studentProfile?.portfolio || "",

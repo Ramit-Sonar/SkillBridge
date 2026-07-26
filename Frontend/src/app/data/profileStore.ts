@@ -9,6 +9,7 @@ export interface ProfileData {
   education: string;
   university: string;
   skills: string[];
+  verifiedSkills: string[];
   github: string;
   linkedin: string;
   portfolio: string;
@@ -21,6 +22,7 @@ const DEFAULT: ProfileData = {
   education: "",
   university: "",
   skills: [],
+  verifiedSkills: [],
   github: "",
   linkedin: "",
   portfolio: "",

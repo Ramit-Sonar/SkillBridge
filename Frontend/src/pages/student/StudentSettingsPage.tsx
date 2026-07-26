@@ -422,6 +422,7 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
         education: updatedProfile.education ?? education,
         university: updatedProfile.university ?? university,
         skills: updatedProfile.skills ?? skills,
+        verifiedSkills: updatedProfile.verifiedSkills ?? [],
       });
       // Notify the dashboard shell so avatar/name changes update immediately.
       window.dispatchEvent(new Event("skillbridge:user-updated"));
@@ -1410,6 +1411,7 @@ export default function StudentSettingsPage() {
           education: response.data.education ?? "",
           university: response.data.university ?? "",
           skills: response.data.skills ?? [],
+          verifiedSkills: response.data.verifiedSkills ?? [],
           github: response.data.github ?? "",
           linkedin: response.data.linkedin ?? "",
           portfolio: response.data.portfolio ?? "",

@@ -48,6 +48,16 @@ jest.unstable_mockModule("../../src/models/verification.model.js", () => ({
 }));
 
 jest.unstable_mockModule("../../src/services/project.service.js", () => ({
+  buildProfileSkillList: jest.fn((skills = [], verifiedSkills = []) => {
+    const verifiedSet = new Set(
+      verifiedSkills.map((skill) => skill.trim().toLowerCase())
+    );
+
+    return skills.map((skill) => ({
+      name: skill,
+      verified: verifiedSet.has(skill.trim().toLowerCase()),
+    }));
+  }),
   getStudentCompletedProjectProfileMap: jest.fn(),
 }));
 

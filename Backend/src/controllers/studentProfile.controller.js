@@ -352,7 +352,7 @@ const getPublicStudentProfile = asyncHandler(async (req, res) => {
   ] = await Promise.all([
     StudentProfile.findOne({ user: studentId })
       .select(
-        "bio education university skills github linkedin portfolio certificates"
+        "bio education university skills verifiedSkills github linkedin portfolio certificates"
       )
       .lean(),
     Verification.findOne({ user: studentId, type: "student" })

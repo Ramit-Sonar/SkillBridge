@@ -1,3 +1,5 @@
+import { buildProfileSkillList } from "./project.service.js";
+
 /**
  * Shapes application records for list cards and detail views.
  */
@@ -49,7 +51,10 @@ export const buildStudentSummary = ({
     bio: studentProfile?.bio || "",
     education: studentProfile?.education || "",
     university: studentProfile?.university || "",
-    skills: studentProfile?.skills || [],
+    skills: buildProfileSkillList(
+      studentProfile?.skills,
+      studentProfile?.verifiedSkills
+    ),
     github: studentProfile?.github || "",
     linkedin: studentProfile?.linkedin || "",
     portfolio: studentProfile?.portfolio || "",
@@ -131,7 +136,10 @@ export const buildApplicationDetails = ({
           bio: studentProfile?.bio || "",
           education: studentProfile?.education || "",
           university: studentProfile?.university || "",
-          skills: studentProfile?.skills || [],
+          skills: buildProfileSkillList(
+            studentProfile?.skills,
+            studentProfile?.verifiedSkills
+          ),
           github: studentProfile?.github || "",
           linkedin: studentProfile?.linkedin || "",
           portfolio: studentProfile?.portfolio || "",

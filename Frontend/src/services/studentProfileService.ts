@@ -16,6 +16,7 @@ export type StudentProfileData = {
   education?: string;
   university?: string;
   skills?: string[];
+  verifiedSkills?: string[];
   github?: string;
   linkedin?: string;
   portfolio?: string;

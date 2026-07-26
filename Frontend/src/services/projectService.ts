@@ -155,6 +155,7 @@ export type ProjectStudentProfile = {
     name: string;
     verified: boolean;
   }[];
+  verifiedSkills?: string[];
   github: string;
   linkedin: string;
   portfolio: string;
