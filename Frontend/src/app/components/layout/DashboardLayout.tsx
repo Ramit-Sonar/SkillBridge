@@ -876,11 +876,27 @@ export function DashboardLayout({
                     <h2 className="text-red-700 font-bold" style={{ fontSize: "0.95rem" }}>
                       Account Suspended
                     </h2>
-                    <p className="text-red-600 mt-1 leading-relaxed" style={{ fontSize: "0.82rem" }}>
+                    <p
+                      className="text-red-600 mt-1 leading-relaxed"
+                      style={{ fontSize: "0.82rem" }}
+                    >
                       Your SkillBridge account has been temporarily suspended. Some marketplace
                       features have been disabled. If you believe this is a mistake, please contact
                       the administrator.
                     </p>
+                    {currentUser?.suspensionReason && (
+                      <div className="mt-3 bg-white border border-red-200 rounded-xl px-3 py-2">
+                        <p className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
+                          Suspension Reason
+                        </p>
+                        <p
+                          className="text-red-700 font-semibold mt-0.5"
+                          style={{ fontSize: "0.78rem" }}
+                        >
+                          {currentUser.suspensionReason}
+                        </p>
+                      </div>
+                    )}
                     <div className="mt-3 inline-flex items-center gap-2 bg-white border border-red-200 rounded-xl px-3 py-1.5">
                       <span className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
                         Status

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, Ban, UserCheck, X } from "lucide-react";
+import { AlertTriangle, Ban, ChevronDown, UserCheck, X } from "lucide-react";
 import { ClientInformationCard } from "../../app/components/shared/ClientInformationCard";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
@@ -59,6 +59,17 @@ const VERIFICATION_STATUS_CFG: Record<VerificationStatus, StatusBadgeConfig> = {
     dot: "#EF4444",
   },
 };
+
+const USER_SUSPENSION_REASONS = [
+  "Spam",
+  "Fake Job",
+  "Duplicate Listing",
+  "Policy Violation",
+  "Copyright Issue",
+  "Other",
+] as const;
+
+type UserSuspensionReason = (typeof USER_SUSPENSION_REASONS)[number];
 
 function formatAdminDate(value?: string) {
   if (!value) return "Not available";
@@ -134,6 +145,146 @@ function AdminMetric({ label, children }: { label: string; children: React.React
   );
 }
 
+function SuspendUserModal({
+  user,
+  onConfirm,
+  onClose,
+  loading,
+}: {
+  user: PlatformUser;
+  onConfirm: (reason: string) => Promise<void> | void;
+  onClose: () => void;
+  loading?: boolean;
+}) {
+  const [reason, setReason] = useState<UserSuspensionReason | "">("");
+  const [customReason, setCustomReason] = useState("");
+  const [error, setError] = useState("");
+  const requiresCustomReason = reason === "Other";
+
+  const handleConfirm = async () => {
+    if (!reason) {
+      setError("Please select a suspension reason.");
+      return;
+    }
+
+    if (requiresCustomReason && !customReason.trim()) {
+      setError("Please enter the custom suspension reason.");
+      return;
+    }
+
+    setError("");
+    await onConfirm(requiresCustomReason ? customReason.trim() : reason);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !loading) onClose();
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.93, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93 }}
+        transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-5"
+      >
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-red-50">
+          <AlertTriangle className="w-6 h-6 text-red-500" />
+        </div>
+        <div>
+          <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+            Suspend User
+          </p>
+          <p className="text-slate-500 mt-1.5 leading-relaxed" style={{ fontSize: "0.82rem" }}>
+            Select why you want to suspend <strong className="text-slate-900">{user.name}</strong>.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <label className="text-slate-700 font-semibold" style={{ fontSize: "0.78rem" }}>
+            Suspension Reason
+          </label>
+          <div className="relative">
+            <select
+              value={reason}
+              onChange={(event) => {
+                setReason(event.target.value as UserSuspensionReason);
+                setError("");
+              }}
+              disabled={loading}
+              className="w-full appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-slate-900 outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
+              style={{ fontSize: "0.85rem" }}
+            >
+              <option value="">Select reason</option>
+              {USER_SUSPENSION_REASONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {requiresCustomReason && (
+            <textarea
+              value={customReason}
+              onChange={(event) => {
+                setCustomReason(event.target.value);
+                setError("");
+              }}
+              disabled={loading}
+              rows={4}
+              placeholder="Enter custom suspension reason..."
+              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 placeholder-slate-300 outline-none resize-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
+              style={{ fontSize: "0.85rem" }}
+            />
+          )}
+
+          {error && (
+            <p className="text-red-600 font-semibold" style={{ fontSize: "0.74rem" }}>
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-3 w-full">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 transition-all disabled:opacity-60"
+            style={{ fontSize: "0.875rem" }}
+          >
+            Cancel
+          </button>
+          <motion.button
+            whileHover={!loading ? { scale: 1.02 } : {}}
+            whileTap={!loading ? { scale: 0.97 } : {}}
+            onClick={handleConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+            style={{ fontSize: "0.875rem" }}
+          >
+            {loading ? (
+              <motion.span
+                className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+              />
+            ) : (
+              "Suspend User"
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function AdminInformation({
   user,
   onUserUpdated,
@@ -146,12 +297,20 @@ function AdminInformation({
   readOnly?: boolean;
 }) {
   const [confirmAction, setConfirmAction] = useState<"suspend" | "activate" | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const isActive = user.status === "active";
 
-  const handleAccountStatusChange = async (action: "suspend" | "activate") => {
+  const handleAccountStatusChange = async (
+    action: "suspend" | "activate",
+    suspensionReason = ""
+  ) => {
+    setActionLoading(true);
+
     try {
       const response =
-        action === "suspend" ? await suspendUser(user.id) : await activateUser(user.id);
+        action === "suspend"
+          ? await suspendUser(user.id, suspensionReason)
+          : await activateUser(user.id);
 
       onUserUpdated(response.data);
       onNotify({ type: "success", text: response.message });
@@ -161,6 +320,8 @@ function AdminInformation({
         type: "error",
         text: error instanceof Error ? error.message : "User status could not be updated.",
       });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -243,22 +404,13 @@ function AdminInformation({
 
       <AnimatePresence>
         {!readOnly && confirmAction === "suspend" && (
-          <ConfirmDialog
-            title="Suspend User"
-            body={
-              <>
-                Are you sure you want to suspend{" "}
-                <strong className="text-slate-900">{user.name}</strong>?
-              </>
-            }
-            confirmLabel="Suspend User"
-            confirmColor="#DC2626"
-            onConfirm={() => handleAccountStatusChange("suspend")}
-            onClose={() => setConfirmAction(null)}
-            icon={AlertTriangle}
-            iconBg="#FEF2F2"
-            iconColor="#EF4444"
-            busyDelayMs={0}
+          <SuspendUserModal
+            user={user}
+            onConfirm={(reason) => handleAccountStatusChange("suspend", reason)}
+            onClose={() => {
+              if (!actionLoading) setConfirmAction(null);
+            }}
+            loading={actionLoading}
           />
         )}
 
@@ -274,7 +426,10 @@ function AdminInformation({
             confirmLabel="Activate User"
             confirmColor="#059669"
             onConfirm={() => handleAccountStatusChange("activate")}
-            onClose={() => setConfirmAction(null)}
+            onClose={() => {
+              if (!actionLoading) setConfirmAction(null);
+            }}
+            loading={actionLoading}
             icon={UserCheck}
             iconBg="#ECFDF5"
             iconColor="#059669"

@@ -144,6 +144,10 @@ const suspendAdminUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid user id");
   }
 
+  if (!suspensionReason) {
+    throw new ApiError(400, "Suspension reason is required");
+  }
+
   const user = await updateAdminUserAccountStatus(
     userId,
     "suspended",

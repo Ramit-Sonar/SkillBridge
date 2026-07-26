@@ -13,6 +13,8 @@ export type AuthUser = {
   email: string;
   role: Role;
   accountStatus?: "active" | "suspended";
+  suspensionReason?: string;
+  suspendedAt?: string;
   avatar?: string;
   isVerified?: boolean;
   profileCompleted?: boolean;
@@ -49,8 +51,6 @@ export const registerUser = async (userData: {
 
   return data;
 };
-
-
 
 //this two sendVerificationOtp and  for verify user email
 export const sendVerificationOtp = async (userData: {
@@ -95,7 +95,6 @@ export const verifyEmail = async (email: string, otp: string): Promise<ApiRespon
   return data;
 };
 
-
 export const loginUser = async (userData: {
   email: string;
   password: string;
@@ -124,8 +123,6 @@ export const loginUser = async (userData: {
 
   return data;
 };
-
-
 
 //this two forgotPassword and resetPassword for forgot passwod logic
 export const forgotPassword = async (email: string): Promise<ApiResponse<{}>> => {
@@ -231,9 +228,6 @@ export const uploadAvatar = async (avatar: File): Promise<ApiResponse<AuthUser>>
   return data;
 };
 
-
-
-
 export const logoutUser = async () => {
   const requestLogout = () =>
     fetch(`${API_URL}/logout`, {
@@ -260,8 +254,6 @@ export const logoutUser = async () => {
 
   return data;
 };
-
-
 
 export const getCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
   const requestCurrentUser = () =>

@@ -353,23 +353,26 @@ function SuspendJobModal({
           <label className="text-slate-700 font-semibold" style={{ fontSize: "0.78rem" }}>
             Moderation Reason
           </label>
-          <select
-            value={reason}
-            onChange={(event) => {
-              setReason(event.target.value as JobModerationReason);
-              setError("");
-            }}
-            disabled={loading}
-            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
-            style={{ fontSize: "0.85rem" }}
-          >
-            <option value="">Select reason</option>
-            {JOB_MODERATION_REASONS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={reason}
+              onChange={(event) => {
+                setReason(event.target.value as JobModerationReason);
+                setError("");
+              }}
+              disabled={loading}
+              className="w-full appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-slate-900 outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
+              style={{ fontSize: "0.85rem" }}
+            >
+              <option value="">Select reason</option>
+              {JOB_MODERATION_REASONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
 
           {requiresCustomReason && (
             <textarea
