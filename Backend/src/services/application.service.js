@@ -53,6 +53,7 @@ export const buildStudentSummary = ({
     github: studentProfile?.github || "",
     linkedin: studentProfile?.linkedin || "",
     portfolio: studentProfile?.portfolio || "",
+    certificates: studentProfile?.certificates || [],
   },
   completedProjects: studentProjectProfile?.completedProjects || [],
   latestReviews: studentReviewProfile?.latestReviews || [],
@@ -134,6 +135,7 @@ export const buildApplicationDetails = ({
           github: studentProfile?.github || "",
           linkedin: studentProfile?.linkedin || "",
           portfolio: studentProfile?.portfolio || "",
+          certificates: studentProfile?.certificates || [],
         },
       }
     : null,

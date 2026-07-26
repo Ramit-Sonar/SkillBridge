@@ -1,6 +1,8 @@
 // Lightweight reactive profile store with no external state library.
 // Settings writes here; profile views read from here.
 
+import type { StudentCertificate } from "../../services/studentProfileService";
+
 export interface ProfileData {
   name: string;
   bio: string;
@@ -10,6 +12,7 @@ export interface ProfileData {
   github: string;
   linkedin: string;
   portfolio: string;
+  certificates: StudentCertificate[];
 }
 
 const DEFAULT: ProfileData = {
@@ -21,6 +24,7 @@ const DEFAULT: ProfileData = {
   github: "",
   linkedin: "",
   portfolio: "",
+  certificates: [],
 };
 
 let _data: ProfileData = { ...DEFAULT };

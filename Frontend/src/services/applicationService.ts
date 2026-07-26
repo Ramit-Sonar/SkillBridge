@@ -1,6 +1,7 @@
 import type { ClientSummary, JobAttachment } from "./jobService";
 import type { ProjectProfileCompletedProject } from "./projectService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
+import type { StudentCertificate } from "./studentProfileService";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
   /\/users\/?$/,
@@ -73,6 +74,7 @@ export type StudentSummary = {
     github?: string;
     linkedin?: string;
     portfolio: string;
+    certificates?: StudentCertificate[];
   };
   completedProjects?: ProjectProfileCompletedProject[];
   latestReviews?: StudentReviewSummary[];

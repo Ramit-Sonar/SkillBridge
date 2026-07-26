@@ -1,4 +1,5 @@
 import type { ApiResponse } from "./applicationService";
+import type { StudentCertificate } from "./studentProfileService";
 import type { JobAttachment } from "./jobService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
 
@@ -157,6 +158,7 @@ export type ProjectStudentProfile = {
   github: string;
   linkedin: string;
   portfolio: string;
+  certificates?: StudentCertificate[];
   statistics?: StudentRatingSummary & {
     completedProjectsCount: number;
   };

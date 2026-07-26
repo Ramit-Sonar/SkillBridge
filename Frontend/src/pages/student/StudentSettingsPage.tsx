@@ -25,8 +25,22 @@ import {
   type VerificationStatusValue,
 } from "../../app/components/shared/VerificationStatusCard";
 import { PasswordChangeForm } from "../../app/components/shared/PasswordChangeForm";
-import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
-import { getStudentProfile, updateStudentProfile } from "../../services/studentProfileService";
+import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
+import { FileUploadArea, type UploadedFile } from "../../app/components/shared/FileUploadArea";
+import {
+  ConfirmDialog,
+  Notification,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
+import {
+  deleteStudentCertificate,
+  getStudentCertificates,
+  getStudentProfile,
+  updateStudentCertificate,
+  updateStudentProfile,
+  uploadStudentCertificate,
+  type StudentCertificate,
+} from "../../services/studentProfileService";
 import { updateAccountDetails, uploadAvatar } from "../../services/authService";
 import { getVerificationStatus, type VerificationData } from "../../services/verificationService";
 import {
@@ -43,11 +57,15 @@ import {
   Linkedin,
   Globe,
   AlertCircle,
+  Award,
+  CalendarDays,
+  Edit3,
+  Trash2,
 } from "lucide-react";
 
 // Nav items
 
-type SettingsSection = "profile" | "social" | "verification" | "account";
+type SettingsSection = "profile" | "social" | "certificates" | "verification" | "account";
 
 const NAV_ITEMS: {
   id: SettingsSection;
@@ -56,6 +74,7 @@ const NAV_ITEMS: {
 }[] = [
   { id: "profile", label: "Profile Information", icon: User },
   { id: "social", label: "Social Links", icon: Link2 },
+  { id: "certificates", label: "Certificates", icon: Award },
   { id: "verification", label: "Identity Verification", icon: ShieldCheck },
   { id: "account", label: "Account Settings", icon: Lock },
 ];
@@ -748,6 +767,503 @@ function SocialSection({ onNotify }: { onNotify: (message: NotificationMessage) 
   );
 }
 
+// Certificates
+
+const CERTIFICATE_ACCEPT = ".pdf,.png,.jpg,.jpeg";
+const CERTIFICATE_TYPES = ["application/pdf", "image/png", "image/jpg", "image/jpeg"];
+const CERTIFICATE_MAX_SIZE = 5 * 1024 * 1024;
+
+function formatCertificateDate(value?: string | null) {
+  if (!value) return "";
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) return value;
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getDateInputValue(value?: string | null) {
+  if (!value) return "";
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
+  return parsedDate.toISOString().slice(0, 10);
+}
+
+function CertificateSection({ onNotify }: { onNotify: (message: NotificationMessage) => void }) {
+  const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
+  const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
+  const [title, setTitle] = useState("");
+  const [issuingOrganization, setIssuingOrganization] = useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [credentialId, setCredentialId] = useState("");
+  const [credentialUrl, setCredentialUrl] = useState("");
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [editingId, setEditingId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<StudentCertificate | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const editingCertificate = certificates.find((certificate) => certificate.id === editingId);
+
+  const resetForm = () => {
+    setTitle("");
+    setIssuingOrganization("");
+    setIssueDate("");
+    setExpiryDate("");
+    setCredentialId("");
+    setCredentialUrl("");
+    setFiles([]);
+    setEditingId("");
+    setErrors({});
+  };
+
+  const loadCertificates = async () => {
+    setLoading(true);
+
+    try {
+      const response = await getStudentCertificates();
+      setCertificates(response.data.certificates);
+      setProfile({ certificates: response.data.certificates });
+    } catch (error) {
+      onNotify({
+        type: "error",
+        text: error instanceof Error ? error.message : "Certificates could not be loaded.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCertificates();
+    // Certificates are loaded once when the section opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const validateFile = (file: UploadedFile) => {
+    if (!CERTIFICATE_TYPES.includes(file.type)) {
+      return "Only PDF, JPG, JPEG and PNG certificate files are allowed.";
+    }
+
+    if (file.size > CERTIFICATE_MAX_SIZE) {
+      return "Certificate file must be 5 MB or smaller.";
+    }
+
+    return "";
+  };
+
+  const handleAddFile = (file: UploadedFile) => {
+    const fileError = validateFile(file);
+
+    if (fileError) {
+      setErrors((current) => ({ ...current, file: fileError }));
+      return;
+    }
+
+    setErrors((current) => ({ ...current, file: "" }));
+    setFiles([file]);
+  };
+
+  const normalizeUrl = (value: string) => {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) return "";
+
+    if (
+      trimmedValue.toLowerCase().startsWith("http://") ||
+      trimmedValue.toLowerCase().startsWith("https://")
+    ) {
+      return trimmedValue;
+    }
+
+    return `https://${trimmedValue}`;
+  };
+
+  const isValidUrl = (value: string) => {
+    if (!value) return true;
+
+    try {
+      const url = new URL(value);
+      return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.hostname.includes(".") &&
+        /[a-z]/i.test(url.hostname)
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    const normalizedUrl = normalizeUrl(credentialUrl);
+    const duplicate = certificates.some((certificate) => {
+      if (editingId && certificate.id === editingId) return false;
+
+      return (
+        certificate.title.trim().toLowerCase() === title.trim().toLowerCase() &&
+        certificate.issuingOrganization.trim().toLowerCase() ===
+          issuingOrganization.trim().toLowerCase()
+      );
+    });
+
+    if (!title.trim()) e.title = "Certificate title is required.";
+    if (!issuingOrganization.trim()) {
+      e.issuingOrganization = "Issuing organization is required.";
+    }
+    if (!issueDate) e.issueDate = "Issue date is required.";
+    if (expiryDate && issueDate && new Date(expiryDate) < new Date(issueDate)) {
+      e.expiryDate = "Expiry date cannot be before issue date.";
+    }
+    if (!editingId && files.length === 0) e.file = "Certificate file is required.";
+    if (files[0]) {
+      const fileError = validateFile(files[0]);
+      if (fileError) e.file = fileError;
+    }
+    if (!isValidUrl(normalizedUrl)) e.credentialUrl = "Enter a valid URL.";
+    if (duplicate) {
+      e.title = "This certificate already exists.";
+      e.issuingOrganization = "This certificate already exists.";
+    }
+
+    return {
+      errors: e,
+      credentialUrl: normalizedUrl,
+    };
+  };
+
+  const handleEdit = (certificate: StudentCertificate) => {
+    setTitle(certificate.title);
+    setIssuingOrganization(certificate.issuingOrganization);
+    setIssueDate(getDateInputValue(certificate.issueDate));
+    setExpiryDate(getDateInputValue(certificate.expiryDate));
+    setCredentialId(certificate.credentialId ?? "");
+    setCredentialUrl(certificate.credentialUrl ?? "");
+    setFiles([]);
+    setEditingId(certificate.id);
+    setErrors({});
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
+
+    const result = validate();
+    setErrors(result.errors);
+    if (Object.keys(result.errors).length > 0) return;
+
+    setSaving(true);
+    setSaved(false);
+
+    try {
+      const payload = {
+        title,
+        issuingOrganization,
+        issueDate,
+        expiryDate,
+        credentialId,
+        credentialUrl: result.credentialUrl,
+        file: files[0]?.file,
+      };
+
+      const response = editingId
+        ? await updateStudentCertificate(editingId, payload)
+        : await uploadStudentCertificate({ ...payload, file: files[0].file });
+
+      const nextCertificates = editingId
+        ? certificates.map((certificate) =>
+            certificate.id === editingId ? response.data : certificate
+          )
+        : [response.data, ...certificates];
+
+      setCertificates(nextCertificates);
+      setProfile({ certificates: nextCertificates });
+      resetForm();
+      setSaving(false);
+      setSaved(true);
+      onNotify({ type: "success", text: response.message });
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      setSaving(false);
+      onNotify({
+        type: "error",
+        text: error instanceof Error ? error.message : "Certificate could not be saved.",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      setDeleteTarget(null);
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      const response = await deleteStudentCertificate(deleteTarget.id);
+      const nextCertificates = certificates.filter(
+        (certificate) => certificate.id !== deleteTarget.id
+      );
+
+      setCertificates(nextCertificates);
+      setProfile({ certificates: nextCertificates });
+      setDeleteTarget(null);
+      onNotify({ type: "success", text: response.message });
+
+      if (editingId === deleteTarget.id) {
+        resetForm();
+      }
+    } catch (error) {
+      onNotify({
+        type: "error",
+        text: error instanceof Error ? error.message : "Certificate could not be deleted.",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>
+          Certificates
+        </h2>
+        <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.78rem" }}>
+          Add certificates that clients can view from your profile.
+        </p>
+      </div>
+
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel text="Certificate Title" required />
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. React Frontend Development"
+              className={inputCls}
+              style={{ fontSize: "0.875rem" }}
+            />
+            <ErrorMsg msg={errors.title ?? ""} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel text="Issuing Organization" required />
+            <input
+              value={issuingOrganization}
+              onChange={(e) => setIssuingOrganization(e.target.value)}
+              placeholder="e.g. Coursera"
+              className={inputCls}
+              style={{ fontSize: "0.875rem" }}
+            />
+            <ErrorMsg msg={errors.issuingOrganization ?? ""} />
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel text="Issue Date" required />
+            <input
+              type="date"
+              value={issueDate}
+              onChange={(e) => setIssueDate(e.target.value)}
+              className={inputCls}
+              style={{ fontSize: "0.875rem" }}
+            />
+            <ErrorMsg msg={errors.issueDate ?? ""} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel text="Expiry Date" />
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className={inputCls}
+              style={{ fontSize: "0.875rem" }}
+            />
+            <ErrorMsg msg={errors.expiryDate ?? ""} />
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel text="Credential ID" />
+            <input
+              value={credentialId}
+              onChange={(e) => setCredentialId(e.target.value)}
+              placeholder="Optional credential identifier"
+              className={inputCls}
+              style={{ fontSize: "0.875rem" }}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <FieldLabel text="Credential URL" />
+            <input
+              value={credentialUrl}
+              onChange={(e) => setCredentialUrl(e.target.value)}
+              placeholder="https://credential-link.com"
+              className={inputCls}
+              style={{ fontSize: "0.875rem" }}
+            />
+            <ErrorMsg msg={errors.credentialUrl ?? ""} />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel text={editingId ? "Replacement File" : "Certificate File"} required={!editingId} />
+          {editingCertificate?.file && files.length === 0 && (
+            <FileAttachmentCard attachment={editingCertificate.file} />
+          )}
+          <FileUploadArea
+            files={files}
+            onAdd={handleAddFile}
+            onRemove={(name) => setFiles((current) => current.filter((file) => file.name !== name))}
+            maxFiles={1}
+            accept={CERTIFICATE_ACCEPT}
+            disabled={suspended}
+          />
+          <p className="text-slate-300" style={{ fontSize: "0.68rem" }}>
+            PDF, JPG, JPEG or PNG · Max 5 MB
+          </p>
+          <ErrorMsg msg={errors.file ?? ""} />
+        </div>
+
+        <div className="pt-1 border-t border-black/[0.05] flex items-center gap-3 flex-wrap">
+          <SaveButton
+            saving={saving}
+            saved={saved}
+            disabled={suspended}
+            label={
+              suspended
+                ? "Account Suspended"
+                : editingId
+                  ? "Update Certificate"
+                  : "Upload Certificate"
+            }
+          />
+          {editingId && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-slate-500 font-semibold hover:text-slate-900 transition-colors"
+              style={{ fontSize: "0.82rem" }}
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
+      </form>
+
+      <div className="border-t border-black/[0.05] pt-5">
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <motion.span
+              className="w-7 h-7 rounded-full border-2 border-slate-200 border-t-blue-600"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+          </div>
+        ) : certificates.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 bg-slate-50 border border-dashed border-slate-200 rounded-2xl py-8 text-center">
+            <Award className="w-7 h-7 text-slate-300" />
+            <p className="text-slate-400" style={{ fontSize: "0.8rem" }}>
+              No certificates added yet.
+            </p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-3">
+            {certificates.map((certificate) => (
+              <div
+                key={certificate.id}
+                className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-slate-900 font-semibold" style={{ fontSize: "0.85rem" }}>
+                      {certificate.title}
+                    </p>
+                    <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.72rem" }}>
+                      {certificate.issuingOrganization}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(certificate)}
+                      disabled={suspended}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                      aria-label={`Edit ${certificate.title}`}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(certificate)}
+                      disabled={suspended}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      aria-label={`Delete ${certificate.title}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-slate-400">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  <span style={{ fontSize: "0.68rem" }}>
+                    Issued {formatCertificateDate(certificate.issueDate)}
+                    {certificate.expiryDate
+                      ? ` · Expires ${formatCertificateDate(certificate.expiryDate)}`
+                      : ""}
+                  </span>
+                </div>
+                {certificate.credentialId && (
+                  <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                    Credential ID: {certificate.credentialId}
+                  </p>
+                )}
+                <FileAttachmentCard attachment={certificate.file} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete Certificate"
+          body={`Are you sure you want to delete "${deleteTarget.title}"?`}
+          confirmLabel="Delete Certificate"
+          confirmColor="#DC2626"
+          loading={deleting}
+          onConfirm={handleDelete}
+          onClose={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 // Identity Verification
 
 function VerificationSection({ onNotify }: { onNotify: (message: NotificationMessage) => void }) {
@@ -897,6 +1413,7 @@ export default function StudentSettingsPage() {
           github: response.data.github ?? "",
           linkedin: response.data.linkedin ?? "",
           portfolio: response.data.portfolio ?? "",
+          certificates: response.data.certificates ?? [],
         });
       } catch (error) {
         const message =
@@ -917,6 +1434,7 @@ export default function StudentSettingsPage() {
   const CONTENT: Record<SettingsSection, React.ReactNode> = {
     profile: <ProfileSection onNotify={setNotification} />,
     social: <SocialSection onNotify={setNotification} />,
+    certificates: <CertificateSection onNotify={setNotification} />,
     verification: <VerificationSection onNotify={setNotification} />,
     account: <AccountSection />,
   };

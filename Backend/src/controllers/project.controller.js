@@ -312,7 +312,9 @@ const getProjectById = asyncHandler(async (req, res) => {
       studentReviewProfileMap,
     ] = await Promise.all([
       StudentProfile.findOne({ user: studentId })
-        .select("bio education university skills github linkedin portfolio")
+        .select(
+          "bio education university skills github linkedin portfolio certificates"
+        )
         .lean(),
       Verification.findOne({ user: studentId, type: "student" })
         .select("status verifiedAt")

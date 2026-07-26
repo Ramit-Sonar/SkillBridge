@@ -1,7 +1,25 @@
 import { useState, type ElementType } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Award, Briefcase, CheckCircle, Github, Globe, Linkedin, Star } from "lucide-react";
+import {
+  Award,
+  Briefcase,
+  CalendarDays,
+  CheckCircle,
+  Download,
+  ExternalLink,
+  Github,
+  Globe,
+  IdCard,
+  Linkedin,
+  Star,
+} from "lucide-react";
 import { ReportUserAction } from "./ReportUserAction";
+import {
+  downloadAttachment,
+  isPreviewSupported,
+  isValidAttachmentUrl,
+  type FileAttachment,
+} from "../../../utils/fileUtils";
 
 export interface ProfileProject {
   id: string;
@@ -40,6 +58,12 @@ export interface ProfileCertificate {
   title: string;
   issuer?: string;
   issuedAt?: string;
+  issuingOrganization?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+  file?: FileAttachment;
   url?: string;
 }
 
@@ -439,6 +463,26 @@ function Portfolio({ projects }: { projects: ProfileProject[] }) {
 }
 
 function Certificates({ certificates }: { certificates: ProfileCertificate[] }) {
+  const [downloadingId, setDownloadingId] = useState("");
+  const [downloadError, setDownloadError] = useState("");
+
+  const handleDownload = async (certificate: ProfileCertificate) => {
+    if (!certificate.file || downloadingId) return;
+
+    setDownloadingId(certificate.id);
+    setDownloadError("");
+
+    try {
+      await downloadAttachment(certificate.file);
+    } catch (error) {
+      setDownloadError(
+        error instanceof Error ? error.message : "Certificate could not be downloaded."
+      );
+    } finally {
+      setDownloadingId("");
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -468,41 +512,115 @@ function Certificates({ certificates }: { certificates: ProfileCertificate[] }) 
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid sm:grid-cols-2 gap-3">
           {certificates.map((certificate) => {
-            const content = (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-start gap-3 transition-all duration-200">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                  <Award className="w-4 h-4 text-emerald-600" />
+            const issuer = certificate.issuingOrganization || certificate.issuer || "";
+            const issuedAt = certificate.issueDate || certificate.issuedAt || "";
+            const certificateUrl = certificate.file?.url || certificate.url || "";
+            const canView = isValidAttachmentUrl(certificateUrl);
+            const canPreviewFile =
+              certificate.file && isPreviewSupported(certificate.file.mimeType);
+
+            return (
+              <motion.div
+                key={certificate.id}
+                whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
+                className="border border-black/[0.06] hover:border-emerald-200 rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Award className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-slate-900 font-semibold" style={{ fontSize: "0.84rem" }}>
+                      {certificate.title}
+                    </p>
+                    <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.72rem" }}>
+                      {issuer || "Issuing organization not provided"}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
-                    {certificate.title}
-                  </p>
-                  {(certificate.issuer || certificate.issuedAt) && (
-                    <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.7rem" }}>
-                      {[certificate.issuer, certificate.issuedAt].filter(Boolean).join(" - ")}
+
+                <div className="flex flex-col gap-1.5">
+                  {issuedAt && (
+                    <p
+                      className="inline-flex items-center gap-1.5 text-slate-400"
+                      style={{ fontSize: "0.68rem" }}
+                    >
+                      <CalendarDays className="w-3 h-3" />
+                      Issued {issuedAt}
+                      {certificate.expiryDate ? ` - Expires ${certificate.expiryDate}` : ""}
                     </p>
                   )}
+                  {certificate.credentialId && (
+                    <p
+                      className="inline-flex items-center gap-1.5 text-slate-400"
+                      style={{ fontSize: "0.68rem" }}
+                    >
+                      <IdCard className="w-3 h-3" />
+                      Credential ID: {certificate.credentialId}
+                    </p>
+                  )}
+                  {certificate.credentialUrl && (
+                    <a
+                      href={getExternalHref(certificate.credentialUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-blue-600 font-semibold hover:text-blue-700 transition-colors w-fit"
+                      style={{ fontSize: "0.68rem" }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Verify credential
+                    </a>
+                  )}
                 </div>
-              </div>
-            );
 
-            return certificate.url ? (
-              <a
-                key={certificate.id}
-                href={certificate.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block hover:-translate-y-0.5 transition-transform"
-              >
-                {content}
-              </a>
-            ) : (
-              <div key={certificate.id}>{content}</div>
+                {canPreviewFile &&
+                  certificate.file?.mimeType?.startsWith("image/") &&
+                  certificate.file.url && (
+                    <img
+                      src={certificate.file.url}
+                      alt={certificate.title}
+                      className="w-full h-28 object-cover rounded-xl border border-slate-200"
+                    />
+                  )}
+
+                <div className="flex items-center gap-2 mt-auto">
+                  <a
+                    href={certificateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-disabled={!canView}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 font-semibold transition-colors ${
+                      canView
+                        ? "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                        : "bg-slate-50 text-slate-300 border-slate-200 pointer-events-none"
+                    }`}
+                    style={{ fontSize: "0.72rem" }}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View Certificate
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDownload(certificate)}
+                    disabled={!certificate.file || downloadingId === certificate.id}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-50 text-slate-500 border border-slate-200 px-3 py-2 font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:hover:bg-slate-50"
+                    style={{ fontSize: "0.72rem" }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    {downloadingId === certificate.id ? "Downloading..." : "Download"}
+                  </button>
+                </div>
+              </motion.div>
             );
           })}
         </div>
+      )}
+      {downloadError && (
+        <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
+          {downloadError}
+        </p>
       )}
     </div>
   );

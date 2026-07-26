@@ -121,6 +121,7 @@ const buildWorkspaceStudentProfile = ({
     github: studentProfile?.github || "",
     linkedin: studentProfile?.linkedin || "",
     portfolio: studentProfile?.portfolio || "",
+    certificates: studentProfile?.certificates || [],
     statistics: {
       averageRating: ratingSummary?.averageRating || 0,
       reviewCount: ratingSummary?.reviewCount || 0,

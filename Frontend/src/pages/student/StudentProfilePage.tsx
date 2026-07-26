@@ -149,6 +149,7 @@ function StudentProfileContent() {
           github: profileData.github ?? "",
           linkedin: profileData.linkedin ?? "",
           portfolio: profileData.portfolio ?? "",
+          certificates: profileData.certificates ?? [],
         });
       }
 

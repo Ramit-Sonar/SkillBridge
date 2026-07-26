@@ -1,4 +1,5 @@
 import type { StudentSummary } from "./applicationService";
+import type { FileAttachment } from "../utils/fileUtils";
 
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
   /\/users\/?$/,
@@ -18,6 +19,29 @@ export type StudentProfileData = {
   github?: string;
   linkedin?: string;
   portfolio?: string;
+  certificates?: StudentCertificate[];
+};
+
+export type StudentCertificate = {
+  id: string;
+  _id?: string;
+  title: string;
+  issuingOrganization: string;
+  issueDate: string;
+  expiryDate?: string | null;
+  credentialId?: string;
+  credentialUrl?: string;
+  file: FileAttachment;
+};
+
+export type CertificatePayload = {
+  title: string;
+  issuingOrganization: string;
+  issueDate: string;
+  expiryDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+  file?: File;
 };
 
 type ApiResponse<T> = {
@@ -52,6 +76,94 @@ export const updateStudentProfile = async (
     },
     credentials: "include",
     body: JSON.stringify(profileData),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const getStudentCertificates = async (): Promise<
+  ApiResponse<{ certificates: StudentCertificate[] }>
+> => {
+  const response = await fetch(`${API_URL}/student/certificates`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+const buildCertificateFormData = (payload: CertificatePayload) => {
+  const formData = new FormData();
+
+  formData.append("title", payload.title);
+  formData.append("issuingOrganization", payload.issuingOrganization);
+  formData.append("issueDate", payload.issueDate);
+  formData.append("expiryDate", payload.expiryDate ?? "");
+  formData.append("credentialId", payload.credentialId ?? "");
+  formData.append("credentialUrl", payload.credentialUrl ?? "");
+
+  if (payload.file) {
+    formData.append("certificateFile", payload.file);
+  }
+
+  return formData;
+};
+
+export const uploadStudentCertificate = async (
+  payload: CertificatePayload & { file: File }
+): Promise<ApiResponse<StudentCertificate>> => {
+  const response = await fetch(`${API_URL}/student/certificates`, {
+    method: "POST",
+    credentials: "include",
+    body: buildCertificateFormData(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const updateStudentCertificate = async (
+  certificateId: string,
+  payload: CertificatePayload
+): Promise<ApiResponse<StudentCertificate>> => {
+  const response = await fetch(`${API_URL}/student/certificates/${certificateId}`, {
+    method: "PATCH",
+    credentials: "include",
+    body: buildCertificateFormData(payload),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const deleteStudentCertificate = async (
+  certificateId: string
+): Promise<ApiResponse<{ certificateId: string }>> => {
+  const response = await fetch(`${API_URL}/student/certificates/${certificateId}`, {
+    method: "DELETE",
+    credentials: "include",
   });
 
   const data = await response.json();

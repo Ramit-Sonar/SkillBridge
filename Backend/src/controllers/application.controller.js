@@ -254,7 +254,9 @@ const getJobApplications = asyncHandler(async (req, res) => {
     studentReviewProfileMap,
   ] = await Promise.all([
     StudentProfile.find({ user: { $in: studentIds } })
-      .select("user bio education university skills github linkedin portfolio")
+      .select(
+        "user bio education university skills github linkedin portfolio certificates"
+      )
       .lean(),
     Verification.find({ user: { $in: studentIds }, type: "student" })
       .select("user status verifiedAt")
@@ -356,7 +358,9 @@ const getApplicationById = asyncHandler(async (req, res) => {
   ] = await Promise.all([
     studentId
       ? StudentProfile.findOne({ user: studentId })
-          .select("bio education university skills github linkedin portfolio")
+          .select(
+            "bio education university skills github linkedin portfolio certificates"
+          )
           .lean()
       : null,
     studentId

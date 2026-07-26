@@ -37,6 +37,12 @@ const allowedAttachmentTypes = [
   "application/x-photoshop",
   "application/illustrator",
 ];
+const allowedCertificateTypes = [
+  "application/pdf",
+  "image/png",
+  "image/jpg",
+  "image/jpeg",
+];
 const allowedRawAttachmentExtensions = [".fig", ".psd", ".ai", ".exe"];
 
 const storage = multer.diskStorage({
@@ -80,6 +86,15 @@ const attachmentFileFilter = function (req, file, cb) {
   cb(null, true);
 };
 
+const certificateFileFilter = function (req, file, cb) {
+  if (!allowedCertificateTypes.includes(file.mimetype)) {
+    cb(new ApiError(400, "Only PDF, JPG, JPEG and PNG certificate files are allowed"));
+    return;
+  }
+
+  cb(null, true);
+};
+
 export const upload = multer({
   storage,
   limits: {
@@ -95,4 +110,13 @@ export const jobAttachmentUpload = multer({
     files: 3,
   },
   fileFilter: attachmentFileFilter,
+});
+
+export const certificateUpload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+  },
+  fileFilter: certificateFileFilter,
 });

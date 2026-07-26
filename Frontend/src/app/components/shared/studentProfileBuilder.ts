@@ -1,4 +1,9 @@
-import type { ProfileProject, ProfileReview, ProfileViewProps } from "./StudentProfileView";
+import type {
+  ProfileCertificate,
+  ProfileProject,
+  ProfileReview,
+  ProfileViewProps,
+} from "./StudentProfileView";
 import type {
   ProjectProfileCompletedProject,
   ProjectStudentProfile,
@@ -6,6 +11,7 @@ import type {
 } from "../../../services/projectService";
 import type { StudentSummary } from "../../../services/applicationService";
 import type { StudentRatingSummary, StudentReviewSummary } from "../../../services/reviewService";
+import type { StudentCertificate } from "../../../services/studentProfileService";
 
 type UserProfileSource = {
   fullName?: string;
@@ -20,6 +26,7 @@ type BasicProfileFields = {
   github?: string;
   linkedin?: string;
   portfolio?: string;
+  certificates?: StudentCertificate[];
 };
 
 type BasicProfileSource = BasicProfileFields & {
@@ -213,6 +220,19 @@ function mapProject(
   };
 }
 
+function mapCertificate(certificate: StudentCertificate): ProfileCertificate {
+  return {
+    id: certificate.id || certificate._id || certificate.title,
+    title: certificate.title,
+    issuingOrganization: certificate.issuingOrganization,
+    issueDate: formatProfileDate(certificate.issueDate),
+    expiryDate: formatProfileDate(certificate.expiryDate),
+    credentialId: certificate.credentialId || undefined,
+    credentialUrl: certificate.credentialUrl || undefined,
+    file: certificate.file,
+  };
+}
+
 export function buildStudentProfileViewProps({
   user,
   profile,
@@ -234,6 +254,7 @@ export function buildStudentProfileViewProps({
   const name = getName(profile, user, fallbackName);
   const education = nestedProfile?.education || "";
   const university = nestedProfile?.university || "";
+  const certificates = nestedProfile?.certificates || [];
 
   // The profile page accepts data from settings, applications, projects, and public profile APIs.
   return {
@@ -258,6 +279,7 @@ export function buildStudentProfileViewProps({
     linkedin: nestedProfile?.linkedin || undefined,
     portfolio: nestedProfile?.portfolio || undefined,
     projects: profileProjects.map((project) => mapProject(project, profileReviews)),
+    certificates: certificates.map(mapCertificate),
     reviews: profileReviews.map(mapReview),
     avatarUrl: getAvatar(profile, user) || undefined,
   };
