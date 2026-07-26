@@ -22,9 +22,11 @@ import {
   Zap,
 } from "lucide-react";
 import { getCurrentUser, logoutUser, type AuthUser } from "@/services/authService";
+import { getAdminDashboardSummary } from "@/services/adminService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const ADMIN_VERIFICATIONS_UPDATED_EVENT = "skillbridge:verification-updated";
 export const ACCOUNT_SUSPENDED_MESSAGE =
   "Your account has been suspended. Some marketplace features have been disabled.";
 
@@ -245,12 +247,14 @@ function Sidebar({
   role,
   currentUser,
   activeItem,
+  pendingVerificationCount,
   onItemClick,
   onLogout,
 }: {
   role: DashboardRole;
   currentUser: DashboardCurrentUser | null;
   activeItem: DashboardNavId;
+  pendingVerificationCount: number;
   onItemClick: (id: DashboardNavId) => void;
   onLogout: () => void;
 }) {
@@ -347,6 +351,8 @@ function Sidebar({
         {config.mainNav.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem === item.id;
+          const showBadge =
+            item.badge && !isActive && (item.id !== "students" || pendingVerificationCount > 0);
 
           return (
             <div key={item.id} className="relative group/nav">
@@ -388,7 +394,7 @@ function Sidebar({
                 </AnimatePresence>
 
                 <AnimatePresence>
-                  {expanded && item.badge && !isActive && (
+                  {expanded && showBadge && (
                     <motion.span
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -646,6 +652,7 @@ function MobileDrawer({
   onClose,
   role,
   activeItem,
+  pendingVerificationCount,
   onItemClick,
   onLogout,
 }: {
@@ -653,6 +660,7 @@ function MobileDrawer({
   onClose: () => void;
   role: DashboardRole;
   activeItem: DashboardNavId;
+  pendingVerificationCount: number;
   onItemClick: (id: DashboardNavId) => void;
   onLogout: () => void;
 }) {
@@ -712,6 +720,10 @@ function MobileDrawer({
               {config.mainNav.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeItem === item.id;
+                const showBadge =
+                  item.badge &&
+                  !isActive &&
+                  (item.id !== "students" || pendingVerificationCount > 0);
                 return (
                   <button
                     key={item.id}
@@ -726,7 +738,7 @@ function MobileDrawer({
                     <span className="font-medium flex-1" style={{ fontSize: "0.85rem" }}>
                       {item.label}
                     </span>
-                    {item.badge && !isActive && (
+                    {showBadge && (
                       <span
                         className="bg-amber-50 text-amber-600 border border-amber-200 font-bold px-1.5 py-0.5 rounded-md"
                         style={{ fontSize: "0.5rem" }}
@@ -780,6 +792,7 @@ export function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState<DashboardNavId>(activeNav as DashboardNavId);
   const [currentUser, setCurrentUser] = useState<DashboardCurrentUser | null>(null);
+  const [pendingVerificationCount, setPendingVerificationCount] = useState(0);
   const loggingOutRef = useRef(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
   const showSuspensionNotice = role !== "admin" && isAccountSuspended(currentUser);
@@ -803,6 +816,35 @@ export function DashboardLayout({
       window.removeEventListener("skillbridge:user-updated", refreshCurrentUser);
     };
   }, []);
+
+  useEffect(() => {
+    if (role !== "admin") {
+      setPendingVerificationCount(0);
+      return;
+    }
+
+    let mounted = true;
+
+    const refreshPendingVerifications = () => {
+      getAdminDashboardSummary()
+        .then((response) => {
+          if (mounted) {
+            setPendingVerificationCount(response.data.pendingVerifications ?? 0);
+          }
+        })
+        .catch(() => {
+          if (mounted) setPendingVerificationCount(0);
+        });
+    };
+
+    refreshPendingVerifications();
+    window.addEventListener(ADMIN_VERIFICATIONS_UPDATED_EVENT, refreshPendingVerifications);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener(ADMIN_VERIFICATIONS_UPDATED_EVENT, refreshPendingVerifications);
+    };
+  }, [role]);
 
   const handleLogout = async () => {
     setNotification(null);
@@ -839,6 +881,7 @@ export function DashboardLayout({
           role={role}
           currentUser={currentUser}
           activeItem={activeItem}
+          pendingVerificationCount={pendingVerificationCount}
           onItemClick={setActiveItem}
           onLogout={handleLogout}
         />
@@ -848,6 +891,7 @@ export function DashboardLayout({
           onClose={() => setMobileOpen(false)}
           role={role}
           activeItem={activeItem}
+          pendingVerificationCount={pendingVerificationCount}
           onItemClick={setActiveItem}
           onLogout={handleLogout}
         />

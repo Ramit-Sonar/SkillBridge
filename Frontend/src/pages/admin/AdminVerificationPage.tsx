@@ -641,6 +641,7 @@ function VerificationListPanel<
       updateLocalStatus(id, "approved");
       onNotify({ type: "success", text: "Verification approved successfully." });
       await onRefresh();
+      window.dispatchEvent(new Event("skillbridge:verification-updated"));
       return true;
     } catch (error) {
       const message =
@@ -664,6 +665,7 @@ function VerificationListPanel<
       updateLocalStatus(id, "rejected");
       onNotify({ type: "success", text: "Verification rejected successfully." });
       await onRefresh();
+      window.dispatchEvent(new Event("skillbridge:verification-updated"));
       return true;
     } catch (error) {
       const message =
