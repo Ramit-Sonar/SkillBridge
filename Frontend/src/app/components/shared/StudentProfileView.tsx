@@ -512,7 +512,7 @@ function Certificates({ certificates }: { certificates: ProfileCertificate[] }) 
           </p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {certificates.map((certificate) => {
             const issuer = certificate.issuingOrganization || certificate.issuer || "";
             const issuedAt = certificate.issueDate || certificate.issuedAt || "";
@@ -525,11 +525,11 @@ function Certificates({ certificates }: { certificates: ProfileCertificate[] }) 
               <motion.div
                 key={certificate.id}
                 whileHover={{ y: -2, boxShadow: "0 6px 20px rgba(0,0,0,0.07)" }}
-                className="border border-black/[0.06] hover:border-emerald-200 rounded-2xl p-4 flex flex-col gap-3 transition-all duration-200"
+                className="w-full bg-white border border-black/[0.06] hover:border-emerald-200 rounded-2xl p-3 flex flex-col gap-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.08)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.10)] transition-all duration-200"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                    <Award className="w-4 h-4 text-emerald-600" />
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+                    <Award className="w-3.5 h-3.5 text-emerald-600" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-slate-900 font-semibold" style={{ fontSize: "0.84rem" }}>
@@ -575,42 +575,56 @@ function Certificates({ certificates }: { certificates: ProfileCertificate[] }) 
                   )}
                 </div>
 
-                {canPreviewFile &&
+                <div className="flex items-end justify-between gap-3 mt-auto">
+                  {canPreviewFile &&
                   certificate.file?.mimeType?.startsWith("image/") &&
-                  certificate.file.url && (
-                    <img
-                      src={certificate.file.url}
-                      alt={certificate.title}
-                      className="w-full h-28 object-cover rounded-xl border border-slate-200"
-                    />
+                  certificate.file.url ? (
+                    <a
+                      href={certificateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-fit max-w-[calc(100%-4.75rem)] rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+                    >
+                      <img
+                        src={certificate.file.url}
+                        alt={certificate.title}
+                        className="h-20 max-w-full object-contain rounded-lg"
+                      />
+                    </a>
+                  ) : (
+                    <div />
                   )}
 
-                <div className="flex items-center gap-2 mt-auto">
-                  <a
-                    href={certificateUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-disabled={!canView}
-                    className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 font-semibold transition-colors ${
-                      canView
-                        ? "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
-                        : "bg-slate-50 text-slate-300 border-slate-200 pointer-events-none"
-                    }`}
-                    style={{ fontSize: "0.72rem" }}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    View Certificate
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => handleDownload(certificate)}
-                    disabled={!certificate.file || downloadingId === certificate.id}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-50 text-slate-500 border border-slate-200 px-3 py-2 font-semibold hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:hover:bg-slate-50"
-                    style={{ fontSize: "0.72rem" }}
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    {downloadingId === certificate.id ? "Downloading..." : "Download"}
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href={certificateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled={!canView}
+                      aria-label="View certificate"
+                      title="View certificate"
+                      className={`w-8 h-8 inline-flex items-center justify-center rounded-xl border shadow-sm transition-colors ${
+                        canView
+                          ? "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                          : "bg-slate-50 text-slate-300 border-slate-200 pointer-events-none"
+                      }`}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(certificate)}
+                      disabled={!certificate.file || downloadingId === certificate.id}
+                      aria-label="Download certificate"
+                      title="Download certificate"
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-white text-slate-500 border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span className="sr-only">
+                        {downloadingId === certificate.id ? "Downloading..." : "Download"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             );
