@@ -16,6 +16,13 @@ export type PlatformUser = {
   email: string;
   role: UserRole;
   status: UserStatus;
+  suspendedAt?: string | null;
+  suspendedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  suspensionReason?: string;
   verificationStatus: VerificationStatus;
   joinedAt: string;
   projectCount: number;
@@ -119,10 +126,17 @@ export const getUserDetails = async (userId: string): Promise<ApiResponse<Platfo
   return parseAdminResponse<PlatformUser>(response, "Failed to fetch user details.");
 };
 
-export const suspendUser = async (userId: string): Promise<ApiResponse<PlatformUser>> => {
+export const suspendUser = async (
+  userId: string,
+  suspensionReason = ""
+): Promise<ApiResponse<PlatformUser>> => {
   const response = await fetch(`${API_URL}/admin/users/${userId}/suspend`, {
     method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
     credentials: "include",
+    body: JSON.stringify({ suspensionReason }),
   });
 
   return parseAdminResponse<PlatformUser>(response, "Failed to suspend user.");

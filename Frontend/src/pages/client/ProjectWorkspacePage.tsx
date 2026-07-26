@@ -16,7 +16,13 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { DashboardLayout, type DashboardRole } from "../../app/components/layout/DashboardLayout";
+import {
+  ACCOUNT_SUSPENDED_MESSAGE,
+  DashboardLayout,
+  isAccountSuspended,
+  useDashboardCurrentUser,
+  type DashboardRole,
+} from "../../app/components/layout/DashboardLayout";
 import {
   ReadOnlyApplicationView,
   type ApplicationDetailsData,
@@ -666,7 +672,9 @@ export default function ProjectWorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = useDashboardCurrentUser();
   const role: DashboardRole = location.pathname.includes("/student/") ? "student" : "client";
+  const suspended = isAccountSuspended(currentUser);
 
   const [activeTab, setActiveTab] = useState<ProjectWorkspaceTab>("deliverables");
   const [workspace, setWorkspace] = useState<ProjectWorkspaceSnapshot | null>(null);
@@ -906,6 +914,10 @@ export default function ProjectWorkspacePage() {
 
   const handleSubmitProject = async (formData: ProjectSubmissionFormData) => {
     if (!id || submitting) return;
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
 
     setSubmitting(true);
     setLoadError("");
@@ -938,6 +950,11 @@ export default function ProjectWorkspacePage() {
     referenceLinks: string[];
   }) => {
     if (!id) return;
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      setShowRevisionDialog(false);
+      return;
+    }
 
     try {
       const response = await requestRevision(id, {
@@ -962,6 +979,11 @@ export default function ProjectWorkspacePage() {
 
   const handleApprove = async () => {
     if (!id) return;
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      setShowApprove(false);
+      return;
+    }
 
     try {
       const response = await approveDeliverable(id);
@@ -987,6 +1009,11 @@ export default function ProjectWorkspacePage() {
 
   const handleCreateReview = async (review: { rating: number; comment: string }) => {
     if (!id || reviewSubmitLockedRef.current) return;
+    if (suspended) {
+      const message = ACCOUNT_SUSPENDED_MESSAGE;
+      setNotification({ type: "error", text: message });
+      throw new Error(message);
+    }
 
     // Prevent duplicate review posts while the modal is awaiting the backend.
     reviewSubmitLockedRef.current = true;

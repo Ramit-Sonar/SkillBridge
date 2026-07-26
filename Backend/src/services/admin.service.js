@@ -242,6 +242,15 @@ const buildAdminUserSummary = ({
     email: user.email,
     role: user.role,
     status: user.accountStatus || "active",
+    suspendedAt: user.suspendedAt || null,
+    suspendedBy: user.suspendedBy
+      ? {
+          id: user.suspendedBy._id?.toString?.() || user.suspendedBy.toString(),
+          name: user.suspendedBy.fullName || "Unknown Admin",
+          email: user.suspendedBy.email || "",
+        }
+      : null,
+    suspensionReason: user.suspensionReason || "",
     verificationStatus,
     joinedAt: user.createdAt,
     projectCount: isStudent
@@ -335,8 +344,9 @@ const buildAdminUserSummaries = async (users) => {
 const getAdminUsersData = async () => {
   const users = await User.find({ role: { $in: ["student", "client"] } })
     .select(
-      "_id fullName email role avatar profileCompleted accountStatus createdAt"
+      "_id fullName email role avatar profileCompleted accountStatus suspendedAt suspendedBy suspensionReason createdAt"
     )
+    .populate("suspendedBy", "fullName email role")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -349,8 +359,9 @@ const getAdminUserDetailsData = async (userId) => {
     role: { $in: ["student", "client"] },
   })
     .select(
-      "_id fullName email role avatar profileCompleted accountStatus createdAt"
+      "_id fullName email role avatar profileCompleted accountStatus suspendedAt suspendedBy suspensionReason createdAt"
     )
+    .populate("suspendedBy", "fullName email role")
     .lean();
 
   if (!user) return null;
@@ -360,15 +371,31 @@ const getAdminUserDetailsData = async (userId) => {
   return userSummary;
 };
 
-const updateAdminUserAccountStatus = async (userId, accountStatus) => {
+const updateAdminUserAccountStatus = async (
+  userId,
+  accountStatus,
+  adminUserId,
+  suspensionReason = ""
+) => {
   const user = await User.findOne({
     _id: userId,
     role: { $in: ["student", "client"] },
-  }).select("_id accountStatus role");
+  }).select("_id accountStatus suspendedAt suspendedBy suspensionReason role");
 
   if (!user) return null;
 
   user.accountStatus = accountStatus;
+
+  if (accountStatus === "suspended") {
+    user.suspendedAt = new Date();
+    user.suspendedBy = adminUserId;
+    user.suspensionReason = suspensionReason;
+  } else {
+    user.suspendedAt = undefined;
+    user.suspendedBy = undefined;
+    user.suspensionReason = "";
+  }
+
   await user.save();
 
   return getAdminUserDetailsData(user._id);

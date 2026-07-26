@@ -11,6 +11,7 @@ import {
   optionalVerifyJWT,
   verifyJWT,
 } from "../middlewares/auth.middleware.js";
+import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 import { removeTempFiles } from "../utils/tempFile.js";
@@ -32,7 +33,7 @@ const jobUpload = (req, res, next) => {
 
 router
   .route("/")
-  .post(verifyJWT, clientRoles, jobUpload, createJob)
+  .post(verifyJWT, clientRoles, ensureActiveAccount, jobUpload, createJob)
   .get(optionalVerifyJWT, getAllOpenJobs);
 
 router.route("/my-jobs").get(verifyJWT, clientRoles, getClientJobs);
@@ -40,8 +41,10 @@ router.route("/my-jobs").get(verifyJWT, clientRoles, getClientJobs);
 router
   .route("/:jobId")
   .get(optionalVerifyJWT, getJobById)
-  .patch(verifyJWT, clientRoles, jobUpload, updateJob);
+  .patch(verifyJWT, clientRoles, ensureActiveAccount, jobUpload, updateJob);
 
-router.route("/:jobId/cancel").patch(verifyJWT, clientRoles, cancelJob);
+router
+  .route("/:jobId/cancel")
+  .patch(verifyJWT, clientRoles, ensureActiveAccount, cancelJob);
 
 export default router;

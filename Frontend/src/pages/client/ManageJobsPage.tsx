@@ -1,7 +1,12 @@
 ﻿import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLocation, useNavigate } from "react-router";
-import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
+import {
+  ACCOUNT_SUSPENDED_MESSAGE,
+  DashboardLayout,
+  isAccountSuspended,
+  useDashboardCurrentUser,
+} from "../../app/components/layout/DashboardLayout";
 import {
   ConfirmDialog,
   Notification,
@@ -757,6 +762,8 @@ function ApplicationsPanel({
   onJobStatusChange: (jobId: string, status: JobStatus) => void;
   onApplicantsChange: (jobId: string, applicants: Applicant[]) => void;
 }) {
+  const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [workspaceApplicant, setWorkspaceApplicant] = useState<Applicant | null>(null);
   const [hireTarget, setHireTarget] = useState<Applicant | null>(null);
@@ -843,6 +850,12 @@ function ApplicationsPanel({
   };
 
   const handleHire = async (applicant: Applicant) => {
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      setHireTarget(null);
+      return;
+    }
+
     setActionLoading(true);
 
     try {
@@ -872,6 +885,12 @@ function ApplicationsPanel({
   };
 
   const handleReject = async (applicant: Applicant) => {
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      setRejectTarget(null);
+      return;
+    }
+
     setActionLoading(true);
 
     try {
@@ -1369,6 +1388,8 @@ function JobCard({
 export default function ManageJobsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -1411,6 +1432,11 @@ export default function ManageJobsPage() {
 
   const handleCancelJob = async () => {
     if (!cancelTarget || cancellingRef.current) return;
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      setCancelTarget(null);
+      return;
+    }
 
     cancellingRef.current = true;
     setCancelling(true);

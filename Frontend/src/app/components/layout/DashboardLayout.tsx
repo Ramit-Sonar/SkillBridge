@@ -15,6 +15,7 @@ import {
   PlusCircle,
   Search,
   Settings,
+  ShieldAlert,
   User,
   Users,
   X,
@@ -24,6 +25,8 @@ import { getCurrentUser, logoutUser, type AuthUser } from "@/services/authServic
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export const ACCOUNT_SUSPENDED_MESSAGE =
+  "Your account has been suspended. Some marketplace features have been disabled.";
 
 export type DashboardRole = "student" | "client" | "admin";
 export type DashboardCurrentUser = AuthUser & {
@@ -63,6 +66,10 @@ function getInitials(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+export function isAccountSuspended(user: Pick<DashboardCurrentUser, "accountStatus"> | null) {
+  return user?.accountStatus === "suspended";
 }
 
 type DashboardNavId =
@@ -775,6 +782,7 @@ export function DashboardLayout({
   const [currentUser, setCurrentUser] = useState<DashboardCurrentUser | null>(null);
   const loggingOutRef = useRef(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
+  const showSuspensionNotice = role !== "admin" && isAccountSuspended(currentUser);
 
   useEffect(() => {
     let mounted = true;
@@ -859,6 +867,31 @@ export function DashboardLayout({
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
               className="p-6 lg:p-8 max-w-6xl"
             >
+              {showSuspensionNotice && (
+                <div className="mb-5 bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-red-200 flex items-center justify-center shrink-0">
+                    <ShieldAlert className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-red-700 font-bold" style={{ fontSize: "0.95rem" }}>
+                      Account Suspended
+                    </h2>
+                    <p className="text-red-600 mt-1 leading-relaxed" style={{ fontSize: "0.82rem" }}>
+                      Your SkillBridge account has been temporarily suspended. Some marketplace
+                      features have been disabled. If you believe this is a mistake, please contact
+                      the administrator.
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 bg-white border border-red-200 rounded-xl px-3 py-1.5">
+                      <span className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
+                        Status
+                      </span>
+                      <span className="text-red-700 font-bold" style={{ fontSize: "0.72rem" }}>
+                        Suspended
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
               {children}
             </motion.div>
           </main>

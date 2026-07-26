@@ -11,6 +11,7 @@ import {
   updateClientVerification,
   updateStudentVerification,
 } from "../controllers/verification.controller.js";
+import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -42,6 +43,7 @@ router
   .post(
     verifyJWT,
     studentRoles,
+    ensureActiveAccount,
     upload.fields([
       { name: "idCard", maxCount: 1 },
       { name: "selfie", maxCount: 1 },
@@ -51,6 +53,7 @@ router
   .patch(
     verifyJWT,
     studentRoles,
+    ensureActiveAccount,
     upload.fields([
       { name: "idCard", maxCount: 1 },
       { name: "selfie", maxCount: 1 },
@@ -63,6 +66,7 @@ router
   .post(
     verifyJWT,
     clientRoles,
+    ensureActiveAccount,
     upload.fields([
       { name: "citizenshipFront", maxCount: 1 },
       { name: "citizenshipSelfie", maxCount: 1 },
@@ -73,6 +77,7 @@ router
   .patch(
     verifyJWT,
     clientRoles,
+    ensureActiveAccount,
     upload.fields([
       { name: "citizenshipFront", maxCount: 1 },
       { name: "citizenshipSelfie", maxCount: 1 },

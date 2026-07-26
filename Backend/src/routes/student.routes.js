@@ -4,6 +4,7 @@ import {
   getStudentProfile,
   updateStudentProfile,
 } from "../controllers/studentProfile.controller.js";
+import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -16,6 +17,6 @@ router.route("/public-profile/:studentId").get(getPublicStudentProfile);
 router
   .route("/profile")
   .get(verifyJWT, studentRoles, getStudentProfile)
-  .put(verifyJWT, studentRoles, updateStudentProfile);
+  .put(verifyJWT, studentRoles, ensureActiveAccount, updateStudentProfile);
 
 export default router;

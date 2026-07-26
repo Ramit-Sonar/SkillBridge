@@ -8,6 +8,7 @@ import {
   submitApplication,
   withdrawApplication,
 } from "../controllers/application.controller.js";
+import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
@@ -34,6 +35,7 @@ router
   .post(
     verifyJWT,
     studentRoles,
+    ensureActiveAccount,
     applicationAttachmentUpload,
     submitApplication
   );
@@ -48,14 +50,14 @@ router.route("/:applicationId").get(verifyJWT, getApplicationById);
 
 router
   .route("/:applicationId/withdraw")
-  .patch(verifyJWT, studentRoles, withdrawApplication);
+  .patch(verifyJWT, studentRoles, ensureActiveAccount, withdrawApplication);
 
 router
   .route("/:applicationId/accept")
-  .patch(verifyJWT, clientRoles, acceptApplication);
+  .patch(verifyJWT, clientRoles, ensureActiveAccount, acceptApplication);
 
 router
   .route("/:applicationId/reject")
-  .patch(verifyJWT, clientRoles, rejectApplication);
+  .patch(verifyJWT, clientRoles, ensureActiveAccount, rejectApplication);
 
 export default router;

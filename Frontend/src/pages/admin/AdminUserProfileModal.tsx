@@ -197,7 +197,28 @@ function AdminInformation({
             {formatAdminDate(user.joinedAt)}
           </p>
         </AdminMetric>
+        <AdminMetric label="Suspended By">
+          <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+            {user.suspendedBy?.name || "Not applicable"}
+          </p>
+        </AdminMetric>
+        <AdminMetric label="Suspended At">
+          <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+            {formatAdminDate(user.suspendedAt || undefined)}
+          </p>
+        </AdminMetric>
       </div>
+
+      {user.status === "suspended" && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <p className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
+            Suspension Reason
+          </p>
+          <p className="text-red-700 mt-1 leading-relaxed" style={{ fontSize: "0.8rem" }}>
+            {user.suspensionReason || "No reason was provided."}
+          </p>
+        </div>
+      )}
 
       {!readOnly &&
         (isActive ? (

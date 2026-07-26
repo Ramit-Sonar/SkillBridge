@@ -19,6 +19,11 @@ import {
   type VerificationData,
 } from "../../../services/verificationService";
 import {
+  ACCOUNT_SUSPENDED_MESSAGE,
+  isAccountSuspended,
+  useDashboardCurrentUser,
+} from "../layout/DashboardLayout";
+import {
   getVerificationDisplayStatus,
   VERIFICATION_STATUS_CONFIG,
   type VerificationStatusValue,
@@ -348,6 +353,8 @@ export function VerificationForm({
   mode = "submit",
   disabled = false,
 }: VerificationFormProps) {
+  const currentUser = useDashboardCurrentUser();
+  const formDisabled = disabled || isAccountSuspended(currentUser);
   const [university, setUniversity] = useState(initialUniversity);
   const [studentId, setStudentId] = useState(initialStudentId);
   const [idCard, setIdCard] = useState<UploadedFile | null>(null);
@@ -362,15 +369,20 @@ export function VerificationForm({
   }, [initialStudentId, initialUniversity]);
 
   const canSubmit =
-    !disabled &&
+    !formDisabled &&
     university.trim() !== "" &&
     studentId.trim() !== "" &&
     idCard !== null &&
     selfie !== null;
-  const canUpdate = !disabled && university.trim() !== "" && studentId.trim() !== "";
+  const canUpdate = !formDisabled && university.trim() !== "" && studentId.trim() !== "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formDisabled) {
+      onNotify?.({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
 
     if (mode === "update") {
       if (!canUpdate || submitting) return;
@@ -476,7 +488,7 @@ export function VerificationForm({
                 placeholder="Enter your college name"
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
-                disabled={disabled || submitting}
+                disabled={formDisabled || submitting}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
                 style={{ fontSize: "0.875rem" }}
               />
@@ -497,7 +509,7 @@ export function VerificationForm({
                 placeholder="Enter your student ID number"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                disabled={disabled || submitting}
+                disabled={formDisabled || submitting}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
                 style={{ fontSize: "0.875rem" }}
               />
@@ -511,7 +523,7 @@ export function VerificationForm({
               file={idCard}
               onFile={setIdCard}
               onRemove={() => setIdCard(null)}
-              disabled={disabled || submitting}
+              disabled={formDisabled || submitting}
             />
 
             <FileUpload
@@ -520,7 +532,7 @@ export function VerificationForm({
               file={selfie}
               onFile={setSelfie}
               onRemove={() => setSelfie(null)}
-              disabled={disabled || submitting}
+              disabled={formDisabled || submitting}
             />
 
             {mode === "submit" && !canSubmit && (university || studentId || idCard || selfie) && (
@@ -535,6 +547,7 @@ export function VerificationForm({
             <button
               type="submit"
               disabled={mode === "update" ? !canUpdate || submitting : !canSubmit || submitting}
+              title={formDisabled ? ACCOUNT_SUSPENDED_MESSAGE : undefined}
               className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all ${
                 ((mode === "update" ? canUpdate : canSubmit) && !submitting)
                   ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
@@ -554,7 +567,11 @@ export function VerificationForm({
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  {mode === "update" ? "Update Verification" : "Submit Verification"}
+                  {formDisabled
+                    ? "Account Suspended"
+                    : mode === "update"
+                      ? "Update Verification"
+                      : "Submit Verification"}
                 </>
               )}
             </button>

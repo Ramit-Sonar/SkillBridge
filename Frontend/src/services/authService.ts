@@ -12,6 +12,7 @@ export type AuthUser = {
   fullName: string;
   email: string;
   role: Role;
+  accountStatus?: "active" | "suspended";
   avatar?: string;
   isVerified?: boolean;
   profileCompleted?: boolean;

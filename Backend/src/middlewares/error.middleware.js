@@ -6,6 +6,7 @@ const globalErrorHandler = (err, req, res, next) => {
 
   return res.status(statusCode).json({
     success: false,
+    errorCode: err.errorCode || undefined,
     message: err.message,
     errors: err.errors || [],
   });

@@ -1,7 +1,12 @@
 ﻿import { useState, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation } from "react-router";
-import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
+import {
+  ACCOUNT_SUSPENDED_MESSAGE,
+  DashboardLayout,
+  isAccountSuspended,
+  useDashboardCurrentUser,
+} from "../../app/components/layout/DashboardLayout";
 import { FileAttachmentCard } from "../../app/components/shared/FileAttachmentCard";
 import { FileUploadArea, type UploadedFile } from "../../app/components/shared/FileUploadArea";
 import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
@@ -309,6 +314,8 @@ function SkillSelector({
 export default function PostJobPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   // Manage Jobs passes edit data through route state to reuse this form.
   const editJob = (location.state as { editJob?: Record<string, unknown> } | null)?.editJob as
     | {
@@ -380,12 +387,22 @@ export default function PostJobPage() {
   };
 
   const handleContinue = () => {
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
+
     if (validateJobDetails()) setActiveSection("project-settings");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (publishing) return;
+    if (suspended) {
+      setNotification({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
+
     if (!validateProjectSettings()) return;
     setPublishing(true);
 
@@ -790,6 +807,7 @@ export default function PostJobPage() {
               </div>
               <FileUploadArea
                 files={files}
+                disabled={suspended}
                 onAdd={(f) => setFiles((p) => [...p, f])}
                 onRemove={(name) => setFiles((p) => p.filter((f) => f.name !== name))}
               />
@@ -819,13 +837,16 @@ export default function PostJobPage() {
             <div className="pt-1 border-t border-black/[0.05] flex flex-wrap items-center gap-3">
               <motion.button
                 type="submit"
-                disabled={publishing}
-                whileHover={!publishing ? { scale: 1.02 } : {}}
-                whileTap={!publishing ? { scale: 0.97 } : {}}
+                disabled={publishing || suspended}
+                title={suspended ? ACCOUNT_SUSPENDED_MESSAGE : undefined}
+                whileHover={!publishing && !suspended ? { scale: 1.02 } : {}}
+                whileTap={!publishing && !suspended ? { scale: 0.97 } : {}}
                 className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70"
                 style={{ fontSize: "0.875rem" }}
               >
-                {publishing ? (
+                {suspended ? (
+                  "Account Suspended"
+                ) : publishing ? (
                   <>
                     <motion.span
                       className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"

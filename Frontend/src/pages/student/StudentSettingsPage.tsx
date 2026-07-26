@@ -1,7 +1,9 @@
 ﻿import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  ACCOUNT_SUSPENDED_MESSAGE,
   DashboardLayout,
+  isAccountSuspended,
   useDashboardCurrentUser,
 } from "../../app/components/layout/DashboardLayout";
 import { SettingsLayout } from "../../app/components/layout/SettingsLayout";
@@ -90,10 +92,12 @@ function SaveButton({
   saving,
   saved,
   disabled: dis,
+  label = "Save Changes",
 }: {
   saving: boolean;
   saved: boolean;
   disabled?: boolean;
+  label?: string;
 }) {
   return (
     <motion.button
@@ -121,7 +125,7 @@ function SaveButton({
           <Check className="w-4 h-4" /> Saved!
         </>
       ) : (
-        "Save Changes"
+        label
       )}
     </motion.button>
   );
@@ -301,6 +305,7 @@ function SkillsComboBox({
 
 function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage) => void }) {
   const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   const [displayName, setDisplayName] = useState("");
   const [about, setAbout] = useState("");
   const [education, setEducation] = useState("");
@@ -332,6 +337,10 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
 
     try {
       const response = await uploadAvatar(file);
@@ -357,6 +366,11 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
+
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -535,7 +549,12 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
       )}
 
       <div className="pt-1 border-t border-black/[0.05]">
-        <SaveButton saving={saving} saved={saved} />
+        <SaveButton
+          saving={saving}
+          saved={saved}
+          disabled={suspended}
+          label={suspended ? "Account Suspended" : "Save Changes"}
+        />
       </div>
     </form>
   );
@@ -544,6 +563,8 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
 // Social Links
 
 function SocialSection({ onNotify }: { onNotify: (message: NotificationMessage) => void }) {
+  const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   const [github, setGithub] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [portfolio, setPortfolio] = useState("");
@@ -616,6 +637,11 @@ function SocialSection({ onNotify }: { onNotify: (message: NotificationMessage) 
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
+
     const result = validate();
     setErrors(result.errors);
     if (Object.keys(result.errors).length > 0) return;
@@ -711,7 +737,12 @@ function SocialSection({ onNotify }: { onNotify: (message: NotificationMessage) 
       </div>
 
       <div className="pt-1 border-t border-black/[0.05]">
-        <SaveButton saving={saving} saved={saved} />
+        <SaveButton
+          saving={saving}
+          saved={saved}
+          disabled={suspended}
+          label={suspended ? "Account Suspended" : "Save Changes"}
+        />
       </div>
     </form>
   );

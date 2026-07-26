@@ -19,7 +19,12 @@ import {
   CheckCircle,
   ArrowRight,
 } from "lucide-react";
-import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
+import {
+  ACCOUNT_SUSPENDED_MESSAGE,
+  DashboardLayout,
+  isAccountSuspended,
+  useDashboardCurrentUser,
+} from "../../app/components/layout/DashboardLayout";
 import { ApplyModal } from "../../app/components/ApplyModal";
 import { type ClientCardData } from "../../app/components/shared/ClientInformationCard";
 import {
@@ -460,20 +465,29 @@ function ApplyJobButton({
   hasApplied,
   onApply,
   label,
+  disabled = false,
+  disabledLabel = "Account Suspended",
 }: {
   hasApplied: boolean;
   onApply: () => void;
   label: string;
+  disabled?: boolean;
+  disabledLabel?: string;
 }) {
+  const isDisabled = hasApplied || disabled;
+
   return (
     <motion.button
-      whileHover={!hasApplied ? { scale: 1.02 } : {}}
-      whileTap={!hasApplied ? { scale: 0.97 } : {}}
+      whileHover={!isDisabled ? { scale: 1.02 } : {}}
+      whileTap={!isDisabled ? { scale: 0.97 } : {}}
       onClick={onApply}
-      disabled={hasApplied}
+      disabled={isDisabled}
+      title={disabled && !hasApplied ? ACCOUNT_SUSPENDED_MESSAGE : undefined}
       className={`flex-1 w-full inline-flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-colors shadow-md ${
         hasApplied
           ? "bg-emerald-50 text-emerald-600 cursor-default"
+          : disabled
+            ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
           : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-lg"
       }`}
       style={{ fontSize: "0.875rem" }}
@@ -485,8 +499,8 @@ function ApplyJobButton({
         </>
       ) : (
         <>
-          {label}
-          <ArrowRight className="w-4 h-4" />
+          {disabled ? disabledLabel : label}
+          {!disabled && <ArrowRight className="w-4 h-4" />}
         </>
       )}
     </motion.button>
@@ -499,12 +513,14 @@ function JobDetailPanel({
   onApply,
   hasApplied,
   showReportAction,
+  actionDisabled,
 }: {
   job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
   hasApplied: boolean;
   showReportAction: boolean;
+  actionDisabled: boolean;
 }) {
   return (
     <motion.div
@@ -537,7 +553,12 @@ function JobDetailPanel({
         showClientReportAction={showReportAction}
         actions={
           <>
-            <ApplyJobButton hasApplied={hasApplied} onApply={onApply} label="Apply Now" />
+            <ApplyJobButton
+              hasApplied={hasApplied}
+              onApply={onApply}
+              label="Apply Now"
+              disabled={actionDisabled}
+            />
             <button
               onClick={onClose}
               className="px-3 py-3 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300 transition-all"
@@ -560,12 +581,14 @@ function MobileDetailModal({
   onApply,
   hasApplied,
   showReportAction,
+  actionDisabled,
 }: {
   job: JobDetailData;
   onClose: () => void;
   onApply: () => void;
   hasApplied: boolean;
   showReportAction: boolean;
+  actionDisabled: boolean;
 }) {
   return (
     <AnimatePresence>
@@ -603,6 +626,7 @@ function MobileDetailModal({
                 hasApplied={hasApplied}
                 onApply={onApply}
                 label="Apply for this Job"
+                disabled={actionDisabled}
               />
             }
           />
@@ -839,6 +863,8 @@ export function GuestApplyModal({ onClose, jobId }: { onClose: () => void; jobId
 // Core browse-jobs content (shared by student and guest layouts)
 
 export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
+  const currentUser = useDashboardCurrentUser();
+  const suspended = !isGuest && isAccountSuspended(currentUser);
   const [query, setQuery] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [complexity, setComplexity] = useState<string[]>([]);
@@ -955,6 +981,15 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
       setShowGuestModal(true);
       return;
     }
+
+    if (suspended) {
+      setNotification({
+        type: "error",
+        text: ACCOUNT_SUSPENDED_MESSAGE,
+      });
+      return;
+    }
+
     setApplyingJobId(jobId);
   };
 
@@ -1230,6 +1265,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
               onApply={() => handleApply(detailsJob.id)}
               hasApplied={submittedJobIds.includes(detailsJob.id)}
               showReportAction={!isGuest}
+              actionDisabled={suspended}
             />
           )}
         </AnimatePresence>
@@ -1258,6 +1294,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
             onApply={() => handleApply(detailsJob.id)}
             hasApplied={submittedJobIds.includes(detailsJob.id)}
             showReportAction={!isGuest}
+            actionDisabled={suspended}
           />
         )}
         {showGuestModal && (

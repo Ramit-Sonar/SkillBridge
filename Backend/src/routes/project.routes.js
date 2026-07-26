@@ -9,6 +9,7 @@ import {
   requestRevision,
   submitDeliverable,
 } from "../controllers/project.controller.js";
+import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
@@ -34,16 +35,23 @@ const deliverableAttachmentUpload = (req, res, next) => {
 router.route("/my-projects").get(verifyJWT, projectRoles, getMyProjects);
 router
   .route("/:projectId/deliverables/approve")
-  .patch(verifyJWT, clientRoles, approveDeliverable);
+  .patch(verifyJWT, clientRoles, ensureActiveAccount, approveDeliverable);
 router
   .route("/:projectId/deliverables/request-revision")
-  .post(verifyJWT, clientRoles, deliverableAttachmentUpload, requestRevision);
+  .post(
+    verifyJWT,
+    clientRoles,
+    ensureActiveAccount,
+    deliverableAttachmentUpload,
+    requestRevision
+  );
 router
   .route("/:projectId/deliverables")
   .get(verifyJWT, projectRoles, getProjectDeliverables)
   .post(
     verifyJWT,
     studentRoles,
+    ensureActiveAccount,
     deliverableAttachmentUpload,
     submitDeliverable
   );

@@ -57,12 +57,21 @@ const getAdminUserById = asyncHandler(async (req, res) => {
 
 const suspendAdminUser = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+  const suspensionReason =
+    typeof req.body?.suspensionReason === "string"
+      ? req.body.suspensionReason.trim()
+      : "";
 
   if (!mongoose.isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid user id");
   }
 
-  const user = await updateAdminUserAccountStatus(userId, "suspended");
+  const user = await updateAdminUserAccountStatus(
+    userId,
+    "suspended",
+    req.user._id,
+    suspensionReason
+  );
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -80,7 +89,7 @@ const activateAdminUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid user id");
   }
 
-  const user = await updateAdminUserAccountStatus(userId, "active");
+  const user = await updateAdminUserAccountStatus(userId, "active", req.user._id);
 
   if (!user) {
     throw new ApiError(404, "User not found");

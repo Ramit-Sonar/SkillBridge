@@ -56,6 +56,21 @@ const userSchema = new mongoose.Schema(
       default: "active",
     },
 
+    suspendedAt: {
+      type: Date,
+    },
+
+    suspendedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    suspensionReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     refreshToken: {
       type: String,
       default: "",

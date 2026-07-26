@@ -1,7 +1,9 @@
 ﻿import { useState, useRef, useEffect } from "react";
 import { motion } from "motion/react";
 import {
+  ACCOUNT_SUSPENDED_MESSAGE,
   DashboardLayout,
+  isAccountSuspended,
   useDashboardCurrentUser,
 } from "../../app/components/layout/DashboardLayout";
 import { SettingsLayout } from "../../app/components/layout/SettingsLayout";
@@ -120,6 +122,7 @@ function SaveButton({
 
 function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage) => void }) {
   const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   const [displayName, setDisplayName] = useState("");
   const [about, setAbout] = useState("");
   const [location, setLocation] = useState("");
@@ -167,6 +170,10 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
 
     try {
       const response = await uploadAvatar(file);
@@ -190,6 +197,11 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
+
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -372,7 +384,12 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
       )}
 
       <div className="pt-1 border-t border-black/[0.05]">
-        <SaveButton saving={saving} saved={saved} />
+        <SaveButton
+          saving={saving}
+          saved={saved}
+          disabled={suspended}
+          label={suspended ? "Account Suspended" : "Save Changes"}
+        />
       </div>
     </form>
   );
@@ -387,6 +404,8 @@ function KycSection({
   onStatusChange?: (s: VerificationDisplayStatus) => void;
   onNotify: (message: NotificationMessage) => void;
 }) {
+  const currentUser = useDashboardCurrentUser();
+  const suspended = isAccountSuspended(currentUser);
   const [verification, setVerification] = useState<VerificationData | null>(null);
   const [loadingVerification, setLoadingVerification] = useState(true);
   const [verificationError, setVerificationError] = useState("");
@@ -404,11 +423,12 @@ function KycSection({
   const status = getVerificationDisplayStatus(verification?.status ?? null);
   const canSubmit = status === "not-verified" || status === "rejected";
   const canSubmitDocuments =
+    !suspended &&
     legalName.trim() !== "" &&
     phone.trim() !== "" &&
     citizenshipFront !== null &&
     citizenshipSelfie !== null;
-  const canUpdateDocuments = legalName.trim() !== "" && phone.trim() !== "";
+  const canUpdateDocuments = !suspended && legalName.trim() !== "" && phone.trim() !== "";
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -477,6 +497,10 @@ function KycSection({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (suspended) {
+      onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
+      return;
+    }
 
     if (status === "rejected") {
       const errs: Record<string, string> = {};
@@ -606,7 +630,7 @@ function KycSection({
                     value={legalName}
                     onChange={(e) => setLegalName(e.target.value)}
                     placeholder="Enter your full legal name"
-                    disabled={submitting}
+                    disabled={submitting || suspended}
                     className={inputCls}
                     style={{ fontSize: "0.875rem" }}
                   />
@@ -620,7 +644,7 @@ function KycSection({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="98XXXXXXXX"
-                    disabled={submitting}
+                    disabled={submitting || suspended}
                     className={inputCls}
                     style={{ fontSize: "0.875rem" }}
                   />
@@ -633,7 +657,7 @@ function KycSection({
                   file={citizenshipFront}
                   onFile={setCitizenshipFront}
                   onRemove={() => setCitizenshipFront(null)}
-                  disabled={submitting}
+                  disabled={submitting || suspended}
                 />
                 <ErrorMsg msg={errors.citizenshipFront ?? ""} />
 
@@ -643,7 +667,7 @@ function KycSection({
                   file={citizenshipSelfie}
                   onFile={setCitizenshipSelfie}
                   onRemove={() => setCitizenshipSelfie(null)}
-                  disabled={submitting}
+                  disabled={submitting || suspended}
                 />
                 <ErrorMsg msg={errors.citizenshipSelfie ?? ""} />
 
@@ -653,7 +677,7 @@ function KycSection({
                     value={companyKyc}
                     onChange={(e) => setCompanyKyc(e.target.value)}
                     placeholder="Company name (optional)"
-                    disabled={submitting}
+                    disabled={submitting || suspended}
                     className={inputCls}
                     style={{ fontSize: "0.875rem" }}
                   />
@@ -666,7 +690,7 @@ function KycSection({
                   onFile={setCompanyRegistration}
                   onRemove={() => setCompanyRegistration(null)}
                   required={false}
-                  disabled={submitting}
+                  disabled={submitting || suspended}
                 />
 
                 {Object.keys(errors).length > 0 && (
@@ -686,6 +710,7 @@ function KycSection({
                         ? !canUpdateDocuments || submitting
                         : !canSubmitDocuments || submitting
                     }
+                    title={suspended ? ACCOUNT_SUSPENDED_MESSAGE : undefined}
                     className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all ${
                       (status === "rejected" ? canUpdateDocuments : canSubmitDocuments) &&
                       !submitting
@@ -706,7 +731,11 @@ function KycSection({
                     ) : (
                       <>
                         <ShieldCheck className="w-4 h-4" />
-                        {status === "rejected" ? "Update Verification" : "Submit Verification"}
+                        {suspended
+                          ? "Account Suspended"
+                          : status === "rejected"
+                            ? "Update Verification"
+                            : "Submit Verification"}
                       </>
                     )}
                   </button>
