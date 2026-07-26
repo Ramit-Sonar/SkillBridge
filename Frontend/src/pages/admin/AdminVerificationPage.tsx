@@ -269,7 +269,7 @@ function StudentDetailModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-black/[0.05]">
           <div className="flex items-center gap-2">
@@ -285,7 +285,7 @@ function StudentDetailModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-6 py-5 flex flex-col gap-5">
+        <div className="px-6 py-5 flex-1 overflow-y-auto flex flex-col gap-5">
           <div className="flex items-center gap-4">
             <div
               className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold"
@@ -415,7 +415,7 @@ function ClientDetailModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-black/[0.05] sticky top-0 bg-white z-10">
           <div className="flex items-center gap-2">
@@ -431,7 +431,7 @@ function ClientDetailModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-6 py-5 flex flex-col gap-5">
+        <div className="px-6 py-5 flex-1 overflow-y-auto flex flex-col gap-5">
           {/* Client info */}
           <div className="flex items-center gap-4">
             <div

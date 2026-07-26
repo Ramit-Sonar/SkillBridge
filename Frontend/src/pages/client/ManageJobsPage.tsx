@@ -579,7 +579,7 @@ function ApplicantWorkspaceModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-4xl max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          className="w-full max-w-4xl h-[90vh] max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="applicant-workspace-title"

@@ -221,7 +221,7 @@ function ReportDetailsModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.93 }}
         transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-details-title"
