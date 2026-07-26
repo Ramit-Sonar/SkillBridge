@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Briefcase, CheckCircle, Star, Clock } from "lucide-react";
+import { usePlatformSettings } from "../data/platformSettingsStore";
 
 interface FloatingCard {
   id: number;
@@ -52,6 +53,8 @@ type HeroProps = {
 };
 
 export function Hero({ getStartedPath, exploreJobsPath }: HeroProps) {
+  const { platformDescription } = usePlatformSettings();
+
   return (
     <section
       id="home"
@@ -116,8 +119,7 @@ export function Hero({ getStartedPath, exploreJobsPath }: HeroProps) {
                 className="mt-5 text-slate-500 leading-relaxed max-w-lg"
                 style={{ fontSize: "1.1rem" }}
               >
-                SkillBridge connects verified students with clients for real-world projects. Build
-                your portfolio, grow your income, and launch your career before graduation.
+                {platformDescription}
               </p>
             </div>
 

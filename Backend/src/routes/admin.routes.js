@@ -7,8 +7,10 @@ import {
   getAdminSettings,
   getAdminUserById,
   getAdminUsers,
+  getPublicPlatformSettings,
   suspendAdminJob,
   suspendAdminUser,
+  updateGeneralSettings,
   updateMaintenanceSettings,
 } from "../controllers/admin.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -17,11 +19,19 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 const router = Router();
 const adminRoles = authorizeRoles("admin");
 
+// GET /api/v1/admin/settings/public -> public platform display settings.
+router.route("/settings/public").get(getPublicPlatformSettings);
+
 // GET /api/v1/admin/dashboard -> getAdminDashboardSummary powers admin overview cards.
 router.route("/dashboard").get(verifyJWT, adminRoles, getAdminDashboardSummary);
 
 // GET /api/v1/admin/settings -> getAdminSettings powers platform settings.
 router.route("/settings").get(verifyJWT, adminRoles, getAdminSettings);
+
+// PATCH /api/v1/admin/settings/general -> updateGeneralSettings saves platform identity settings.
+router
+  .route("/settings/general")
+  .patch(verifyJWT, adminRoles, updateGeneralSettings);
 
 // PATCH /api/v1/admin/settings/maintenance -> updateMaintenanceSettings toggles maintenance mode.
 router

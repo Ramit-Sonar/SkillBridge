@@ -5,6 +5,7 @@ import { Zap, User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import { sendVerificationOtp } from "@/services/authService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { usePlatformSettings } from "@/app/data/platformSettingsStore";
 
 // Input field component
 
@@ -60,6 +61,7 @@ function InputField({
  */
 export default function Register() {
   const navigate = useNavigate();
+  const { platformName } = usePlatformSettings();
   const [role, setRole] = useState<"student" | "client">("student");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -147,7 +149,7 @@ export default function Register() {
               Create your account
             </h2>
             <p className="text-slate-500 mt-1" style={{ fontSize: "0.875rem" }}>
-              Join SkillBridge and start building your career.
+              Join {platformName} and start building your career.
             </p>
           </div>
 

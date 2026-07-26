@@ -9,6 +9,7 @@ import {
   Zap,
   Users,
 } from "lucide-react";
+import { usePlatformSettings } from "../data/platformSettingsStore";
 
 interface ValueBlock {
   icon: React.ReactNode;
@@ -71,6 +72,8 @@ type WhyChooseProps = {
 };
 
 export function WhyChoose({ getStartedPath }: WhyChooseProps) {
+  const { platformName } = usePlatformSettings();
+
   return (
     <section id="about" className="py-24 lg:py-32 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -152,7 +155,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
                 className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-full px-4 py-1.5 text-amber-600 uppercase tracking-widest mb-5"
                 style={{ fontSize: "0.65rem", fontWeight: 700 }}
               >
-                Why SkillBridge
+                Why {platformName}
               </span>
               <h2
                 className="text-slate-900 tracking-tight"
@@ -167,7 +170,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
               </h2>
               <p className="mt-4 text-slate-500 leading-relaxed" style={{ fontSize: "0.9rem" }}>
                 The gap between graduation and first job is narrowing for students who arrive with a
-                verified track record. SkillBridge exists to give every student that edge before
+                verified track record. {platformName} exists to give every student that edge before
                 they ever graduate.
               </p>
             </div>
@@ -209,7 +212,7 @@ export function WhyChoose({ getStartedPath }: WhyChooseProps) {
               className="inline-flex items-center gap-2 bg-slate-900 text-white font-semibold w-fit px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors duration-200 shadow-sm"
               style={{ fontSize: "0.875rem" }}
             >
-              Join SkillBridge for free
+              Join {platformName} for free
               <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>

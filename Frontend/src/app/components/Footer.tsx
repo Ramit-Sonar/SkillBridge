@@ -1,4 +1,5 @@
 import { Zap, Twitter, Linkedin, Github, Mail, MapPin } from "lucide-react";
+import { usePlatformSettings } from "../data/platformSettingsStore";
 
 const footerLinks = {
   Product: ["Features", "How It Works", "Pricing", "Roadmap"],
@@ -8,6 +9,8 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const { platformName, supportEmail, platformDescription } = usePlatformSettings();
+
   return (
     <footer className="bg-slate-900 text-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
@@ -26,8 +29,7 @@ export function Footer() {
               className="text-slate-400 leading-relaxed max-w-xs mb-6"
               style={{ fontSize: "0.875rem" }}
             >
-              Connecting verified students with real-world projects. Build your portfolio, earn
-              income, and grow your career before graduation.
+              {platformDescription}
             </p>
             {/* Contact */}
             <div className="flex flex-col gap-2">
@@ -36,7 +38,7 @@ export function Footer() {
                 style={{ fontSize: "0.8rem" }}
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>hello@skillbridge.io</span>
+                <span>{supportEmail}</span>
               </div>
               <div
                 className="flex items-center gap-2 text-slate-500"
@@ -82,7 +84,7 @@ export function Footer() {
         {/* Divider */}
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-slate-600" style={{ fontSize: "0.8rem" }}>
-            © 2026 SkillBridge, Inc. All rights reserved.
+            © 2026 {platformName}, Inc. All rights reserved.
           </p>
 
           {/* Social icons */}

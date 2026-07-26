@@ -21,6 +21,12 @@ const JOB_MODERATION_REASONS = [
 
 const DEFAULT_MAINTENANCE_MESSAGE =
   "SkillBridge is currently under maintenance.";
+const DEFAULT_PLATFORM_NAME = "SkillBridge";
+const DEFAULT_SUPPORT_EMAIL = "support@skillbridge.com";
+const DEFAULT_PLATFORM_DESCRIPTION =
+  "A platform connecting verified students with local clients for real-world projects.";
+const getDefaultMaintenanceMessage = (platformName = DEFAULT_PLATFORM_NAME) =>
+  `${platformName} is currently under maintenance.`;
 
 /**
  * Ensures the configured admin account exists when the server starts.
@@ -759,6 +765,10 @@ const getPlatformSettingsData = async () => {
     {
       $setOnInsert: {
         key: "platform",
+        platformName: DEFAULT_PLATFORM_NAME,
+        supportEmail: DEFAULT_SUPPORT_EMAIL,
+        platformDescription: DEFAULT_PLATFORM_DESCRIPTION,
+        logoUrl: "",
         maintenanceMode: false,
         maintenanceMessage: DEFAULT_MAINTENANCE_MESSAGE,
       },
@@ -772,10 +782,21 @@ const getPlatformSettingsData = async () => {
     .populate("updatedBy", "fullName email role")
     .lean();
 
+  const platformName = settings.platformName || DEFAULT_PLATFORM_NAME;
+  const maintenanceMessage =
+    settings.maintenanceMessage &&
+    settings.maintenanceMessage !== DEFAULT_MAINTENANCE_MESSAGE
+      ? settings.maintenanceMessage
+      : getDefaultMaintenanceMessage(platformName);
+
   return {
+    platformName,
+    supportEmail: settings.supportEmail || DEFAULT_SUPPORT_EMAIL,
+    platformDescription:
+      settings.platformDescription || DEFAULT_PLATFORM_DESCRIPTION,
+    logoUrl: settings.logoUrl || "",
     maintenanceMode: settings.maintenanceMode,
-    maintenanceMessage:
-      settings.maintenanceMessage || DEFAULT_MAINTENANCE_MESSAGE,
+    maintenanceMessage,
     updatedBy: settings.updatedBy
       ? {
           id: settings.updatedBy._id?.toString?.() || "",
@@ -787,12 +808,48 @@ const getPlatformSettingsData = async () => {
   };
 };
 
+const updateGeneralSettingsData = async ({
+  platformName,
+  supportEmail,
+  platformDescription,
+  adminUserId,
+}) => {
+  await PlatformSettings.findOneAndUpdate(
+    { key: "platform" },
+    {
+      $set: {
+        platformName,
+        supportEmail,
+        platformDescription,
+        updatedBy: adminUserId,
+        updatedAt: new Date(),
+      },
+      $setOnInsert: {
+        key: "platform",
+        maintenanceMode: false,
+        maintenanceMessage: DEFAULT_MAINTENANCE_MESSAGE,
+        logoUrl: "",
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    }
+  );
+
+  return getPlatformSettingsData();
+};
+
 const updateMaintenanceSettingsData = async ({
   maintenanceMode,
   maintenanceMessage,
   adminUserId,
 }) => {
-  const message = maintenanceMessage.trim() || DEFAULT_MAINTENANCE_MESSAGE;
+  const currentSettings = await getPlatformSettingsData();
+  const message =
+    maintenanceMessage.trim() ||
+    getDefaultMaintenanceMessage(currentSettings.platformName);
 
   await PlatformSettings.findOneAndUpdate(
     { key: "platform" },
@@ -826,6 +883,7 @@ export {
   getAdminUserDetailsData,
   getAdminUsersData,
   suspendAdminJobData,
+  updateGeneralSettingsData,
   updateMaintenanceSettingsData,
   updateAdminUserAccountStatus,
 };

@@ -5,6 +5,7 @@ import { Zap, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import { loginUser } from "@/services/authService.js";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { usePlatformSettings } from "@/app/data/platformSettingsStore";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -13,6 +14,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export default function Login() {
   const navigate = useNavigate();
+  const { platformName } = usePlatformSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -106,7 +108,7 @@ export default function Login() {
         <div className="bg-white rounded-3xl shadow-xl border border-black/[0.06] p-8 sm:p-10">
           <div className="mb-7">
             <h2 className="text-slate-900 tracking-tight font-bold" style={{ fontSize: "1.5rem" }}>
-              Sign in to your account
+              Sign in to your {platformName} account
             </h2>
             <p className="text-slate-500 mt-1" style={{ fontSize: "0.875rem" }}>
               Good to have you back. Let's pick up where you left off.

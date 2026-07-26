@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Star, CheckCircle } from "lucide-react";
+import { usePlatformSettings } from "../data/platformSettingsStore";
 
 interface ReviewModalProps {
   studentName: string;
@@ -19,6 +20,7 @@ export function ReviewModal({
   onClose,
   onSubmit,
 }: ReviewModalProps) {
+  const { platformName } = usePlatformSettings();
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState("");
@@ -88,7 +90,8 @@ export function ReviewModal({
                   Review Submitted!
                 </p>
                 <p className="text-slate-500 mt-2 leading-relaxed" style={{ fontSize: "0.85rem" }}>
-                  Thank you for sharing your feedback. Your review helps build trust on SkillBridge.
+                  Thank you for sharing your feedback. Your review helps build trust on{" "}
+                  {platformName}.
                 </p>
               </div>
               <motion.button

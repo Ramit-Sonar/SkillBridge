@@ -33,6 +33,7 @@ import {
 } from "../../app/components/shared/SharedJobDetailsContent";
 import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
+import { usePlatformSettings } from "../../app/data/platformSettingsStore";
 import {
   JOB_CATEGORIES,
   JOB_DURATION_OPTIONS,
@@ -803,6 +804,7 @@ function FilterChip({
 // Auth-required modal (reusable for both guest and student views)
 
 export function GuestApplyModal({ onClose, jobId }: { onClose: () => void; jobId?: string }) {
+  const { platformName } = usePlatformSettings();
   const returnParam = jobId ? `?returnTo=/browse&jobId=${jobId}` : "";
   return (
     <motion.div
@@ -829,7 +831,7 @@ export function GuestApplyModal({ onClose, jobId }: { onClose: () => void; jobId
             Student Account Required
           </p>
           <p className="text-slate-500 mt-1.5 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-            Please sign in or create a student account to apply for jobs on SkillBridge.
+            Please sign in or create a student account to apply for jobs on {platformName}.
           </p>
         </div>
         <div className="flex flex-col gap-2">

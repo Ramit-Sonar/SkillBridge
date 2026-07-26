@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { Zap, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getCurrentUser, loginUser } from "@/services/authService.js";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { usePlatformSettings } from "@/app/data/platformSettingsStore";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -13,6 +14,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export default function AdminLoginPage() {
   const navigate = useNavigate();
+  const { platformName } = usePlatformSettings();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -102,7 +104,7 @@ export default function AdminLoginPage() {
               Admin Sign In
             </h1>
             <p className="text-slate-500 mt-1" style={{ fontSize: "0.78rem" }}>
-              Access the SkillBridge admin panel
+              Access the {platformName} admin panel
             </p>
           </div>
 
@@ -185,7 +187,7 @@ export default function AdminLoginPage() {
             onClick={() => navigate("/")}
             className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
           >
-            Go to SkillBridge
+            Go to {platformName}
           </button>
         </p>
       </motion.div>

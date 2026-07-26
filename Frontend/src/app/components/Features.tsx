@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
+import { usePlatformSettings } from "../data/platformSettingsStore";
 
 // Inline marketing mockups avoid numeric claims that are not backed by product data.
 
@@ -219,6 +220,8 @@ const fadeUp = {
 };
 
 export function Features() {
+  const { platformName } = usePlatformSettings();
+
   return (
     <section id="features" className="py-24 lg:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -292,7 +295,7 @@ export function Features() {
                 {[
                   "University ID validation on sign-up",
                   "Verified badge visible on every profile",
-                  "Verification reviewed by the SkillBridge team",
+                  `Verification reviewed by the ${platformName} team`,
                 ].map((pt) => (
                   <div key={pt} className="flex items-start gap-2">
                     <CheckCircle className="w-3.5 h-3.5 text-teal-500 shrink-0 mt-0.5" />

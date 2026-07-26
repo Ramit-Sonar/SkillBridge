@@ -7,6 +7,7 @@ import {
   getAdminUsersData,
   getPlatformSettingsData,
   suspendAdminJobData,
+  updateGeneralSettingsData,
   updateMaintenanceSettingsData,
   updateAdminUserAccountStatus,
 } from "../services/admin.service.js";
@@ -49,6 +50,80 @@ const getAdminSettings = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, settings, "Admin settings fetched successfully")
+    );
+});
+
+const getPublicPlatformSettings = asyncHandler(async (req, res) => {
+  const settings = await getPlatformSettingsData();
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        platformName: settings.platformName,
+        supportEmail: settings.supportEmail,
+        platformDescription: settings.platformDescription,
+        logoUrl: settings.logoUrl,
+        maintenanceMode: settings.maintenanceMode,
+        maintenanceMessage: settings.maintenanceMessage,
+      },
+      "Platform settings fetched successfully"
+    )
+  );
+});
+
+const updateGeneralSettings = asyncHandler(async (req, res) => {
+  const platformName =
+    typeof req.body?.platformName === "string"
+      ? req.body.platformName.trim()
+      : "";
+  const supportEmail =
+    typeof req.body?.supportEmail === "string"
+      ? req.body.supportEmail.trim().toLowerCase()
+      : "";
+  const platformDescription =
+    typeof req.body?.platformDescription === "string"
+      ? req.body.platformDescription.trim()
+      : "";
+
+  if (!platformName) {
+    throw new ApiError(400, "Platform name is required");
+  }
+
+  if (platformName.length > 80) {
+    throw new ApiError(400, "Platform name must be 80 characters or less");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supportEmail)) {
+    throw new ApiError(400, "A valid support email is required");
+  }
+
+  if (supportEmail.length > 120) {
+    throw new ApiError(400, "Support email must be 120 characters or less");
+  }
+
+  if (!platformDescription) {
+    throw new ApiError(400, "Platform description is required");
+  }
+
+  if (platformDescription.length > 300) {
+    throw new ApiError(
+      400,
+      "Platform description must be 300 characters or less"
+    );
+  }
+
+  const settings = await updateGeneralSettingsData({
+    platformName,
+    supportEmail,
+    platformDescription,
+    adminUserId: req.user._id,
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, settings, "General settings updated successfully")
     );
 });
 
@@ -234,7 +309,9 @@ export {
   getAdminSettings,
   getAdminUserById,
   getAdminUsers,
+  getPublicPlatformSettings,
   suspendAdminJob,
   suspendAdminUser,
+  updateGeneralSettings,
   updateMaintenanceSettings,
 };

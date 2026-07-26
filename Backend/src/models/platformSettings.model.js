@@ -15,6 +15,31 @@ const platformSettingsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    platformName: {
+      type: String,
+      trim: true,
+      default: "SkillBridge",
+      maxlength: 80,
+    },
+    supportEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: "support@skillbridge.com",
+      maxlength: 120,
+    },
+    platformDescription: {
+      type: String,
+      trim: true,
+      default:
+        "A platform connecting verified students with local clients for real-world projects.",
+      maxlength: 300,
+    },
+    logoUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     maintenanceMessage: {
       type: String,
       trim: true,

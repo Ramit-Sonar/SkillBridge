@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from "motion/react";
 import { Zap, Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { forgotPassword } from "@/services/authService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { usePlatformSettings } from "@/app/data/platformSettingsStore";
 
 /**
  * Requests a password reset email for an existing account.
  */
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
+  const { platformName } = usePlatformSettings();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -107,7 +109,8 @@ export default function ForgotPasswordPage() {
                     className="text-slate-500 mt-1 leading-relaxed"
                     style={{ fontSize: "0.875rem" }}
                   >
-                    Enter your email address and we will send password reset instructions.
+                    Enter your email address and we will send {platformName} password reset
+                    instructions.
                   </p>
                 </div>
 

@@ -9,6 +9,10 @@ import {
   isMaintenanceResponseData,
   saveMaintenanceState,
 } from "../../services/apiConfig";
+import {
+  setPlatformSettings,
+  usePlatformSettings,
+} from "../../app/data/platformSettingsStore";
 
 const dashboardPaths: Record<AuthUser["role"], string> = {
   student: "/dashboard/student",
@@ -16,12 +20,12 @@ const dashboardPaths: Record<AuthUser["role"], string> = {
   admin: "/admin/dashboard",
 };
 
-const defaultMessage = "SkillBridge is currently under maintenance.";
-
 export default function MaintenancePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { platformName, supportEmail } = usePlatformSettings();
   const stored = getStoredMaintenanceState();
+  const defaultMessage = `${platformName} is currently under maintenance.`;
   const [message, setMessage] = useState(stored?.maintenanceMessage || defaultMessage);
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -41,6 +45,12 @@ export default function MaintenancePage() {
         saveMaintenanceState(data);
         setMessage(data.maintenanceMessage || data.message || defaultMessage);
         setAuthenticated(Boolean(data.authenticated));
+        setPlatformSettings({
+          platformName: data.platformName,
+          supportEmail: data.supportEmail,
+          platformDescription: data.platformDescription,
+          maintenanceMessage: data.maintenanceMessage || data.message,
+        });
         return;
       }
 
@@ -62,6 +72,15 @@ export default function MaintenancePage() {
   };
 
   useEffect(() => {
+    if (stored) {
+      setPlatformSettings({
+        platformName: stored.platformName,
+        supportEmail: stored.supportEmail,
+        platformDescription: stored.platformDescription,
+        maintenanceMessage: stored.maintenanceMessage,
+      });
+    }
+
     checkAvailability();
     // The first check should run once when the maintenance page opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,11 +115,16 @@ export default function MaintenancePage() {
           <AlertTriangle className="w-7 h-7 text-amber-600" />
         </div>
         <h1 className="text-slate-900 font-bold mt-5" style={{ fontSize: "1.3rem" }}>
-          Maintenance Mode
+          {platformName} Maintenance
         </h1>
         <p className="text-slate-500 leading-relaxed mt-2" style={{ fontSize: "0.9rem" }}>
           {message}
         </p>
+        {supportEmail && (
+          <p className="text-slate-400 mt-3" style={{ fontSize: "0.78rem" }}>
+            Need help? Contact {supportEmail}.
+          </p>
+        )}
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
             type="button"

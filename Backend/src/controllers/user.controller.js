@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { getPlatformSettingsData } from "../services/admin.service.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
@@ -390,9 +391,12 @@ const sendVerificationOtp = asyncHandler(async (req, res) => {
 
   await pendingUser.save();
 
+  const platformSettings = await getPlatformSettingsData();
+  const platformName = platformSettings.platformName;
+
   const message = `Hello,
 
-Your SkillBridge verification code is
+Your ${platformName} verification code is
 
 ${otp}
 
@@ -411,7 +415,7 @@ If you did not request this, ignore this email.`;
         process.env.EMAIL_USER ||
         process.env.SMTP_USER,
       to: normalizedEmail,
-      subject: "Verify your SkillBridge email",
+      subject: `Verify your ${platformName} email`,
       text: message,
     });
   } catch (error) {
@@ -506,6 +510,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
   // Email the raw token once while only the hashed token remains persisted.
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+  const platformSettings = await getPlatformSettingsData();
+  const platformName = platformSettings.platformName;
 
   const message = `Hello,
 
@@ -526,7 +532,7 @@ This link expires in 15 minutes.`;
         process.env.EMAIL_USER ||
         process.env.SMTP_USER,
       to: user.email,
-      subject: "Reset your SkillBridge password",
+      subject: `Reset your ${platformName} password`,
       text: message,
     });
   } catch (error) {

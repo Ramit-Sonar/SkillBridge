@@ -55,13 +55,16 @@ export type MaintenanceResponseData = {
   errorCode?: string;
   message?: string;
   maintenanceMessage?: string;
+  platformName?: string;
+  supportEmail?: string;
+  platformDescription?: string;
   authenticated?: boolean;
 };
 
 export class MaintenanceModeError extends Error {
   code = MAINTENANCE_MODE_CODE;
 
-  constructor(message = "SkillBridge is currently under maintenance.") {
+  constructor(message = "The platform is currently under maintenance.") {
     super(message);
     this.name = "MaintenanceModeError";
   }
@@ -84,9 +87,12 @@ export const saveMaintenanceState = (data: MaintenanceResponseData) => {
   sessionStorage.setItem(
     MAINTENANCE_STORAGE_KEY,
     JSON.stringify({
-      message: data.message || "SkillBridge is currently under maintenance.",
+      message: data.message || "The platform is currently under maintenance.",
       maintenanceMessage:
-        data.maintenanceMessage || data.message || "SkillBridge is currently under maintenance.",
+        data.maintenanceMessage || data.message || "The platform is currently under maintenance.",
+      platformName: data.platformName,
+      supportEmail: data.supportEmail,
+      platformDescription: data.platformDescription,
     })
   );
 };
@@ -96,7 +102,15 @@ export const getStoredMaintenanceState = () => {
 
   try {
     const stored = sessionStorage.getItem(MAINTENANCE_STORAGE_KEY);
-    return stored ? (JSON.parse(stored) as { message: string; maintenanceMessage: string }) : null;
+    return stored
+      ? (JSON.parse(stored) as {
+          message: string;
+          maintenanceMessage: string;
+          platformName?: string;
+          supportEmail?: string;
+          platformDescription?: string;
+        })
+      : null;
   } catch {
     return null;
   }

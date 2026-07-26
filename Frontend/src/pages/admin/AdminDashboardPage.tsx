@@ -7,6 +7,7 @@ import { WelcomeCard } from "../../app/components/shared/WelcomeCard";
 import { StatGrid } from "../../app/components/shared/StatCard";
 import { QuickActionsGrid } from "../../app/components/shared/QuickActionCard";
 import { SectionCard } from "../../app/components/shared/SectionCard";
+import { usePlatformSettings } from "../../app/data/platformSettingsStore";
 import {
   getAdminDashboardSummary,
   type AdminDashboardSummary,
@@ -146,6 +147,7 @@ function PendingTasks({
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { platformName } = usePlatformSettings();
   const [summary, setSummary] = useState<AdminDashboardSummary>(emptyDashboardSummary);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -211,7 +213,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col gap-6">
         <WelcomeCard
           name="Admin"
-          subtitle="Monitor platform activity, verify students, and keep SkillBridge running smoothly."
+          subtitle={`Monitor platform activity, verify students, and keep ${platformName} running smoothly.`}
           actions={[
             {
               label: "Review Verifications",

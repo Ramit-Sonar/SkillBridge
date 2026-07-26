@@ -8,8 +8,16 @@ import {
   Notification,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
+import {
+  setPlatformSettings,
+  usePlatformSettings,
+} from "../../app/data/platformSettingsStore";
 import { changePassword } from "../../services/authService";
-import { getAdminSettings, updateMaintenanceSettings } from "../../services/adminService";
+import {
+  getAdminSettings,
+  updateGeneralSettings,
+  updateMaintenanceSettings,
+} from "../../services/adminService";
 
 type Section = "general" | "security";
 
@@ -101,25 +109,50 @@ function Toggle({
   );
 }
 
-// Platform settings are currently local-only, matching the existing admin UI behavior.
-
 function GeneralSection() {
-  const [name, setName] = useState("SkillBridge");
-  const [email, setEmail] = useState("support@skillbridge.com");
-  const [desc, setDesc] = useState(
-    "A platform connecting verified students with local clients for real-world projects."
-  );
+  const platformSettings = usePlatformSettings();
+  const [name, setName] = useState(platformSettings.platformName);
+  const [email, setEmail] = useState(platformSettings.supportEmail);
+  const [desc, setDesc] = useState(platformSettings.platformDescription);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [notification, setNotification] = useState<NotificationMessage>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    setName(platformSettings.platformName);
+    setEmail(platformSettings.supportEmail);
+    setDesc(platformSettings.platformDescription);
+  }, [
+    platformSettings.platformDescription,
+    platformSettings.platformName,
+    platformSettings.supportEmail,
+  ]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    setTimeout(() => {
+
+    try {
+      setNotification(null);
+      setSaving(true);
+
+      const response = await updateGeneralSettings({
+        platformName: name,
+        supportEmail: email,
+        platformDescription: desc,
+      });
+
+      setPlatformSettings(response.data);
       setSaving(false);
       setSaved(true);
+      setNotification({ type: "success", text: response.message });
       setTimeout(() => setSaved(false), 3000);
-    }, 900);
+    } catch (error) {
+      setSaving(false);
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "General settings could not be updated.",
+      });
+    }
   };
 
   return (
@@ -166,6 +199,7 @@ function GeneralSection() {
       <div className="pt-1 border-t border-black/[0.05]">
         <SaveButton saving={saving} saved={saved} />
       </div>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </form>
   );
 }
@@ -173,9 +207,10 @@ function GeneralSection() {
 // Security settings call real APIs for password and maintenance mode changes.
 
 function SecuritySection() {
+  const platformSettings = usePlatformSettings();
   const [maintenance, setMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState(
-    "SkillBridge is currently under maintenance."
+    platformSettings.maintenanceMessage
   );
   const [maintenanceDraft, setMaintenanceDraft] = useState("");
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
@@ -203,6 +238,7 @@ function SecuritySection() {
         if (!ignore) {
           setMaintenance(response.data.maintenanceMode);
           setMaintenanceMessage(response.data.maintenanceMessage);
+          setPlatformSettings(response.data);
         }
       } catch (error) {
         if (!ignore) {
@@ -237,6 +273,7 @@ function SecuritySection() {
 
       setMaintenance(response.data.maintenanceMode);
       setMaintenanceMessage(response.data.maintenanceMessage);
+      setPlatformSettings(response.data);
       setMaintenanceSaved(true);
       setNotification({ type: "success", text: response.message });
       setTimeout(() => setMaintenanceSaved(false), 3000);
@@ -445,7 +482,7 @@ function SecuritySection() {
             <div className="flex flex-col gap-4">
               <p>
                 This will temporarily prevent students, clients, and visitors from using
-                SkillBridge.
+                {platformSettings.platformName}.
               </p>
               <div className="flex flex-col gap-1.5 text-left">
                 <FieldLabel text="Optional Message" />

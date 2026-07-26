@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertCircle, Flag, X } from "lucide-react";
 import { Notification, type NotificationMessage } from "./ui";
+import { usePlatformSettings } from "../../data/platformSettingsStore";
 import {
   submitReport,
   type ReportReason,
@@ -38,6 +39,7 @@ function ReportUserModal({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  const { platformName } = usePlatformSettings();
   const [reason, setReason] = useState<ReportReason | "">("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
@@ -109,7 +111,7 @@ function ReportUserModal({
               Report User
             </h3>
             <p className="text-slate-500 mt-1.5 leading-relaxed" style={{ fontSize: "0.82rem" }}>
-              Tell the SkillBridge team what happened with {reportedUserName}.
+              Tell the {platformName} team what happened with {reportedUserName}.
             </p>
           </div>
           <button

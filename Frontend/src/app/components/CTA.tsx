@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Link } from "react-router";
 import { motion, useInView } from "motion/react";
 import { ArrowRight, Zap } from "lucide-react";
+import { usePlatformSettings } from "../data/platformSettingsStore";
 
 type CTAProps = {
   getStartedPath: string;
@@ -10,6 +11,7 @@ type CTAProps = {
 export function CTA({ getStartedPath }: CTAProps) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.15 });
+  const { platformName } = usePlatformSettings();
 
   return (
     <section className="py-24 lg:py-32 bg-white overflow-hidden">
@@ -58,7 +60,7 @@ export function CTA({ getStartedPath }: CTAProps) {
                 className="mt-5 text-white/75 leading-relaxed max-w-xl mx-auto"
                 style={{ fontSize: "1.05rem" }}
               >
-                Join SkillBridge for free. Build your verified profile, land your first project, and
+                Join {platformName} for free. Build your verified profile, land your first project, and
                 start earning real income before you even graduate.
               </p>
             </div>
@@ -68,7 +70,7 @@ export function CTA({ getStartedPath }: CTAProps) {
                 to={getStartedPath}
                 className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-slate-50 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 text-sm"
               >
-                Join SkillBridge Free
+                Join {platformName} Free
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <button

@@ -24,6 +24,7 @@ import {
 import { getCurrentUser, logoutUser, type AuthUser } from "@/services/authService";
 import { getAdminDashboardSummary } from "@/services/adminService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { usePlatformSettings } from "@/app/data/platformSettingsStore";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const ADMIN_VERIFICATIONS_UPDATED_EVENT = "skillbridge:verification-updated";
@@ -789,6 +790,7 @@ export function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
   const navigate = useNavigate();
+  const { platformName } = usePlatformSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState<DashboardNavId>(activeNav as DashboardNavId);
   const [currentUser, setCurrentUser] = useState<DashboardCurrentUser | null>(null);
@@ -924,7 +926,7 @@ export function DashboardLayout({
                       className="text-red-600 mt-1 leading-relaxed"
                       style={{ fontSize: "0.82rem" }}
                     >
-                      Your SkillBridge account has been temporarily suspended. Some marketplace
+                      Your {platformName} account has been temporarily suspended. Some marketplace
                       features have been disabled. If you believe this is a mistake, please contact
                       the administrator.
                     </p>

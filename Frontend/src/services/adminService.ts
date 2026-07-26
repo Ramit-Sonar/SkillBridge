@@ -72,6 +72,10 @@ export type AdminDashboardSummary = {
 };
 
 export type PlatformSettings = {
+  platformName: string;
+  supportEmail: string;
+  platformDescription: string;
+  logoUrl?: string;
   maintenanceMode: boolean;
   maintenanceMessage: string;
   updatedBy?: {
@@ -224,6 +228,32 @@ export const getAdminSettings = async (): Promise<ApiResponse<PlatformSettings>>
   });
 
   return parseAdminResponse<PlatformSettings>(response, "Failed to fetch admin settings.");
+};
+
+export const getPublicPlatformSettings = async (): Promise<ApiResponse<PlatformSettings>> => {
+  const response = await fetch(`${API_URL}/admin/settings/public`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return parseAdminResponse<PlatformSettings>(response, "Failed to fetch platform settings.");
+};
+
+export const updateGeneralSettings = async (payload: {
+  platformName: string;
+  supportEmail: string;
+  platformDescription: string;
+}): Promise<ApiResponse<PlatformSettings>> => {
+  const response = await fetch(`${API_URL}/admin/settings/general`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  return parseAdminResponse<PlatformSettings>(response, "Failed to update general settings.");
 };
 
 export const updateMaintenanceSettings = async (payload: {

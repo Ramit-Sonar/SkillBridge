@@ -5,6 +5,9 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const DEFAULT_MAINTENANCE_MESSAGE =
   "SkillBridge is currently under maintenance.";
+const DEFAULT_PLATFORM_NAME = "SkillBridge";
+const getDefaultMaintenanceMessage = (platformName = DEFAULT_PLATFORM_NAME) =>
+  `${platformName} is currently under maintenance.`;
 
 const getTokenRole = async (token, secret) => {
   if (!token || !secret) return "";
@@ -78,14 +81,23 @@ export const maintenanceModeMiddleware = asyncHandler(
       return;
     }
 
+    const platformName = settings.platformName || DEFAULT_PLATFORM_NAME;
+    const maintenanceMessage =
+      settings.maintenanceMessage &&
+      settings.maintenanceMessage !== DEFAULT_MAINTENANCE_MESSAGE
+        ? settings.maintenanceMessage
+        : getDefaultMaintenanceMessage(platformName);
+
     return res.status(503).json({
       success: false,
       code: "MAINTENANCE_MODE",
       errorCode: "MAINTENANCE_MODE",
-      message: DEFAULT_MAINTENANCE_MESSAGE,
+      message: maintenanceMessage,
       authenticated: ["student", "client"].includes(requestRole),
-      maintenanceMessage:
-        settings.maintenanceMessage || DEFAULT_MAINTENANCE_MESSAGE,
+      platformName,
+      supportEmail: settings.supportEmail || "",
+      platformDescription: settings.platformDescription || "",
+      maintenanceMessage,
     });
   }
 );
