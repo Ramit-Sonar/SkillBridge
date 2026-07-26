@@ -50,6 +50,9 @@ export type JobData = {
   complexity?: "small" | "medium";
   attachments?: JobAttachment[];
   status?: "open" | "closed" | "cancelled" | "suspended";
+  moderatedAt?: string | null;
+  moderationReason?: string;
+  customModerationReason?: string;
   applicationCount?: number;
   pendingApplicationCount?: number;
   createdAt?: string;

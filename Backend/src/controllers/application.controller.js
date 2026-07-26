@@ -107,6 +107,13 @@ const submitApplication = asyncHandler(async (req, res) => {
       );
     }
 
+    if (job.status === "suspended") {
+      throw new ApiError(
+        403,
+        "This job has been suspended and no longer accepts applications"
+      );
+    }
+
     if (job.status !== "open") {
       throw new ApiError(400, "This job is not open for applications");
     }
@@ -529,6 +536,10 @@ const acceptApplication = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Cancelled jobs cannot accept applications");
       }
 
+      if (job.status === "suspended") {
+        throw new ApiError(400, "Suspended jobs cannot accept applications");
+      }
+
       if (job.status !== "open") {
         throw new ApiError(400, "Only open jobs can accept applications");
       }
@@ -665,6 +676,10 @@ const rejectApplication = asyncHandler(async (req, res) => {
 
   if (job.status === "cancelled") {
     throw new ApiError(400, "Cancelled jobs cannot process applications");
+  }
+
+  if (job.status === "suspended") {
+    throw new ApiError(400, "Suspended jobs cannot process applications");
   }
 
   if (application.status === "accepted") {

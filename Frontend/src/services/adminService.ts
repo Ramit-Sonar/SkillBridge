@@ -73,6 +73,14 @@ export type AdminDashboardSummary = {
 
 export type AdminJobStatus = "open" | "closed" | "cancelled" | "suspended";
 
+export type JobModerationReason =
+  | "Spam"
+  | "Fake Job"
+  | "Duplicate Listing"
+  | "Policy Violation"
+  | "Copyright Issue"
+  | "Other";
+
 export type AdminJobClient = {
   id: string;
   name: string;
@@ -135,6 +143,14 @@ export type AdminJob = {
   deadline: string;
   complexity: "small" | "medium";
   status: AdminJobStatus;
+  moderatedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  moderatedAt?: string | null;
+  moderationReason?: string;
+  customModerationReason?: string;
   postedAt?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -236,6 +252,25 @@ export const getAdminJobDetails = async (jobId: string): Promise<ApiResponse<Adm
   });
 
   return parseAdminResponse<AdminJob>(response, "Failed to fetch job details.");
+};
+
+export const suspendAdminJob = async (
+  jobId: string,
+  payload: {
+    moderationReason: JobModerationReason;
+    customModerationReason?: string;
+  }
+): Promise<ApiResponse<AdminJob>> => {
+  const response = await fetch(`${API_URL}/admin/jobs/${jobId}/suspend`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  return parseAdminResponse<AdminJob>(response, "Failed to suspend job.");
 };
 
 export const getUserDetails = async (userId: string): Promise<ApiResponse<PlatformUser>> => {

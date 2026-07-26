@@ -105,6 +105,9 @@ interface Job {
   category: string;
   categoryKey: string;
   status: JobStatus;
+  moderationReason?: string;
+  customModerationReason?: string;
+  moderatedAt?: string;
   budget: string;
   budgetRaw: string;
   postedAt: string;
@@ -163,6 +166,9 @@ function mapJobFromApi(job: JobData): Job {
     category: JOB_CATEGORY_LABELS[categoryKey as keyof typeof JOB_CATEGORY_LABELS] ?? categoryKey,
     categoryKey,
     status,
+    moderationReason: job.moderationReason ?? "",
+    customModerationReason: job.customModerationReason ?? "",
+    moderatedAt: formatJobDate(job.moderatedAt ?? undefined),
     budget,
     budgetRaw,
     postedAt: formatJobDate(job.createdAt),
@@ -273,6 +279,14 @@ function getInitials(name?: string) {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
+}
+
+function getSuspensionReason(job: Job) {
+  if (job.moderationReason === "Other" && job.customModerationReason) {
+    return job.customModerationReason;
+  }
+
+  return job.moderationReason || "Not provided";
 }
 
 function isStudentVerified(student: ApplicantCard["student"] | ApplicationDetails["student"]) {
@@ -1190,6 +1204,24 @@ function JobDetailsPanel({
           </button>
         </div>
 
+        {isSuspendedJob && (
+          <div className="bg-red-50 border-b border-red-100 px-5 py-3 flex flex-col gap-1">
+            <p className="text-red-600 font-semibold" style={{ fontSize: "0.76rem" }}>
+              Status: Suspended
+            </p>
+            <p className="text-slate-600" style={{ fontSize: "0.74rem" }}>
+              <span className="font-semibold text-slate-700">Reason:</span>{" "}
+              {getSuspensionReason(job)}
+            </p>
+            {job.moderatedAt && (
+              <p className="text-slate-600" style={{ fontSize: "0.74rem" }}>
+                <span className="font-semibold text-slate-700">Suspended On:</span>{" "}
+                {job.moderatedAt}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 min-h-0">
           <SharedJobDetailsContent
             showClientCard={false}
@@ -1209,20 +1241,13 @@ function JobDetailsPanel({
             }}
             actions={
               <motion.button
-                whileHover={!isSuspendedJob ? { scale: 1.02 } : {}}
-                whileTap={!isSuspendedJob ? { scale: 0.97 } : {}}
-                disabled={isSuspendedJob}
-                title={
-                  isSuspendedJob
-                    ? "Suspended jobs are unavailable for application review."
-                    : undefined
-                }
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => {
-                  if (isSuspendedJob) return;
                   onClose();
                   onViewApplications();
                 }}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
                 style={{ fontSize: "0.82rem" }}
               >
                 <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
@@ -1356,13 +1381,20 @@ function JobCard({
             {job.category}
           </p>
           {isSuspendedJob && (
-            <span
-              className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full border border-red-200 bg-red-50 text-red-600 font-semibold"
-              style={{ fontSize: "0.62rem" }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              Suspended
-            </span>
+            <div className="mt-3 max-w-xl rounded-xl border border-red-200 bg-red-50 px-3 py-2 flex items-start gap-2">
+              <span className="w-7 h-7 rounded-lg bg-white border border-red-100 flex items-center justify-center shrink-0">
+                <Ban className="w-3.5 h-3.5 text-red-600" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-red-700 font-semibold" style={{ fontSize: "0.76rem" }}>
+                  This job is currently suspended
+                </p>
+                <p className="text-slate-600 mt-0.5" style={{ fontSize: "0.72rem" }}>
+                  Our moderation team paused this listing for{" "}
+                  <span className="font-semibold text-red-700">{getSuspensionReason(job)}</span>.
+                </p>
+              </div>
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -1403,14 +1435,10 @@ function JobCard({
           <Eye className="w-3.5 h-3.5" /> View Details
         </button>
         <motion.button
-          whileHover={!isSuspendedJob ? { scale: 1.02 } : {}}
-          whileTap={!isSuspendedJob ? { scale: 0.97 } : {}}
-          disabled={isSuspendedJob}
-          title={
-            isSuspendedJob ? "Suspended jobs are unavailable for application review." : undefined
-          }
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
           onClick={onViewApplications}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm"
           style={{ fontSize: "0.75rem" }}
         >
           <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})

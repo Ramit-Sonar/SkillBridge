@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import {
-  ConfirmDialog,
   Notification,
   SearchInput,
   StatusBadge,
@@ -23,8 +22,10 @@ import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDe
 import {
   getAdminJobDetails,
   getAdminJobs,
+  suspendAdminJob,
   type AdminJob as AdminJobData,
   type AdminJobStatus,
+  type JobModerationReason,
 } from "../../services/adminService";
 
 type JobStatus = AdminJobStatus;
@@ -51,6 +52,14 @@ interface AdminJob {
   deadline: string;
   complexity: "small" | "medium";
   status: JobStatus;
+  moderatedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  moderatedAt?: string;
+  moderationReason?: string;
+  customModerationReason?: string;
   postedAt: string;
   applications: number;
   description: string;
@@ -87,6 +96,15 @@ const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; 
       border: "#FECACA",
     },
   };
+
+const JOB_MODERATION_REASONS: JobModerationReason[] = [
+  "Spam",
+  "Fake Job",
+  "Duplicate Listing",
+  "Policy Violation",
+  "Copyright Issue",
+  "Other",
+];
 
 function getInitials(name = "Unknown Client") {
   return name
@@ -155,6 +173,10 @@ function mapAdminJob(job: AdminJobData): AdminJob {
     deadline: formatAdminDate(job.deadline),
     complexity: job.complexity,
     status: job.status,
+    moderatedBy: job.moderatedBy,
+    moderatedAt: job.moderatedAt ? formatAdminDate(job.moderatedAt) : "",
+    moderationReason: job.moderationReason || "",
+    customModerationReason: job.customModerationReason || "",
     postedAt: formatAdminDate(job.postedAt || job.createdAt),
     applications: getApplicationCount(job),
     description: job.description,
@@ -266,6 +288,144 @@ function JobDetailsPanel({
   );
 }
 
+function SuspendJobModal({
+  job,
+  onConfirm,
+  onClose,
+  loading,
+}: {
+  job: AdminJob;
+  onConfirm: (reason: JobModerationReason, customReason: string) => Promise<void> | void;
+  onClose: () => void;
+  loading?: boolean;
+}) {
+  const [reason, setReason] = useState<JobModerationReason | "">("");
+  const [customReason, setCustomReason] = useState("");
+  const [error, setError] = useState("");
+  const requiresCustomReason = reason === "Other";
+
+  const handleConfirm = async () => {
+    if (!reason) {
+      setError("Please select a moderation reason.");
+      return;
+    }
+
+    if (requiresCustomReason && !customReason.trim()) {
+      setError("Please enter the custom moderation reason.");
+      return;
+    }
+
+    setError("");
+    await onConfirm(reason, customReason.trim());
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !loading) onClose();
+      }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.93, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93 }}
+        transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-5"
+      >
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-red-50">
+          <Ban className="w-6 h-6 text-red-600" />
+        </div>
+        <div>
+          <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+            Suspend Job
+          </p>
+          <p className="text-slate-500 mt-1.5 leading-relaxed" style={{ fontSize: "0.82rem" }}>
+            Select why you want to suspend <strong className="text-slate-900">"{job.title}"</strong>
+            .
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <label className="text-slate-700 font-semibold" style={{ fontSize: "0.78rem" }}>
+            Moderation Reason
+          </label>
+          <select
+            value={reason}
+            onChange={(event) => {
+              setReason(event.target.value as JobModerationReason);
+              setError("");
+            }}
+            disabled={loading}
+            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 outline-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
+            style={{ fontSize: "0.85rem" }}
+          >
+            <option value="">Select reason</option>
+            {JOB_MODERATION_REASONS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          {requiresCustomReason && (
+            <textarea
+              value={customReason}
+              onChange={(event) => {
+                setCustomReason(event.target.value);
+                setError("");
+              }}
+              disabled={loading}
+              rows={4}
+              placeholder="Enter custom moderation reason..."
+              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 placeholder-slate-300 outline-none resize-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
+              style={{ fontSize: "0.85rem" }}
+            />
+          )}
+
+          {error && (
+            <p className="text-red-600 font-semibold" style={{ fontSize: "0.74rem" }}>
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-3 w-full">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:text-slate-900 transition-all disabled:opacity-60"
+            style={{ fontSize: "0.875rem" }}
+          >
+            Cancel
+          </button>
+          <motion.button
+            whileHover={!loading ? { scale: 1.02 } : {}}
+            whileTap={!loading ? { scale: 0.97 } : {}}
+            onClick={handleConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+            style={{ fontSize: "0.875rem" }}
+          >
+            {loading ? (
+              <motion.span
+                className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+              />
+            ) : (
+              "Suspend"
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 function StatusDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
 
@@ -287,7 +447,7 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (v: stri
             transition={{ duration: 0.14 }}
             className="absolute right-0 top-full mt-1 w-36 bg-white border border-black/[0.07] rounded-xl shadow-lg z-20 overflow-hidden py-1"
           >
-            {["All", "Open", "Closed", "Cancelled"].map((opt) => (
+            {["All", "Open", "Closed", "Cancelled", "Suspended"].map((opt) => (
               <button
                 key={opt}
                 onClick={() => {
@@ -317,6 +477,7 @@ export default function AdminJobsPage() {
   const [error, setError] = useState("");
   const [notification, setNotification] = useState<NotificationMessage>(null);
   const [suspendTarget, setSuspendTarget] = useState<AdminJob | null>(null);
+  const [suspending, setSuspending] = useState(false);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -351,6 +512,36 @@ export default function AdminJobsPage() {
       });
     } finally {
       setDetailsLoadingId(null);
+    }
+  };
+
+  const updateSuspendedJob = (job: AdminJob) => {
+    setJobs((prev) => prev.map((item) => (item.id === job.id ? job : item)));
+    setSelected((prev) => (prev?.id === job.id ? job : prev));
+  };
+
+  const handleSuspendJob = async (reason: JobModerationReason, customReason: string) => {
+    if (!suspendTarget) return;
+
+    setSuspending(true);
+
+    try {
+      const response = await suspendAdminJob(suspendTarget.id, {
+        moderationReason: reason,
+        customModerationReason: customReason,
+      });
+      const suspendedJob = mapAdminJob(response.data);
+
+      updateSuspendedJob(suspendedJob);
+      setSuspendTarget(null);
+      setNotification({ type: "success", text: response.message });
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to suspend job.",
+      });
+    } finally {
+      setSuspending(false);
     }
   };
 
@@ -521,20 +712,13 @@ export default function AdminJobsPage() {
           />
         )}
         {suspendTarget && (
-          <ConfirmDialog
-            title="Suspend Job"
-            body={
-              <>
-                Suspension is not connected yet. Backend moderation will be added in the next phase.
-              </>
-            }
-            confirmLabel="Close"
-            confirmColor="#DC2626"
-            icon={Ban}
-            iconBg="#FEF2F2"
-            iconColor="#DC2626"
-            onConfirm={() => setSuspendTarget(null)}
-            onClose={() => setSuspendTarget(null)}
+          <SuspendJobModal
+            job={suspendTarget}
+            onConfirm={handleSuspendJob}
+            onClose={() => {
+              if (!suspending) setSuspendTarget(null);
+            }}
+            loading={suspending}
           />
         )}
       </AnimatePresence>

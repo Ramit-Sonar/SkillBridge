@@ -9,6 +9,15 @@ import { Verification } from "../models/verification.model.js";
 import { getStudentCompletedProjectProfileMap } from "./project.service.js";
 import { getStudentReviewProfileMap } from "./review.service.js";
 
+const JOB_MODERATION_REASONS = [
+  "Spam",
+  "Fake Job",
+  "Duplicate Listing",
+  "Policy Violation",
+  "Copyright Issue",
+  "Other",
+];
+
 /**
  * Ensures the configured admin account exists when the server starts.
  */
@@ -75,6 +84,9 @@ const mapByUserId = (items) =>
   new Map(items.map((item) => [item.user.toString(), item]));
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const isValidJobModerationReason = (reason) =>
+  JOB_MODERATION_REASONS.includes(reason);
 
 const getReportCountMap = async (userIds) => {
   if (userIds.length === 0) return new Map();
@@ -507,6 +519,16 @@ const buildAdminJobSummary = (job, applicationCountMap = new Map()) => {
     deadline: job.deadline,
     complexity: job.complexity,
     status: job.status,
+    moderatedBy: job.moderatedBy
+      ? {
+          id: job.moderatedBy._id?.toString?.() || job.moderatedBy.toString(),
+          name: job.moderatedBy.fullName || "Unknown Admin",
+          email: job.moderatedBy.email || "",
+        }
+      : null,
+    moderatedAt: job.moderatedAt || null,
+    moderationReason: job.moderationReason || "",
+    customModerationReason: job.customModerationReason || "",
     postedAt: job.createdAt,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
@@ -570,7 +592,7 @@ const getAdminJobsData = async ({ search = "", status = "all" } = {}) => {
   const query = {};
   const normalizedStatus = status.toLowerCase();
 
-  if (["open", "closed", "cancelled"].includes(normalizedStatus)) {
+  if (["open", "closed", "cancelled", "suspended"].includes(normalizedStatus)) {
     query.status = normalizedStatus;
   }
 
@@ -600,6 +622,7 @@ const getAdminJobsData = async ({ search = "", status = "all" } = {}) => {
 
   const jobs = await Job.find(query)
     .populate("client", "fullName avatar")
+    .populate("moderatedBy", "fullName email role")
     .sort({ createdAt: -1 })
     .lean();
 
@@ -613,6 +636,7 @@ const getAdminJobsData = async ({ search = "", status = "all" } = {}) => {
 const getAdminJobDetailsData = async (jobId) => {
   const job = await Job.findById(jobId)
     .populate("client", "fullName avatar createdAt")
+    .populate("moderatedBy", "fullName email role")
     .lean();
 
   if (!job) return null;
@@ -648,6 +672,53 @@ const getAdminJobDetailsData = async (jobId) => {
   return buildAdminJobDetails(job, applications, clientDetails);
 };
 
+const suspendAdminJobData = async ({
+  jobId,
+  adminUserId,
+  moderationReason,
+  customModerationReason = "",
+}) => {
+  const reason = moderationReason.trim();
+  const customReason = customModerationReason.trim();
+
+  if (!isValidJobModerationReason(reason)) {
+    return {
+      error: "INVALID_REASON",
+      message: "Please select a valid moderation reason",
+    };
+  }
+
+  if (reason === "Other" && !customReason) {
+    return {
+      error: "CUSTOM_REASON_REQUIRED",
+      message: "Custom moderation reason is required when Other is selected",
+    };
+  }
+
+  const job = await Job.findById(jobId).select(
+    "_id status moderatedBy moderatedAt moderationReason customModerationReason"
+  );
+
+  if (!job) return null;
+
+  if (job.status !== "open") {
+    return {
+      error: "NOT_OPEN",
+      message: "Only open jobs can be suspended",
+    };
+  }
+
+  job.status = "suspended";
+  job.moderatedBy = adminUserId;
+  job.moderatedAt = new Date();
+  job.moderationReason = reason;
+  job.customModerationReason = reason === "Other" ? customReason : "";
+
+  await job.save();
+
+  return getAdminJobDetailsData(job._id);
+};
+
 const updateAdminUserAccountStatus = async (
   userId,
   accountStatus,
@@ -679,11 +750,13 @@ const updateAdminUserAccountStatus = async (
 };
 
 export {
+  JOB_MODERATION_REASONS,
   getAdminDashboardSummaryData,
   getAdminJobDetailsData,
   getAdminJobsData,
   getAdminUserDetailsData,
   getAdminUsersData,
+  suspendAdminJobData,
   updateAdminUserAccountStatus,
 };
 

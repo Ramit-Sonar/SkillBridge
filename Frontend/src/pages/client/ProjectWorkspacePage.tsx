@@ -152,8 +152,8 @@ function getInitials(name = "") {
     .join("");
 }
 
-function getJobStatus(status?: string): "open" | "closed" | "cancelled" {
-  if (status === "closed" || status === "cancelled") return status;
+function getJobStatus(status?: string): "open" | "closed" | "cancelled" | "suspended" {
+  if (status === "closed" || status === "cancelled" || status === "suspended") return status;
 
   return "open";
 }

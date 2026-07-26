@@ -73,8 +73,31 @@ const jobSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["open", "closed", "cancelled"],
+      enum: ["open", "closed", "cancelled", "suspended"],
       default: "open",
+    },
+
+    moderatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    moderatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    moderationReason: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    customModerationReason: {
+      type: String,
+      trim: true,
+      default: "",
     },
   },
   {

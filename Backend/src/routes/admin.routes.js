@@ -6,6 +6,7 @@ import {
   getAdminJobs,
   getAdminUserById,
   getAdminUsers,
+  suspendAdminJob,
   suspendAdminUser,
 } from "../controllers/admin.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -25,6 +26,11 @@ router.route("/jobs").get(verifyJWT, adminRoles, getAdminJobs);
 
 // GET /api/v1/admin/jobs/:jobId -> getAdminJobById powers job detail modals.
 router.route("/jobs/:jobId").get(verifyJWT, adminRoles, getAdminJobById);
+
+// PATCH /api/v1/admin/jobs/:jobId/suspend -> suspendAdminJob moderates open jobs.
+router
+  .route("/jobs/:jobId/suspend")
+  .patch(verifyJWT, adminRoles, suspendAdminJob);
 
 // GET /api/v1/admin/users/:userId -> getAdminUserById powers user detail modals.
 router.route("/users/:userId").get(verifyJWT, adminRoles, getAdminUserById);

@@ -370,6 +370,10 @@ const getJobById = asyncHandler(async (req, res) => {
     );
   }
 
+  if (req.user.role === "student" && job.status !== "open") {
+    throw new ApiError(403, "You are not allowed to view this job");
+  }
+
   const jobResponse = { ...job };
   // Authenticated users can see the richer client summary used by detail views.
   jobResponse.client = await buildClientSummary(job.client?._id || job.client);
@@ -423,6 +427,10 @@ const updateJob = asyncHandler(async (req, res) => {
 
   if (job.status === "cancelled") {
     throw new ApiError(400, "Cancelled jobs cannot be edited");
+  }
+
+  if (job.status === "suspended") {
+    throw new ApiError(400, "Suspended jobs cannot be edited");
   }
 
   const project = await Project.exists({ job: job._id });
@@ -644,6 +652,10 @@ const cancelJob = asyncHandler(async (req, res) => {
 
   if (job.status === "cancelled") {
     throw new ApiError(400, "Job is already cancelled");
+  }
+
+  if (job.status === "suspended") {
+    throw new ApiError(400, "Suspended jobs cannot be cancelled");
   }
 
   const project = await Project.exists({ job: job._id });

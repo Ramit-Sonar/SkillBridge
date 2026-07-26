@@ -5,6 +5,7 @@ import {
   getAdminJobsData,
   getAdminUserDetailsData,
   getAdminUsersData,
+  suspendAdminJobData,
   updateAdminUserAccountStatus,
 } from "../services/admin.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -73,6 +74,45 @@ const getAdminJobById = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, job, "Job fetched successfully"));
+});
+
+const suspendAdminJob = asyncHandler(async (req, res) => {
+  const { jobId } = req.params;
+  const moderationReason =
+    typeof req.body?.moderationReason === "string"
+      ? req.body.moderationReason.trim()
+      : "";
+  const customModerationReason =
+    typeof req.body?.customModerationReason === "string"
+      ? req.body.customModerationReason.trim()
+      : "";
+
+  if (!mongoose.isValidObjectId(jobId)) {
+    throw new ApiError(400, "Invalid job id");
+  }
+
+  if (!moderationReason) {
+    throw new ApiError(400, "Moderation reason is required");
+  }
+
+  const job = await suspendAdminJobData({
+    jobId,
+    adminUserId: req.user._id,
+    moderationReason,
+    customModerationReason,
+  });
+
+  if (!job) {
+    throw new ApiError(404, "Job not found");
+  }
+
+  if (job.error) {
+    throw new ApiError(400, job.message);
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, job, "Job suspended successfully"));
 });
 
 const getAdminUserById = asyncHandler(async (req, res) => {
@@ -149,5 +189,6 @@ export {
   getAdminJobs,
   getAdminUserById,
   getAdminUsers,
+  suspendAdminJob,
   suspendAdminUser,
 };
