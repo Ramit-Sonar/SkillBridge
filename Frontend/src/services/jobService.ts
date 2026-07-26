@@ -49,7 +49,7 @@ export type JobData = {
   deadline: string;
   complexity?: "small" | "medium";
   attachments?: JobAttachment[];
-  status?: "open" | "closed" | "cancelled";
+  status?: "open" | "closed" | "cancelled" | "suspended";
   applicationCount?: number;
   pendingApplicationCount?: number;
   createdAt?: string;

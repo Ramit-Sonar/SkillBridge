@@ -85,7 +85,7 @@ const CATEGORY_CONFIG: Record<
 // Shared shape accepted by every job details context.
 
 export type AttachedFile = FileAttachment;
-export type JobDisplayStatus = "open" | "closed" | "cancelled";
+export type JobDisplayStatus = "open" | "closed" | "cancelled" | "suspended";
 
 export interface JobDetailData {
   title: string;
@@ -134,6 +134,13 @@ const JOB_STATUS_CFG: Record<JobDisplayStatus, StatusBadgeConfig> = {
   },
   cancelled: {
     label: "Cancelled",
+    color: "#DC2626",
+    bg: "#FEF2F2",
+    border: "#FECACA",
+    dot: "#EF4444",
+  },
+  suspended: {
+    label: "Suspended",
     color: "#DC2626",
     bg: "#FEF2F2",
     border: "#FECACA",

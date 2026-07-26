@@ -21,6 +21,7 @@ const JOB_STATUS_CONFIG = {
   open: { label: "Open", color: "#059669", bg: "#ECFDF5" },
   closed: { label: "Closed", color: "#64748B", bg: "#F8FAFC" },
   cancelled: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" },
+  suspended: { label: "Suspended", color: "#DC2626", bg: "#FEF2F2" },
 };
 
 function formatPostedDate(date?: string) {

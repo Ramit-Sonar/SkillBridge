@@ -7,7 +7,7 @@ import {
   Tag,
   Calendar,
   Users,
-  Trash2,
+  Ban,
   Eye,
   ChevronDown,
   CheckCircle,
@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
 
-type JobStatus = "open" | "closed";
+type JobStatus = "open" | "closed" | "suspended";
 
 interface AdminJob {
   id: string;
@@ -76,7 +76,7 @@ const JOBS: AdminJob[] = [
   },
 ];
 
-// Admin jobs are currently local fixtures; removal only affects this screen state.
+// Admin jobs are currently local fixtures; suspension only affects this screen state.
 const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; border: string }> =
   {
     open: { label: "Open", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },
@@ -86,19 +86,26 @@ const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; 
       bg: "#F8FAFC",
       border: "#E2E8F0",
     },
+    suspended: {
+      label: "Suspended",
+      color: "#DC2626",
+      bg: "#FEF2F2",
+      border: "#FECACA",
+    },
   };
 
 function JobDetailsPanel({
   job,
   onClose,
-  onRemove,
+  onSuspend,
 }: {
   job: AdminJob;
   onClose: () => void;
-  onRemove: () => void;
+  onSuspend: () => void;
 }) {
-  const [removing, setRemoving] = useState(false);
-  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [suspending, setSuspending] = useState(false);
+  const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const canSuspend = job.status === "open";
 
   return (
     <motion.div
@@ -167,10 +174,10 @@ function JobDetailsPanel({
               clientJoinedDate: "Jun 2026",
             }}
             actions={
-              confirmRemove ? (
+              !canSuspend ? null : confirmSuspend ? (
                 <>
                   <button
-                    onClick={() => setConfirmRemove(false)}
+                    onClick={() => setConfirmSuspend(false)}
                     className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
                     style={{ fontSize: "0.875rem" }}
                   >
@@ -180,17 +187,17 @@ function JobDetailsPanel({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
-                      setRemoving(true);
+                      setSuspending(true);
                       setTimeout(() => {
-                        onRemove();
+                        onSuspend();
                         onClose();
                       }, 700);
                     }}
-                    disabled={removing}
+                    disabled={suspending}
                     className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center justify-center"
                     style={{ fontSize: "0.875rem" }}
                   >
-                    {removing ? (
+                    {suspending ? (
                       <motion.span
                         className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
                         animate={{ rotate: 360 }}
@@ -201,17 +208,17 @@ function JobDetailsPanel({
                         }}
                       />
                     ) : (
-                      "Remove Job"
+                      "Suspend Job"
                     )}
                   </motion.button>
                 </>
               ) : (
                 <button
-                  onClick={() => setConfirmRemove(true)}
+                  onClick={() => setConfirmSuspend(true)}
                   className="w-full flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
                   style={{ fontSize: "0.875rem" }}
                 >
-                  <Trash2 className="w-4 h-4" /> Remove Job
+                  <Ban className="w-4 h-4" /> Suspend Job
                 </button>
               )
             }
@@ -242,7 +249,7 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (v: stri
             transition={{ duration: 0.14 }}
             className="absolute right-0 top-full mt-1 w-36 bg-white border border-black/[0.07] rounded-xl shadow-lg z-20 overflow-hidden py-1"
           >
-            {["All", "Open", "Closed"].map((opt) => (
+            {["All", "Open", "Closed", "Suspended"].map((opt) => (
               <button
                 key={opt}
                 onClick={() => {
@@ -267,7 +274,7 @@ export default function AdminJobsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [selected, setSelected] = useState<AdminJob | null>(null);
-  const [removeTarget, setRemoveTarget] = useState<AdminJob | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<AdminJob | null>(null);
 
   const filtered = jobs.filter((j) => {
     const q = search.toLowerCase();
@@ -277,13 +284,14 @@ export default function AdminJobsPage() {
     return matchSearch && matchFilter;
   });
 
-  const removeJob = (id: string) => setJobs((prev) => prev.filter((j) => j.id !== id));
+  const suspendJob = (id: string) =>
+    setJobs((prev) => prev.map((job) => (job.id === id ? { ...job, status: "suspended" } : job)));
 
-  const handleRemoveJob = (job: AdminJob) => {
-    removeJob(job.id);
-    setRemoveTarget(null);
+  const handleSuspendJob = (job: AdminJob) => {
+    suspendJob(job.id);
+    setSuspendTarget(null);
     if (selected?.id === job.id) {
-      setSelected(null);
+      setSelected({ ...job, status: "suspended" });
     }
   };
 
@@ -386,13 +394,15 @@ export default function AdminJobsPage() {
                     >
                       <Eye className="w-3.5 h-3.5" /> View Details
                     </button>
-                    <button
-                      onClick={() => setRemoveTarget(job)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 font-semibold hover:bg-red-600 hover:text-white transition-all"
-                      style={{ fontSize: "0.75rem" }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Remove
-                    </button>
+                    {job.status === "open" && (
+                      <button
+                        onClick={() => setSuspendTarget(job)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 font-semibold hover:bg-red-600 hover:text-white transition-all"
+                        style={{ fontSize: "0.75rem" }}
+                      >
+                        <Ban className="w-3.5 h-3.5" /> Suspend
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -405,25 +415,25 @@ export default function AdminJobsPage() {
           <JobDetailsPanel
             job={selected}
             onClose={() => setSelected(null)}
-            onRemove={() => removeJob(selected.id)}
+            onSuspend={() => suspendJob(selected.id)}
           />
         )}
-        {removeTarget && (
+        {suspendTarget && (
           <ConfirmDialog
-            title="Remove Job"
+            title="Suspend Job"
             body={
               <>
-                Are you sure you want to remove{" "}
-                <strong className="text-slate-900">"{removeTarget.title}"</strong>?
+                Are you sure you want to suspend{" "}
+                <strong className="text-slate-900">"{suspendTarget.title}"</strong>?
               </>
             }
-            confirmLabel="Remove"
+            confirmLabel="Suspend"
             confirmColor="#DC2626"
-            icon={Trash2}
+            icon={Ban}
             iconBg="#FEF2F2"
             iconColor="#DC2626"
-            onConfirm={() => handleRemoveJob(removeTarget)}
-            onClose={() => setRemoveTarget(null)}
+            onConfirm={() => handleSuspendJob(suspendTarget)}
+            onClose={() => setSuspendTarget(null)}
           />
         )}
       </AnimatePresence>

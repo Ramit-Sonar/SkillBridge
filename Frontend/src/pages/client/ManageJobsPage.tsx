@@ -59,7 +59,7 @@ import {
 
 // Types
 
-type JobStatus = "open" | "closed" | "cancelled";
+type JobStatus = "open" | "closed" | "cancelled" | "suspended";
 type AppStatus = ApplicationStatus;
 
 interface VerifiedSkill {
@@ -151,7 +151,10 @@ function mapJobFromApi(job: JobData): Job {
   const budget = Number.isNaN(numericBudget)
     ? `NPR ${budgetRaw}`
     : `NPR ${numericBudget.toLocaleString("en-IN")}`;
-  const status = job.status === "closed" || job.status === "cancelled" ? job.status : "open";
+  const status =
+    job.status === "closed" || job.status === "cancelled" || job.status === "suspended"
+      ? job.status
+      : "open";
 
   // Normalize backend job records into the shape expected by manage-job cards.
   return {
@@ -203,6 +206,12 @@ const JOB_STATUS_CFG: Record<
   },
   cancelled: {
     label: "Cancelled",
+    color: "#DC2626",
+    bg: "#FEF2F2",
+    border: "#FECACA",
+  },
+  suspended: {
+    label: "Suspended",
     color: "#DC2626",
     bg: "#FEF2F2",
     border: "#FECACA",
@@ -773,6 +782,7 @@ function ApplicationsPanel({
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [notification, setNotification] = useState<NotificationMessage>(null);
+  const isSuspendedJob = job.status === "suspended";
 
   const loadApplicants = useCallback(
     async ({ showLoading = true, preserveCurrentData = false } = {}) => {
@@ -922,7 +932,7 @@ function ApplicationsPanel({
           onHire={() => handleHire(workspaceApplicant)}
           onReject={() => handleReject(workspaceApplicant)}
           actionLoading={actionLoading}
-          showApplicantActions
+          showApplicantActions={!isSuspendedJob}
           showProjectButton
         />
         <Notification message={notification} onClose={() => setNotification(null)} />
@@ -1053,7 +1063,7 @@ function ApplicationsPanel({
                           <Eye className="w-3 h-3" />{" "}
                           {isDetailsLoading ? "Loading" : "View Details"}
                         </button>
-                        {applicant.status === "pending" && (
+                        {applicant.status === "pending" && !isSuspendedJob && (
                           <>
                             <button
                               type="button"
@@ -1134,6 +1144,8 @@ function JobDetailsPanel({
   onClose: () => void;
   onViewApplications: () => void;
 }) {
+  const isSuspendedJob = job.status === "suspended";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1197,13 +1209,20 @@ function JobDetailsPanel({
             }}
             actions={
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={!isSuspendedJob ? { scale: 1.02 } : {}}
+                whileTap={!isSuspendedJob ? { scale: 0.97 } : {}}
+                disabled={isSuspendedJob}
+                title={
+                  isSuspendedJob
+                    ? "Suspended jobs are unavailable for application review."
+                    : undefined
+                }
                 onClick={() => {
+                  if (isSuspendedJob) return;
                   onClose();
                   onViewApplications();
                 }}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm"
+                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
                 style={{ fontSize: "0.82rem" }}
               >
                 <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
@@ -1246,7 +1265,7 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (v: stri
             transition={{ duration: 0.14 }}
             className="absolute right-0 top-full mt-1 w-36 bg-white border border-black/[0.07] rounded-xl shadow-lg z-20 overflow-hidden py-1"
           >
-            {["All", "Open", "Closed", "Cancelled"].map((opt) => (
+            {["All", "Open", "Closed", "Suspended"].map((opt) => (
               <button
                 key={opt}
                 onClick={() => {
@@ -1282,25 +1301,30 @@ function JobCard({
   navigate: ReturnType<typeof useNavigate>;
 }) {
   const cfg = JOB_STATUS_CFG[job.status];
+  const isSuspendedJob = job.status === "suspended";
   const editDisabledReason =
     job.status === "closed"
       ? "Closed jobs cannot be edited."
-      : job.status === "cancelled"
-        ? "Cancelled jobs cannot be edited."
-        : job.applicationCount > 0
-          ? "This job has already received applications and can no longer be edited."
-          : "";
+      : isSuspendedJob
+        ? "Suspended jobs cannot be edited."
+        : job.status === "cancelled"
+          ? "Cancelled jobs cannot be edited."
+          : job.applicationCount > 0
+            ? "This job has already received applications and can no longer be edited."
+            : "";
   const hasAcceptedApplication = job.applicants.some(
     (applicant) => applicant.status === "accepted"
   );
   const cancelDisabledReason =
     job.status === "closed"
       ? "Closed jobs cannot be cancelled."
-      : job.status === "cancelled"
-        ? "Job is already cancelled."
-        : hasAcceptedApplication
-          ? "Jobs with accepted applications cannot be cancelled."
-          : "";
+      : isSuspendedJob
+        ? "Suspended jobs cannot be cancelled."
+        : job.status === "cancelled"
+          ? "Job is already cancelled."
+          : hasAcceptedApplication
+            ? "Jobs with accepted applications cannot be cancelled."
+            : "";
   const editState = {
     editJob: {
       id: job.id,
@@ -1331,6 +1355,15 @@ function JobCard({
           <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.75rem" }}>
             {job.category}
           </p>
+          {isSuspendedJob && (
+            <span
+              className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full border border-red-200 bg-red-50 text-red-600 font-semibold"
+              style={{ fontSize: "0.62rem" }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              Suspended
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <StatusBadge config={cfg} />
@@ -1370,10 +1403,14 @@ function JobCard({
           <Eye className="w-3.5 h-3.5" /> View Details
         </button>
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={!isSuspendedJob ? { scale: 1.02 } : {}}
+          whileTap={!isSuspendedJob ? { scale: 0.97 } : {}}
+          disabled={isSuspendedJob}
+          title={
+            isSuspendedJob ? "Suspended jobs are unavailable for application review." : undefined
+          }
           onClick={onViewApplications}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
           style={{ fontSize: "0.75rem" }}
         >
           <Users className="w-3.5 h-3.5" /> Applications ({job.applicationCount})
