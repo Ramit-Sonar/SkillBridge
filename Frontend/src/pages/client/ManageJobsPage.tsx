@@ -1265,7 +1265,7 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (v: stri
             transition={{ duration: 0.14 }}
             className="absolute right-0 top-full mt-1 w-36 bg-white border border-black/[0.07] rounded-xl shadow-lg z-20 overflow-hidden py-1"
           >
-            {["All", "Open", "Closed", "Suspended"].map((opt) => (
+            {["All", "Open", "Closed", "Cancelled", "Suspended"].map((opt) => (
               <button
                 key={opt}
                 onClick={() => {
