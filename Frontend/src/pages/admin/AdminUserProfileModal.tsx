@@ -285,46 +285,7 @@ function SuspendUserModal({
   );
 }
 
-function AdminInformation({
-  user,
-  onUserUpdated,
-  onNotify,
-  readOnly,
-}: {
-  user: PlatformUser;
-  onUserUpdated: (user: PlatformUser) => void;
-  onNotify: (message: NotificationMessage) => void;
-  readOnly?: boolean;
-}) {
-  const [confirmAction, setConfirmAction] = useState<"suspend" | "activate" | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const isActive = user.status === "active";
-
-  const handleAccountStatusChange = async (
-    action: "suspend" | "activate",
-    suspensionReason = ""
-  ) => {
-    setActionLoading(true);
-
-    try {
-      const response =
-        action === "suspend"
-          ? await suspendUser(user.id, suspensionReason)
-          : await activateUser(user.id);
-
-      onUserUpdated(response.data);
-      onNotify({ type: "success", text: response.message });
-      setConfirmAction(null);
-    } catch (error) {
-      onNotify({
-        type: "error",
-        text: error instanceof Error ? error.message : "User status could not be updated.",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
+function AdminInformation({ user }: { user: PlatformUser }) {
   return (
     <section className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col gap-4">
       <div>
@@ -380,63 +341,6 @@ function AdminInformation({
           </p>
         </div>
       )}
-
-      {!readOnly &&
-        (isActive ? (
-          <button
-            type="button"
-            onClick={() => setConfirmAction("suspend")}
-            className="w-full flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
-            style={{ fontSize: "0.85rem" }}
-          >
-            <Ban className="w-4 h-4" /> Suspend User
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmAction("activate")}
-            className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
-            style={{ fontSize: "0.85rem" }}
-          >
-            <UserCheck className="w-4 h-4" /> Activate User
-          </button>
-        ))}
-
-      <AnimatePresence>
-        {!readOnly && confirmAction === "suspend" && (
-          <SuspendUserModal
-            user={user}
-            onConfirm={(reason) => handleAccountStatusChange("suspend", reason)}
-            onClose={() => {
-              if (!actionLoading) setConfirmAction(null);
-            }}
-            loading={actionLoading}
-          />
-        )}
-
-        {!readOnly && confirmAction === "activate" && (
-          <ConfirmDialog
-            title="Activate User"
-            body={
-              <>
-                Are you sure you want to activate{" "}
-                <strong className="text-slate-900">{user.name}</strong>?
-              </>
-            }
-            confirmLabel="Activate User"
-            confirmColor="#059669"
-            onConfirm={() => handleAccountStatusChange("activate")}
-            onClose={() => {
-              if (!actionLoading) setConfirmAction(null);
-            }}
-            loading={actionLoading}
-            icon={UserCheck}
-            iconBg="#ECFDF5"
-            iconColor="#059669"
-            busyDelayMs={0}
-          />
-        )}
-      </AnimatePresence>
     </section>
   );
 }
@@ -454,9 +358,37 @@ export function AdminUserProfileModal({
 }) {
   const isStudent = user.role === "student";
   const [notification, setNotification] = useState<NotificationMessage>(null);
+  const [confirmAction, setConfirmAction] = useState<"suspend" | "activate" | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const isActive = user.status === "active";
 
   const handleUserUpdated = (updatedUser: PlatformUser) => {
     onUserUpdated?.(updatedUser);
+  };
+
+  const handleAccountStatusChange = async (
+    action: "suspend" | "activate",
+    suspensionReason = ""
+  ) => {
+    setActionLoading(true);
+
+    try {
+      const response =
+        action === "suspend"
+          ? await suspendUser(user.id, suspensionReason)
+          : await activateUser(user.id);
+
+      handleUserUpdated(response.data);
+      setNotification({ type: "success", text: response.message });
+      setConfirmAction(null);
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "User status could not be updated.",
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -529,15 +461,70 @@ export function AdminUserProfileModal({
               />
             )}
 
-            <AdminInformation
-              user={user}
-              onUserUpdated={handleUserUpdated}
-              onNotify={setNotification}
-              readOnly={readOnly}
-            />
+            <AdminInformation user={user} />
           </div>
         </div>
+
+        {!readOnly && (
+          <div className="p-4 border-t border-black/[0.05] bg-white flex gap-3 shrink-0">
+            {isActive ? (
+              <button
+                type="button"
+                onClick={() => setConfirmAction("suspend")}
+                className="w-full flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
+                style={{ fontSize: "0.875rem" }}
+              >
+                <Ban className="w-4 h-4" /> Suspend User
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmAction("activate")}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+                style={{ fontSize: "0.875rem" }}
+              >
+                <UserCheck className="w-4 h-4" /> Activate User
+              </button>
+            )}
+          </div>
+        )}
       </motion.div>
+
+      <AnimatePresence>
+        {!readOnly && confirmAction === "suspend" && (
+          <SuspendUserModal
+            user={user}
+            onConfirm={(reason) => handleAccountStatusChange("suspend", reason)}
+            onClose={() => {
+              if (!actionLoading) setConfirmAction(null);
+            }}
+            loading={actionLoading}
+          />
+        )}
+
+        {!readOnly && confirmAction === "activate" && (
+          <ConfirmDialog
+            title="Activate User"
+            body={
+              <>
+                Are you sure you want to activate{" "}
+                <strong className="text-slate-900">{user.name}</strong>?
+              </>
+            }
+            confirmLabel="Activate User"
+            confirmColor="#059669"
+            onConfirm={() => handleAccountStatusChange("activate")}
+            onClose={() => {
+              if (!actionLoading) setConfirmAction(null);
+            }}
+            loading={actionLoading}
+            icon={UserCheck}
+            iconBg="#ECFDF5"
+            iconColor="#059669"
+            busyDelayMs={0}
+          />
+        )}
+      </AnimatePresence>
       <Notification message={notification} onClose={() => setNotification(null)} />
     </motion.div>
   );
