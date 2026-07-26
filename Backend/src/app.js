@@ -53,6 +53,7 @@ app.use(express.static("public"));
 app.use(cookieParser());
 app.use(maintenanceModeMiddleware);
 
+
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/jobs", jobRouter);
 app.use("/api/v1/student", studentRouter);
@@ -69,5 +70,6 @@ app.use("/api", (req, res, next) => {
 });
 
 app.use(globalErrorHandler);
+
 
 export { app };
