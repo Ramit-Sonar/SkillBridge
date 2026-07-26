@@ -319,16 +319,20 @@ function AdminInformation({ user }: { user: PlatformUser }) {
             {formatAdminDate(user.joinedAt)}
           </p>
         </AdminMetric>
-        <AdminMetric label="Suspended By">
-          <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
-            {user.suspendedBy?.name || "Not applicable"}
-          </p>
-        </AdminMetric>
-        <AdminMetric label="Suspended At">
-          <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
-            {formatAdminDate(user.suspendedAt || undefined)}
-          </p>
-        </AdminMetric>
+        {user.status === "suspended" && (
+          <>
+            <AdminMetric label="Suspended By">
+              <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+                {user.suspendedBy?.name || "Not available"}
+              </p>
+            </AdminMetric>
+            <AdminMetric label="Suspended At">
+              <p className="text-slate-900 font-semibold" style={{ fontSize: "0.78rem" }}>
+                {formatAdminDate(user.suspendedAt || undefined)}
+              </p>
+            </AdminMetric>
+          </>
+        )}
       </div>
 
       {user.status === "suspended" && (
