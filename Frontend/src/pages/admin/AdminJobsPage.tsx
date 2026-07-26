@@ -1,7 +1,13 @@
-﻿import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
-import { ConfirmDialog, SearchInput, StatusBadge } from "../../app/components/shared/ui";
+import {
+  ConfirmDialog,
+  Notification,
+  SearchInput,
+  StatusBadge,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import {
   Briefcase,
   Tag,
@@ -14,14 +20,31 @@ import {
   X,
 } from "lucide-react";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
+import {
+  getAdminJobDetails,
+  getAdminJobs,
+  type AdminJob as AdminJobData,
+  type AdminJobStatus,
+} from "../../services/adminService";
 
-type JobStatus = "open" | "closed" | "suspended";
+type JobStatus = AdminJobStatus;
 
 interface AdminJob {
   id: string;
   title: string;
   clientName: string;
   clientInitials: string;
+  clientAvatar?: string;
+  clientId?: string;
+  clientLocation?: string;
+  clientCompanyName?: string;
+  clientWebsite?: string;
+  clientAbout?: string;
+  clientVerified?: boolean;
+  clientJobsPosted?: number;
+  clientProjectsCompleted?: number;
+  clientJoinedDate?: string;
+  clientRating?: number;
   category: string;
   budget: string;
   duration: string;
@@ -33,50 +56,15 @@ interface AdminJob {
   description: string;
   requirements: string;
   skills: string[];
+  attachedFiles: {
+    url?: string;
+    publicId?: string;
+    originalName?: string;
+    mimeType?: string;
+    size?: number;
+  }[];
 }
 
-const JOBS: AdminJob[] = [
-  {
-    id: "j1",
-    title: "Landing Page Design",
-    clientName: "Dikshya Khanal",
-    clientInitials: "DK",
-    category: "UI/UX Design",
-    budget: "NPR 8,000",
-    duration: "7d",
-    deadline: "2026-06-30",
-    complexity: "medium",
-    status: "open",
-    postedAt: "13 Jun 2026",
-    applications: 5,
-    description:
-      "Design a modern, conversion-focused landing page for an online learning platform.",
-    requirements:
-      "Use brand colors (blue and white). Include hero, features, testimonials, and CTA. Deliver Figma prototype + exported assets.",
-    skills: ["Figma", "UI Design", "Prototyping"],
-  },
-  {
-    id: "j4",
-    title: "Social Media Design Kit",
-    clientName: "Dikshya Khanal",
-    clientInitials: "DK",
-    category: "Graphic Design",
-    budget: "NPR 3,500",
-    duration: "3d",
-    deadline: "2026-06-27",
-    complexity: "small",
-    status: "closed",
-    postedAt: "1 Jun 2026",
-    applications: 4,
-    description:
-      "Create 20 branded social media post templates for Instagram, Facebook, and LinkedIn.",
-    requirements:
-      "Templates for announcements, quotes, product features. All editable in Canva. Export as PNG + Canva share links.",
-    skills: ["Canva", "Graphic Design"],
-  },
-];
-
-// Admin jobs are currently local fixtures; suspension only affects this screen state.
 const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; border: string }> =
   {
     open: { label: "Open", color: "#059669", bg: "#ECFDF5", border: "#6EE7B7" },
@@ -86,6 +74,12 @@ const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; 
       bg: "#F8FAFC",
       border: "#E2E8F0",
     },
+    cancelled: {
+      label: "Cancelled",
+      color: "#DC2626",
+      bg: "#FEF2F2",
+      border: "#FECACA",
+    },
     suspended: {
       label: "Suspended",
       color: "#DC2626",
@@ -93,6 +87,82 @@ const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; 
       border: "#FECACA",
     },
   };
+
+function getInitials(name = "Unknown Client") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatAdminDate(value?: string) {
+  if (!value) return "Not set";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatBudget(value: number | string) {
+  const numericBudget = typeof value === "number" ? value : Number(value);
+
+  if (Number.isFinite(numericBudget)) {
+    return `NPR ${numericBudget.toLocaleString("en-IN")}`;
+  }
+
+  return String(value || "NPR 0");
+}
+
+function getApplicationCount(job: AdminJobData) {
+  if (typeof job.applications === "number") return job.applications;
+  if (Array.isArray(job.applications)) return job.applications.length;
+  return job.applicationCount || job.applicationsCount || 0;
+}
+
+function mapAdminJob(job: AdminJobData): AdminJob {
+  const client = job.client;
+  const clientName = client?.fullName || client?.name || job.clientName || "Unknown Client";
+
+  return {
+    id: job.id || job._id || "",
+    title: job.title,
+    clientName,
+    clientInitials: client?.initials || job.clientInitials || getInitials(clientName),
+    clientAvatar: client?.avatar || job.clientAvatar || "",
+    clientId: client?.id || job.clientId,
+    clientLocation: client?.location || job.clientLocation || "",
+    clientCompanyName: client?.companyName || job.clientCompanyName || "",
+    clientWebsite: client?.website || job.clientWebsite || "",
+    clientAbout: client?.bio || job.clientAbout || "",
+    clientVerified: job.clientVerified ?? client?.verification?.status === "approved",
+    clientJobsPosted: job.clientJobsPosted ?? client?.statistics?.jobsPosted ?? undefined,
+    clientProjectsCompleted:
+      job.clientProjectsCompleted ?? client?.statistics?.projectsCompleted ?? undefined,
+    clientJoinedDate: formatAdminDate(job.clientJoinedDate || client?.joined || undefined),
+    clientRating: job.clientRating ?? client?.statistics?.averageRating ?? undefined,
+    category: job.category,
+    budget: formatBudget(job.budget),
+    duration: job.duration,
+    deadline: formatAdminDate(job.deadline),
+    complexity: job.complexity,
+    status: job.status,
+    postedAt: formatAdminDate(job.postedAt || job.createdAt),
+    applications: getApplicationCount(job),
+    description: job.description,
+    requirements: job.requirements,
+    skills: job.skills || [],
+    attachedFiles: job.attachments || [],
+  };
+}
 
 function JobDetailsPanel({
   job,
@@ -103,8 +173,6 @@ function JobDetailsPanel({
   onClose: () => void;
   onSuspend: () => void;
 }) {
-  const [suspending, setSuspending] = useState(false);
-  const [confirmSuspend, setConfirmSuspend] = useState(false);
   const canSuspend = job.status === "open";
 
   return (
@@ -138,7 +206,7 @@ function JobDetailsPanel({
               Job Details
             </p>
             <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
-              Admin view — read only
+              Admin view - read only
             </p>
           </div>
           <button
@@ -165,56 +233,25 @@ function JobDetailsPanel({
               deadline: job.deadline,
               complexity: job.complexity,
               postedAt: job.postedAt,
+              attachedFiles: job.attachedFiles,
+              clientId: job.clientId,
               clientName: job.clientName,
               clientInitials: job.clientInitials,
-              clientLocation: "Kathmandu, Nepal",
-              clientAbout: "Posted jobs on SkillBridge.",
-              clientJobsPosted: job.applications,
-              clientProjectsCompleted: 3,
-              clientJoinedDate: "Jun 2026",
+              clientAvatar: job.clientAvatar,
+              clientLocation: job.clientLocation,
+              clientCompanyName: job.clientCompanyName,
+              clientWebsite: job.clientWebsite,
+              clientAbout: job.clientAbout,
+              clientVerified: job.clientVerified,
+              clientJobsPosted: job.clientJobsPosted,
+              clientProjectsCompleted: job.clientProjectsCompleted,
+              clientJoinedDate: job.clientJoinedDate,
+              clientRating: job.clientRating,
             }}
             actions={
-              !canSuspend ? null : confirmSuspend ? (
-                <>
-                  <button
-                    onClick={() => setConfirmSuspend(false)}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
-                    style={{ fontSize: "0.875rem" }}
-                  >
-                    Cancel
-                  </button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => {
-                      setSuspending(true);
-                      setTimeout(() => {
-                        onSuspend();
-                        onClose();
-                      }, 700);
-                    }}
-                    disabled={suspending}
-                    className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center justify-center"
-                    style={{ fontSize: "0.875rem" }}
-                  >
-                    {suspending ? (
-                      <motion.span
-                        className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white"
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 0.8,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                      />
-                    ) : (
-                      "Suspend Job"
-                    )}
-                  </motion.button>
-                </>
-              ) : (
+              !canSuspend ? null : (
                 <button
-                  onClick={() => setConfirmSuspend(true)}
+                  onClick={onSuspend}
                   className="w-full flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold py-2.5 rounded-xl hover:bg-red-600 hover:text-white transition-all"
                   style={{ fontSize: "0.875rem" }}
                 >
@@ -231,6 +268,7 @@ function JobDetailsPanel({
 
 function StatusDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+
   return (
     <div className="relative">
       <button
@@ -249,7 +287,7 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (v: stri
             transition={{ duration: 0.14 }}
             className="absolute right-0 top-full mt-1 w-36 bg-white border border-black/[0.07] rounded-xl shadow-lg z-20 overflow-hidden py-1"
           >
-            {["All", "Open", "Closed", "Suspended"].map((opt) => (
+            {["All", "Open", "Closed", "Cancelled"].map((opt) => (
               <button
                 key={opt}
                 onClick={() => {
@@ -270,28 +308,49 @@ function StatusDropdown({ value, onChange }: { value: string; onChange: (v: stri
 }
 
 export default function AdminJobsPage() {
-  const [jobs, setJobs] = useState(JOBS);
+  const [jobs, setJobs] = useState<AdminJob[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [selected, setSelected] = useState<AdminJob | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [notification, setNotification] = useState<NotificationMessage>(null);
   const [suspendTarget, setSuspendTarget] = useState<AdminJob | null>(null);
 
-  const filtered = jobs.filter((j) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q || j.title.toLowerCase().includes(q) || j.clientName.toLowerCase().includes(q);
-    const matchFilter = filter === "All" || j.status === filter.toLowerCase();
-    return matchSearch && matchFilter;
-  });
+  const loadJobs = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-  const suspendJob = (id: string) =>
-    setJobs((prev) => prev.map((job) => (job.id === id ? { ...job, status: "suspended" } : job)));
+    try {
+      const response = await getAdminJobs({ search, status: filter });
+      setJobs(response.data.jobs.map(mapAdminJob));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to fetch jobs.";
+      setError(message);
+      setNotification({ type: "error", text: message });
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, search]);
 
-  const handleSuspendJob = (job: AdminJob) => {
-    suspendJob(job.id);
-    setSuspendTarget(null);
-    if (selected?.id === job.id) {
-      setSelected({ ...job, status: "suspended" });
+  useEffect(() => {
+    loadJobs();
+  }, [loadJobs]);
+
+  const handleViewDetails = async (jobId: string) => {
+    setDetailsLoadingId(jobId);
+
+    try {
+      const response = await getAdminJobDetails(jobId);
+      setSelected(mapAdminJob(response.data));
+    } catch (error) {
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to fetch job details.",
+      });
+    } finally {
+      setDetailsLoadingId(null);
     }
   };
 
@@ -325,7 +384,30 @@ export default function AdminJobsPage() {
           />
           <StatusDropdown value={filter} onChange={setFilter} />
         </div>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <motion.span
+              className="w-10 h-10 rounded-full border-4 border-blue-100 border-t-blue-600"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+            <p className="text-slate-500 font-semibold" style={{ fontSize: "0.9rem" }}>
+              Loading jobs...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
+              <Briefcase className="w-7 h-7 text-red-300" />
+            </div>
+            <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
+              Unable to Load Jobs
+            </p>
+            <p className="text-slate-500 max-w-md" style={{ fontSize: "0.78rem" }}>
+              {error}
+            </p>
+          </div>
+        ) : jobs.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
               <Briefcase className="w-7 h-7 text-slate-300" />
@@ -336,8 +418,10 @@ export default function AdminJobsPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {filtered.map((job, i) => {
+            {jobs.map((job, i) => {
               const cfg = STATUS_CFG[job.status];
+              const detailsLoading = detailsLoadingId === job.id;
+
               return (
                 <motion.div
                   key={job.id}
@@ -357,10 +441,18 @@ export default function AdminJobsPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <div
-                          className="w-5 h-5 rounded-md bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold"
+                          className="w-5 h-5 rounded-md bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0"
                           style={{ fontSize: "0.42rem" }}
                         >
-                          {job.clientInitials}
+                          {job.clientAvatar ? (
+                            <img
+                              src={job.clientAvatar}
+                              alt={job.clientName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            job.clientInitials
+                          )}
                         </div>
                         <span className="text-slate-500" style={{ fontSize: "0.72rem" }}>
                           {job.clientName}
@@ -388,11 +480,21 @@ export default function AdminJobsPage() {
                   </div>
                   <div className="flex gap-2 pt-1 border-t border-black/[0.04]">
                     <button
-                      onClick={() => setSelected(job)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 font-semibold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
+                      onClick={() => handleViewDetails(job.id)}
+                      disabled={detailsLoading}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 font-semibold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all disabled:opacity-70"
                       style={{ fontSize: "0.75rem" }}
                     >
-                      <Eye className="w-3.5 h-3.5" /> View Details
+                      {detailsLoading ? (
+                        <motion.span
+                          className="w-3.5 h-3.5 rounded-full border-2 border-blue-200 border-t-blue-600"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                        />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5" />
+                      )}
+                      {detailsLoading ? "Loading" : "View Details"}
                     </button>
                     {job.status === "open" && (
                       <button
@@ -415,7 +517,7 @@ export default function AdminJobsPage() {
           <JobDetailsPanel
             job={selected}
             onClose={() => setSelected(null)}
-            onSuspend={() => suspendJob(selected.id)}
+            onSuspend={() => setSuspendTarget(selected)}
           />
         )}
         {suspendTarget && (
@@ -423,20 +525,20 @@ export default function AdminJobsPage() {
             title="Suspend Job"
             body={
               <>
-                Are you sure you want to suspend{" "}
-                <strong className="text-slate-900">"{suspendTarget.title}"</strong>?
+                Suspension is not connected yet. Backend moderation will be added in the next phase.
               </>
             }
-            confirmLabel="Suspend"
+            confirmLabel="Close"
             confirmColor="#DC2626"
             icon={Ban}
             iconBg="#FEF2F2"
             iconColor="#DC2626"
-            onConfirm={() => handleSuspendJob(suspendTarget)}
+            onConfirm={() => setSuspendTarget(null)}
             onClose={() => setSuspendTarget(null)}
           />
         )}
       </AnimatePresence>
+      <Notification message={notification} onClose={() => setNotification(null)} />
     </DashboardLayout>
   );
 }

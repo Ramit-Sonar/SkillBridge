@@ -71,6 +71,93 @@ export type AdminDashboardSummary = {
   pendingTasks: AdminPendingTask[];
 };
 
+export type AdminJobStatus = "open" | "closed" | "cancelled" | "suspended";
+
+export type AdminJobClient = {
+  id: string;
+  name: string;
+  fullName?: string;
+  initials: string;
+  avatar?: string;
+  joined?: string | null;
+  location?: string;
+  companyName?: string;
+  website?: string;
+  bio?: string;
+  verification?: {
+    status: string | null;
+    verifiedAt?: string | null;
+  };
+  statistics?: {
+    jobsPosted?: number | null;
+    projectsCompleted?: number | null;
+    activeProjects?: number | null;
+    totalReviews?: number | null;
+    averageRating?: number | null;
+  };
+};
+
+export type AdminJobApplication = {
+  id: string;
+  student?: {
+    id: string;
+    name: string;
+    initials: string;
+    avatar?: string;
+  } | null;
+  status: string;
+  appliedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminJob = {
+  id: string;
+  _id?: string;
+  title: string;
+  client?: AdminJobClient;
+  clientName?: string;
+  clientInitials?: string;
+  clientAvatar?: string;
+  clientId?: string;
+  clientLocation?: string;
+  clientCompanyName?: string;
+  clientWebsite?: string;
+  clientAbout?: string;
+  clientVerified?: boolean;
+  clientJobsPosted?: number | null;
+  clientProjectsCompleted?: number | null;
+  clientJoinedDate?: string | null;
+  clientRating?: number | null;
+  category: string;
+  budget: number | string;
+  duration: string;
+  deadline: string;
+  complexity: "small" | "medium";
+  status: AdminJobStatus;
+  postedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  applications?: number | AdminJobApplication[];
+  applicationCount?: number;
+  applicationsCount?: number;
+  description: string;
+  requirements: string;
+  skills: string[];
+  attachments?: {
+    url: string;
+    publicId?: string;
+    originalName: string;
+    mimeType: string;
+    size: number;
+  }[];
+};
+
+export type AdminJobsResponse = {
+  totalJobs: number;
+  jobs: AdminJob[];
+};
+
 const parseAdminResponse = async <T>(
   response: Response,
   fallbackMessage: string
@@ -115,6 +202,40 @@ export const getUsers = async (): Promise<ApiResponse<UsersResponse>> => {
   });
 
   return parseAdminResponse<UsersResponse>(response, "Failed to fetch users.");
+};
+
+export const getAdminJobs = async (params?: {
+  search?: string;
+  status?: string;
+}): Promise<ApiResponse<AdminJobsResponse>> => {
+  const searchParams = new URLSearchParams();
+
+  if (params?.search?.trim()) {
+    searchParams.set("search", params.search.trim());
+  }
+
+  if (params?.status && params.status !== "All") {
+    searchParams.set("status", params.status.toLowerCase());
+  }
+
+  const queryString = searchParams.toString();
+  const url = queryString ? `${API_URL}/admin/jobs?${queryString}` : `${API_URL}/admin/jobs`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return parseAdminResponse<AdminJobsResponse>(response, "Failed to fetch jobs.");
+};
+
+export const getAdminJobDetails = async (jobId: string): Promise<ApiResponse<AdminJob>> => {
+  const response = await fetch(`${API_URL}/admin/jobs/${jobId}`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return parseAdminResponse<AdminJob>(response, "Failed to fetch job details.");
 };
 
 export const getUserDetails = async (userId: string): Promise<ApiResponse<PlatformUser>> => {

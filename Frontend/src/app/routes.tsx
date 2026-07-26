@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { Navigate, createBrowserRouter } from "react-router";
 import Root from "./Root";
 import Landing from "../pages/public/Landing";
 import AdminLoginPage from "../pages/auth/AdminLoginPage";
@@ -174,6 +174,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  { path: "admin", element: <Navigate to="/admin/dashboard" replace /> },
   { path: "admin/login", Component: AdminLoginPage },
   {
     path: "admin/dashboard",

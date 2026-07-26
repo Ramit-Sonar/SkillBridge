@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   activateAdminUser,
   getAdminDashboardSummary,
+  getAdminJobById,
+  getAdminJobs,
   getAdminUserById,
   getAdminUsers,
   suspendAdminUser,
@@ -17,6 +19,12 @@ router.route("/dashboard").get(verifyJWT, adminRoles, getAdminDashboardSummary);
 
 // GET /api/v1/admin/users -> getAdminUsers powers admin user cards.
 router.route("/users").get(verifyJWT, adminRoles, getAdminUsers);
+
+// GET /api/v1/admin/jobs -> getAdminJobs powers admin job cards.
+router.route("/jobs").get(verifyJWT, adminRoles, getAdminJobs);
+
+// GET /api/v1/admin/jobs/:jobId -> getAdminJobById powers job detail modals.
+router.route("/jobs/:jobId").get(verifyJWT, adminRoles, getAdminJobById);
 
 // GET /api/v1/admin/users/:userId -> getAdminUserById powers user detail modals.
 router.route("/users/:userId").get(verifyJWT, adminRoles, getAdminUserById);

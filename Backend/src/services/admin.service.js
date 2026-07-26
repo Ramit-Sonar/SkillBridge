@@ -1,4 +1,5 @@
 import { User } from "../models/user.model.js";
+import { Application } from "../models/application.model.js";
 import { ClientProfile } from "../models/clientProfile.model.js";
 import { Job } from "../models/job.model.js";
 import { Project } from "../models/project.model.js";
@@ -72,6 +73,8 @@ const getInitials = (fullName = "") => {
 
 const mapByUserId = (items) =>
   new Map(items.map((item) => [item.user.toString(), item]));
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const getReportCountMap = async (userIds) => {
   if (userIds.length === 0) return new Map();
@@ -371,6 +374,280 @@ const getAdminUserDetailsData = async (userId) => {
   return userSummary;
 };
 
+const buildAdminJobClient = (client) => {
+  if (!client) {
+    return {
+      id: "",
+      name: "Unknown Client",
+      fullName: "Unknown Client",
+      initials: "UC",
+      avatar: "",
+      joined: null,
+      location: "",
+      companyName: "",
+      website: "",
+      bio: "",
+      verification: {
+        status: null,
+        verifiedAt: null,
+      },
+      statistics: {
+        jobsPosted: null,
+        projectsCompleted: null,
+        activeProjects: null,
+        totalReviews: null,
+        averageRating: null,
+      },
+    };
+  }
+
+  const clientId = client._id?.toString?.() || client.toString?.() || "";
+  const clientName = client.fullName || "Unknown Client";
+
+  return {
+    id: clientId,
+    name: clientName,
+    fullName: clientName,
+    initials: getInitials(clientName),
+    avatar: client.avatar || "",
+    joined: client.createdAt || null,
+    location: client.location || "",
+    companyName: client.companyName || "",
+    website: client.website || "",
+    bio: client.bio || "",
+    verification: client.verification || {
+      status: null,
+      verifiedAt: null,
+    },
+    statistics: client.statistics || {
+      jobsPosted: null,
+      projectsCompleted: null,
+      activeProjects: null,
+      totalReviews: null,
+      averageRating: null,
+    },
+  };
+};
+
+const buildDetailedAdminJobClient = ({
+  client,
+  clientProfile,
+  verification,
+  clientStats,
+}) => {
+  const detailedClient = {
+    ...(client || {}),
+    location: clientProfile?.location || "",
+    companyName: clientProfile?.companyName || verification?.companyName || "",
+    website: clientProfile?.website || "",
+    bio: clientProfile?.bio || "",
+    verification: {
+      status: verification?.status || null,
+      verifiedAt: verification?.verifiedAt || verification?.approvedAt || null,
+    },
+    statistics: {
+      jobsPosted: clientStats?.jobsPosted ?? null,
+      projectsCompleted: clientStats?.projectsCompleted ?? null,
+      activeProjects: clientStats?.activeProjects ?? null,
+      totalReviews: null,
+      averageRating: null,
+    },
+  };
+
+  return buildAdminJobClient(detailedClient);
+};
+
+const getApplicationCountMapByJob = async (jobIds) => {
+  if (jobIds.length === 0) return new Map();
+
+  const applicationCounts = await Application.aggregate([
+    {
+      $match: {
+        job: { $in: jobIds },
+      },
+    },
+    {
+      $group: {
+        _id: "$job",
+        applications: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return new Map(
+    applicationCounts.map((item) => [item._id.toString(), item.applications])
+  );
+};
+
+const buildAdminJobSummary = (job, applicationCountMap = new Map()) => {
+  const client = buildAdminJobClient(job.client);
+  const jobId = job._id.toString();
+  const applications = applicationCountMap.get(jobId) || 0;
+
+  return {
+    id: jobId,
+    title: job.title,
+    client,
+    clientName: client.name,
+    clientInitials: client.initials,
+    clientAvatar: client.avatar,
+    clientId: client.id,
+    clientLocation: client.location,
+    clientCompanyName: client.companyName,
+    clientWebsite: client.website,
+    clientAbout: client.bio,
+    clientVerified: client.verification.status === "approved",
+    clientJobsPosted: client.statistics.jobsPosted,
+    clientProjectsCompleted: client.statistics.projectsCompleted,
+    clientJoinedDate: client.joined,
+    clientRating: client.statistics.averageRating,
+    category: job.category,
+    budget: job.budget,
+    duration: job.duration,
+    deadline: job.deadline,
+    complexity: job.complexity,
+    status: job.status,
+    postedAt: job.createdAt,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    applications,
+    applicationCount: applications,
+    applicationsCount: applications,
+    description: job.description,
+    requirements: job.requirements,
+    skills: job.skills || [],
+    attachments: job.attachments || [],
+  };
+};
+
+const buildAdminJobDetails = (job, applications, clientDetails) => {
+  const applicationCountMap = new Map([
+    [job._id.toString(), applications.length],
+  ]);
+  const summary = buildAdminJobSummary(job, applicationCountMap);
+
+  return {
+    ...summary,
+    client: clientDetails || summary.client,
+    clientName: clientDetails?.name || summary.clientName,
+    clientInitials: clientDetails?.initials || summary.clientInitials,
+    clientAvatar: clientDetails?.avatar || summary.clientAvatar,
+    clientId: clientDetails?.id || summary.clientId,
+    clientLocation: clientDetails?.location || "",
+    clientCompanyName: clientDetails?.companyName || "",
+    clientWebsite: clientDetails?.website || "",
+    clientAbout: clientDetails?.bio || "",
+    clientVerified: clientDetails?.verification?.status === "approved",
+    clientJobsPosted: clientDetails?.statistics?.jobsPosted ?? null,
+    clientProjectsCompleted:
+      clientDetails?.statistics?.projectsCompleted ?? null,
+    clientJoinedDate: clientDetails?.joined || null,
+    clientRating: clientDetails?.statistics?.averageRating ?? null,
+    _id: job._id,
+    applications: applications.map((application) => ({
+      id: application._id.toString(),
+      student: application.student
+        ? {
+            id: application.student._id?.toString?.() || "",
+            name: application.student.fullName || "Unknown Student",
+            initials: getInitials(
+              application.student.fullName || "Unknown Student"
+            ),
+            avatar: application.student.avatar || "",
+          }
+        : null,
+      status: application.status,
+      appliedAt: application.appliedAt,
+      createdAt: application.createdAt,
+      updatedAt: application.updatedAt,
+    })),
+    applicationCount: applications.length,
+    applicationsCount: applications.length,
+  };
+};
+
+const getAdminJobsData = async ({ search = "", status = "all" } = {}) => {
+  const query = {};
+  const normalizedStatus = status.toLowerCase();
+
+  if (["open", "closed", "cancelled"].includes(normalizedStatus)) {
+    query.status = normalizedStatus;
+  }
+
+  const trimmedSearch = search.trim();
+
+  if (trimmedSearch) {
+    const searchRegex = new RegExp(escapeRegex(trimmedSearch), "i");
+    const clientMatches = await User.find({
+      role: "client",
+      fullName: searchRegex,
+    })
+      .select("_id")
+      .lean();
+
+    query.$or = [
+      { title: searchRegex },
+      { category: searchRegex },
+      { description: searchRegex },
+    ];
+
+    if (clientMatches.length > 0) {
+      query.$or.push({
+        client: { $in: clientMatches.map((client) => client._id) },
+      });
+    }
+  }
+
+  const jobs = await Job.find(query)
+    .populate("client", "fullName avatar")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const applicationCountMap = await getApplicationCountMapByJob(
+    jobs.map((job) => job._id)
+  );
+
+  return jobs.map((job) => buildAdminJobSummary(job, applicationCountMap));
+};
+
+const getAdminJobDetailsData = async (jobId) => {
+  const job = await Job.findById(jobId)
+    .populate("client", "fullName avatar createdAt")
+    .lean();
+
+  if (!job) return null;
+
+  const clientId = job.client?._id || null;
+  const [applications, clientProfile, verification, clientStatsMap] =
+    await Promise.all([
+      Application.find({ job: job._id })
+        .select("_id student status appliedAt createdAt updatedAt")
+        .populate("student", "fullName avatar")
+        .sort({ appliedAt: -1, createdAt: -1 })
+        .lean(),
+      clientId
+        ? ClientProfile.findOne({ user: clientId }).select(
+            "location bio companyName website"
+          )
+        : null,
+      clientId
+        ? Verification.findOne({ user: clientId, type: "client" }).select(
+            "status verifiedAt approvedAt companyName"
+          )
+        : null,
+      clientId ? getClientStatsMap([clientId]) : new Map(),
+    ]);
+
+  const clientDetails = buildDetailedAdminJobClient({
+    client: job.client,
+    clientProfile,
+    verification,
+    clientStats: clientId ? clientStatsMap.get(clientId.toString()) : null,
+  });
+
+  return buildAdminJobDetails(job, applications, clientDetails);
+};
+
 const updateAdminUserAccountStatus = async (
   userId,
   accountStatus,
@@ -403,6 +680,8 @@ const updateAdminUserAccountStatus = async (
 
 export {
   getAdminDashboardSummaryData,
+  getAdminJobDetailsData,
+  getAdminJobsData,
   getAdminUserDetailsData,
   getAdminUsersData,
   updateAdminUserAccountStatus,
