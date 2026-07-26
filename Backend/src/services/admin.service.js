@@ -2,6 +2,7 @@ import { User } from "../models/user.model.js";
 import { Application } from "../models/application.model.js";
 import { ClientProfile } from "../models/clientProfile.model.js";
 import { Job } from "../models/job.model.js";
+import { PlatformSettings } from "../models/platformSettings.model.js";
 import { Project } from "../models/project.model.js";
 import { Report } from "../models/report.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
@@ -17,6 +18,9 @@ const JOB_MODERATION_REASONS = [
   "Copyright Issue",
   "Other",
 ];
+
+const DEFAULT_MAINTENANCE_MESSAGE =
+  "SkillBridge is currently under maintenance.";
 
 /**
  * Ensures the configured admin account exists when the server starts.
@@ -749,14 +753,80 @@ const updateAdminUserAccountStatus = async (
   return getAdminUserDetailsData(user._id);
 };
 
+const getPlatformSettingsData = async () => {
+  const settings = await PlatformSettings.findOneAndUpdate(
+    { key: "platform" },
+    {
+      $setOnInsert: {
+        key: "platform",
+        maintenanceMode: false,
+        maintenanceMessage: DEFAULT_MAINTENANCE_MESSAGE,
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    }
+  )
+    .populate("updatedBy", "fullName email role")
+    .lean();
+
+  return {
+    maintenanceMode: settings.maintenanceMode,
+    maintenanceMessage:
+      settings.maintenanceMessage || DEFAULT_MAINTENANCE_MESSAGE,
+    updatedBy: settings.updatedBy
+      ? {
+          id: settings.updatedBy._id?.toString?.() || "",
+          name: settings.updatedBy.fullName || "Unknown Admin",
+          email: settings.updatedBy.email || "",
+        }
+      : null,
+    updatedAt: settings.updatedAt || null,
+  };
+};
+
+const updateMaintenanceSettingsData = async ({
+  maintenanceMode,
+  maintenanceMessage,
+  adminUserId,
+}) => {
+  const message = maintenanceMessage.trim() || DEFAULT_MAINTENANCE_MESSAGE;
+
+  await PlatformSettings.findOneAndUpdate(
+    { key: "platform" },
+    {
+      $set: {
+        maintenanceMode,
+        maintenanceMessage: message,
+        updatedBy: adminUserId,
+        updatedAt: new Date(),
+      },
+      $setOnInsert: {
+        key: "platform",
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    }
+  );
+
+  return getPlatformSettingsData();
+};
+
 export {
   JOB_MODERATION_REASONS,
   getAdminDashboardSummaryData,
   getAdminJobDetailsData,
   getAdminJobsData,
+  getPlatformSettingsData,
   getAdminUserDetailsData,
   getAdminUsersData,
   suspendAdminJobData,
+  updateMaintenanceSettingsData,
   updateAdminUserAccountStatus,
 };
 

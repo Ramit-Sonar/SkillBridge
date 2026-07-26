@@ -1,10 +1,15 @@
-﻿import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { Settings, Lock, Check, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import { SettingsLayout } from "../../app/components/layout/SettingsLayout";
-import { Settings, Lock, Check, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import {
+  ConfirmDialog,
+  Notification,
+  type NotificationMessage,
+} from "../../app/components/shared/ui";
 import { changePassword } from "../../services/authService";
-import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
+import { getAdminSettings, updateMaintenanceSettings } from "../../services/adminService";
 
 type Section = "general" | "security";
 
@@ -70,12 +75,21 @@ function SaveButton({
   );
 }
 
-function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+function Toggle({
+  on,
+  onChange,
+  disabled,
+}: {
+  on: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
   return (
     <motion.button
       type="button"
       onClick={onChange}
-      className="relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0"
+      disabled={disabled}
+      className="relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-60"
       style={{ background: on ? "#2563EB" : "#E2E8F0" }}
     >
       <motion.span
@@ -156,10 +170,17 @@ function GeneralSection() {
   );
 }
 
-// Security settings call the real password API while maintenance mode remains local UI state.
+// Security settings call real APIs for password and maintenance mode changes.
 
 function SecuritySection() {
   const [maintenance, setMaintenance] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState(
+    "SkillBridge is currently under maintenance."
+  );
+  const [maintenanceDraft, setMaintenanceDraft] = useState("");
+  const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false);
+  const [maintenanceSaved, setMaintenanceSaved] = useState(false);
   const [current, setCurrent] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -171,7 +192,97 @@ function SecuritySection() {
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
   const pwMatch = newPw && confirm && newPw === confirm;
-  const canSave = !!current && !!newPw && !!pwMatch;
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadSettings = async () => {
+      try {
+        const response = await getAdminSettings();
+
+        if (!ignore) {
+          setMaintenance(response.data.maintenanceMode);
+          setMaintenanceMessage(response.data.maintenanceMessage);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setNotification({
+            type: "error",
+            text: error instanceof Error ? error.message : "Admin settings could not be loaded.",
+          });
+        }
+      }
+    };
+
+    loadSettings();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const saveMaintenanceSettings = async (
+    nextMaintenance: boolean,
+    nextMessage: string,
+    rollbackMaintenance?: boolean
+  ) => {
+    setNotification(null);
+
+    try {
+      setMaintenanceSaving(true);
+      const response = await updateMaintenanceSettings({
+        maintenanceMode: nextMaintenance,
+        maintenanceMessage: nextMessage,
+      });
+
+      setMaintenance(response.data.maintenanceMode);
+      setMaintenanceMessage(response.data.maintenanceMessage);
+      setMaintenanceSaved(true);
+      setNotification({ type: "success", text: response.message });
+      setTimeout(() => setMaintenanceSaved(false), 3000);
+      return true;
+    } catch (error) {
+      if (rollbackMaintenance !== undefined) {
+        setMaintenance(rollbackMaintenance);
+      }
+
+      setNotification({
+        type: "error",
+        text: error instanceof Error ? error.message : "Maintenance settings could not be updated.",
+      });
+      return false;
+    } finally {
+      setMaintenanceSaving(false);
+    }
+  };
+
+  const handleMaintenanceToggle = () => {
+    if (maintenanceSaving) return;
+
+    const nextMaintenance = !maintenance;
+    if (nextMaintenance) {
+      setMaintenanceDraft("");
+      setShowMaintenanceConfirm(true);
+      return;
+    }
+
+    setMaintenance(nextMaintenance);
+    saveMaintenanceSettings(nextMaintenance, maintenanceMessage, maintenance);
+  };
+
+  const handleMaintenanceSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveMaintenanceSettings(maintenance, maintenanceMessage);
+  };
+
+  const confirmEnableMaintenance = async () => {
+    const success = await saveMaintenanceSettings(true, maintenanceDraft.trim());
+
+    if (success) {
+      setShowMaintenanceConfirm(false);
+      setMaintenanceDraft("");
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,7 +356,7 @@ function SecuritySection() {
       </div>
 
       {/* Maintenance toggle */}
-      <div className="flex flex-col gap-3">
+      <form onSubmit={handleMaintenanceSave} className="flex flex-col gap-3">
         <p className="text-slate-900 font-semibold" style={{ fontSize: "0.875rem" }}>
           Maintenance Mode
         </p>
@@ -258,7 +369,11 @@ function SecuritySection() {
               Temporarily restrict platform access for all users.
             </p>
           </div>
-          <Toggle on={maintenance} onChange={() => setMaintenance((v) => !v)} />
+          <Toggle
+            on={maintenance}
+            onChange={handleMaintenanceToggle}
+            disabled={maintenanceSaving}
+          />
         </div>
         {maintenance && (
           <motion.div
@@ -273,7 +388,7 @@ function SecuritySection() {
             </p>
           </motion.div>
         )}
-      </div>
+      </form>
 
       {/* Password */}
       <form onSubmit={handleSave} className="flex flex-col gap-4">
@@ -317,6 +432,47 @@ function SecuritySection() {
           <SaveButton saving={saving} saved={saved} label="Update Security Settings" />
         </div>
       </form>
+      {showMaintenanceConfirm && (
+        <ConfirmDialog
+          align="left"
+          busyDelayMs={0}
+          icon={AlertTriangle}
+          iconBg="#FFFBEB"
+          iconColor="#D97706"
+          maxWidthClassName="max-w-md"
+          title="Enable Maintenance Mode?"
+          body={
+            <div className="flex flex-col gap-4">
+              <p>
+                This will temporarily prevent students, clients, and visitors from using
+                SkillBridge.
+              </p>
+              <div className="flex flex-col gap-1.5 text-left">
+                <FieldLabel text="Optional Message" />
+                <textarea
+                  rows={4}
+                  value={maintenanceDraft}
+                  onChange={(e) => setMaintenanceDraft(e.target.value)}
+                  placeholder="Write a short message users will see during maintenance."
+                  className={`${inputCls} resize-none`}
+                  style={{ fontSize: "0.875rem" }}
+                  disabled={maintenanceSaving}
+                />
+              </div>
+            </div>
+          }
+          confirmLabel="Enable"
+          confirmColor="#D97706"
+          loading={maintenanceSaving}
+          onConfirm={confirmEnableMaintenance}
+          onClose={() => {
+            if (!maintenanceSaving) {
+              setShowMaintenanceConfirm(false);
+              setMaintenanceDraft("");
+            }
+          }}
+        />
+      )}
       <Notification message={notification} onClose={() => setNotification(null)} />
     </div>
   );

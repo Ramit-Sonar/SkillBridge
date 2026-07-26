@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router";
 
 import { getCurrentUser, type AuthUser } from "@/services/authService";
+import { isMaintenanceModeError } from "@/services/apiConfig";
 
 type AuthenticationGuardProps = {
   allowedRole: AuthUser["role"];
@@ -17,23 +18,28 @@ const dashboardPaths = {
 /**
  * Protects dashboard routes and redirects authenticated users to their own role area.
  */
-export default function AuthenticationGuard({
-  allowedRole,
-  children,
-}: AuthenticationGuardProps) {
+export default function AuthenticationGuard({ allowedRole, children }: AuthenticationGuardProps) {
   const location = useLocation();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let waitingForMaintenanceRedirect = false;
+
     const checkUser = async () => {
       try {
         // This checks the existing login cookie after page refresh.
         const response = await getCurrentUser();
         setUser(response.data);
-      } catch {
+      } catch (error) {
+        if (isMaintenanceModeError(error)) {
+          waitingForMaintenanceRedirect = true;
+          return;
+        }
+
         setUser(null);
       } finally {
+        if (waitingForMaintenanceRedirect) return;
         setLoading(false);
       }
     };

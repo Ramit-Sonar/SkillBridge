@@ -5,7 +5,9 @@ import {
   getAdminJobsData,
   getAdminUserDetailsData,
   getAdminUsersData,
+  getPlatformSettingsData,
   suspendAdminJobData,
+  updateMaintenanceSettingsData,
   updateAdminUserAccountStatus,
 } from "../services/admin.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -37,6 +39,44 @@ const getAdminDashboardSummary = asyncHandler(async (req, res) => {
     .status(200)
     .json(
       new ApiResponse(200, summary, "Admin dashboard fetched successfully")
+    );
+});
+
+const getAdminSettings = asyncHandler(async (req, res) => {
+  const settings = await getPlatformSettingsData();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, settings, "Admin settings fetched successfully")
+    );
+});
+
+const updateMaintenanceSettings = asyncHandler(async (req, res) => {
+  const { maintenanceMode } = req.body || {};
+  const maintenanceMessage =
+    typeof req.body?.maintenanceMessage === "string"
+      ? req.body.maintenanceMessage
+      : "";
+
+  if (typeof maintenanceMode !== "boolean") {
+    throw new ApiError(400, "Maintenance mode value is required");
+  }
+
+  const settings = await updateMaintenanceSettingsData({
+    maintenanceMode,
+    maintenanceMessage,
+    adminUserId: req.user._id,
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        settings,
+        "Maintenance settings updated successfully"
+      )
     );
 });
 
@@ -191,8 +231,10 @@ export {
   getAdminDashboardSummary,
   getAdminJobById,
   getAdminJobs,
+  getAdminSettings,
   getAdminUserById,
   getAdminUsers,
   suspendAdminJob,
   suspendAdminUser,
+  updateMaintenanceSettings,
 };

@@ -12,6 +12,7 @@ import projectRouter from "./routes/project.routes.js";
 import reviewRouter from "./routes/review.routes.js";
 import reportRouter from "./routes/report.routes.js";
 import adminRouter from "./routes/admin.routes.js";
+import { maintenanceModeMiddleware } from "./middlewares/maintenance.middleware.js";
 import { ApiError } from "./utils/ApiError.js";
 
 /**
@@ -50,6 +51,7 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
+app.use(maintenanceModeMiddleware);
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/jobs", jobRouter);

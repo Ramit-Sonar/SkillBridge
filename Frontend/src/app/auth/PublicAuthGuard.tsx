@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
 import { getCurrentUser, logoutUser, type AuthUser } from "@/services/authService";
+import { isMaintenanceModeError } from "@/services/apiConfig";
 
 type PublicAuthGuardProps = {
   page: "login" | "register";
@@ -30,6 +31,8 @@ export default function PublicAuthGuard({ page, children }: PublicAuthGuardProps
   const [notification, setNotification] = useState<NotificationMessage>(null);
 
   useEffect(() => {
+    let waitingForMaintenanceRedirect = false;
+
     const checkUser = async () => {
       try {
         const response = await getCurrentUser();
@@ -39,9 +42,15 @@ export default function PublicAuthGuard({ page, children }: PublicAuthGuardProps
         if (response.data.role === "student" || response.data.role === "client") {
           setDialogOpen(true);
         }
-      } catch {
+      } catch (error) {
+        if (isMaintenanceModeError(error)) {
+          waitingForMaintenanceRedirect = true;
+          return;
+        }
+
         setUser(null);
       } finally {
+        if (waitingForMaintenanceRedirect) return;
         setLoading(false);
       }
     };
@@ -84,8 +93,7 @@ export default function PublicAuthGuard({ page, children }: PublicAuthGuardProps
     page === "login"
       ? `You are already signed in as a ${roleName}.\nWould you like to continue or switch to another account?`
       : `You are already signed in as a ${roleName}.\nTo create another account, you must first sign out.`;
-  const secondaryButtonText =
-    page === "login" ? "Switch Account" : "Logout & Create New Account";
+  const secondaryButtonText = page === "login" ? "Switch Account" : "Logout & Create New Account";
 
   return (
     <>

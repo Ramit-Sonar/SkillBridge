@@ -10,6 +10,7 @@ import AdminSettingsPage from "../pages/admin/AdminSettingsPage";
 import Register from "../pages/auth/Register";
 import PublicProfilePage from "../pages/public/PublicProfilePage";
 import PublicBrowseJobsPage from "../pages/public/PublicBrowseJobsPage";
+import MaintenancePage from "../pages/public/MaintenancePage";
 import AdminJobsPage from "../pages/admin/AdminJobsPage";
 import Login from "../pages/auth/Login";
 import ForgotPasswordPage from "../pages/auth/ForgotPassword";
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
     Component: Root,
     children: [
       { index: true, Component: Landing },
+      { path: "maintenance", Component: MaintenancePage },
       { path: "p/:username", Component: PublicProfilePage },
       { path: "browse", Component: PublicBrowseJobsPage },
       { path: "forgot-password", Component: ForgotPasswordPage },

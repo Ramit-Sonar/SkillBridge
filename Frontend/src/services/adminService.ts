@@ -71,15 +71,21 @@ export type AdminDashboardSummary = {
   pendingTasks: AdminPendingTask[];
 };
 
+export type PlatformSettings = {
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  updatedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  updatedAt?: string | null;
+};
+
 export type AdminJobStatus = "open" | "closed" | "cancelled" | "suspended";
 
 export type JobModerationReason =
-  | "Spam"
-  | "Fake Job"
-  | "Duplicate Listing"
-  | "Policy Violation"
-  | "Copyright Issue"
-  | "Other";
+  "Spam" | "Fake Job" | "Duplicate Listing" | "Policy Violation" | "Copyright Issue" | "Other";
 
 export type AdminJobClient = {
   id: string;
@@ -209,6 +215,31 @@ export const getAdminDashboardSummary = async (): Promise<ApiResponse<AdminDashb
   });
 
   return parseAdminResponse<AdminDashboardSummary>(response, "Failed to fetch admin dashboard.");
+};
+
+export const getAdminSettings = async (): Promise<ApiResponse<PlatformSettings>> => {
+  const response = await fetch(`${API_URL}/admin/settings`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return parseAdminResponse<PlatformSettings>(response, "Failed to fetch admin settings.");
+};
+
+export const updateMaintenanceSettings = async (payload: {
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+}): Promise<ApiResponse<PlatformSettings>> => {
+  const response = await fetch(`${API_URL}/admin/settings/maintenance`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  return parseAdminResponse<PlatformSettings>(response, "Failed to update maintenance settings.");
 };
 
 export const getUsers = async (): Promise<ApiResponse<UsersResponse>> => {

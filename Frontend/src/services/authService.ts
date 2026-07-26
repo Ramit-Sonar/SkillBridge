@@ -1,4 +1,9 @@
 import { refreshToken } from "./refreshToken";
+import {
+  isMaintenanceResponseData,
+  MaintenanceModeError,
+  redirectToMaintenance,
+} from "./apiConfig";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users";
 
@@ -288,6 +293,11 @@ export const getCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
   const data = await response.json();
 
   if (!response.ok) {
+    if (isMaintenanceResponseData(data)) {
+      redirectToMaintenance(data);
+      throw new MaintenanceModeError(data.maintenanceMessage || data.message);
+    }
+
     if (isProtectedPage) {
       window.location.href = redirectPath;
     }

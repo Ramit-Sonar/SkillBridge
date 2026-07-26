@@ -4,10 +4,12 @@ import {
   getAdminDashboardSummary,
   getAdminJobById,
   getAdminJobs,
+  getAdminSettings,
   getAdminUserById,
   getAdminUsers,
   suspendAdminJob,
   suspendAdminUser,
+  updateMaintenanceSettings,
 } from "../controllers/admin.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
@@ -17,6 +19,14 @@ const adminRoles = authorizeRoles("admin");
 
 // GET /api/v1/admin/dashboard -> getAdminDashboardSummary powers admin overview cards.
 router.route("/dashboard").get(verifyJWT, adminRoles, getAdminDashboardSummary);
+
+// GET /api/v1/admin/settings -> getAdminSettings powers platform settings.
+router.route("/settings").get(verifyJWT, adminRoles, getAdminSettings);
+
+// PATCH /api/v1/admin/settings/maintenance -> updateMaintenanceSettings toggles maintenance mode.
+router
+  .route("/settings/maintenance")
+  .patch(verifyJWT, adminRoles, updateMaintenanceSettings);
 
 // GET /api/v1/admin/users -> getAdminUsers powers admin user cards.
 router.route("/users").get(verifyJWT, adminRoles, getAdminUsers);
