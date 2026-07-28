@@ -14,7 +14,8 @@ import {
 import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { upload } from "../middlewares/multer.middleware.js";
+import { verificationUpload } from "../middlewares/multer.middleware.js";
+import { verificationRateLimiter } from "../middlewares/security.middleware.js";
 
 const router = Router();
 const studentRoles = authorizeRoles("student");
@@ -44,7 +45,8 @@ router
     verifyJWT,
     studentRoles,
     ensureActiveAccount,
-    upload.fields([
+    verificationRateLimiter,
+    verificationUpload.fields([
       { name: "idCard", maxCount: 1 },
       { name: "selfie", maxCount: 1 },
     ]),
@@ -54,7 +56,8 @@ router
     verifyJWT,
     studentRoles,
     ensureActiveAccount,
-    upload.fields([
+    verificationRateLimiter,
+    verificationUpload.fields([
       { name: "idCard", maxCount: 1 },
       { name: "selfie", maxCount: 1 },
     ]),
@@ -67,7 +70,8 @@ router
     verifyJWT,
     clientRoles,
     ensureActiveAccount,
-    upload.fields([
+    verificationRateLimiter,
+    verificationUpload.fields([
       { name: "citizenshipFront", maxCount: 1 },
       { name: "citizenshipSelfie", maxCount: 1 },
       { name: "companyRegistration", maxCount: 1 },
@@ -78,7 +82,8 @@ router
     verifyJWT,
     clientRoles,
     ensureActiveAccount,
-    upload.fields([
+    verificationRateLimiter,
+    verificationUpload.fields([
       { name: "citizenshipFront", maxCount: 1 },
       { name: "citizenshipSelfie", maxCount: 1 },
       { name: "companyRegistration", maxCount: 1 },

@@ -1,6 +1,12 @@
 import { ApiError } from "./ApiError.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "./cloudinary.js";
 
+const sanitizeAttachmentName = (fileName = "") =>
+  fileName
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim();
+
 /**
  * Normalizes existing attachment metadata and newly uploaded Cloudinary files.
  */
@@ -60,7 +66,7 @@ export const uploadAttachments = async (uploadedFiles, submittedFiles) => {
       attachments.push({
         url: uploadedAttachment.secure_url || uploadedAttachment.url,
         publicId: uploadedAttachment.public_id || "",
-        originalName: file.originalname,
+        originalName: sanitizeAttachmentName(file.originalname) || "attachment",
         mimeType: file.mimetype,
         size: file.size,
       });

@@ -23,7 +23,6 @@ const PREVIEW_MIME_TYPES = [
   "image/jpeg",
   "image/gif",
   "image/webp",
-  "image/svg+xml",
   "text/plain",
 ];
 

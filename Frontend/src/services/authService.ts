@@ -108,8 +108,6 @@ export const loginUser = async (userData: {
 }): Promise<
   ApiResponse<{
     user: AuthUser;
-    accessToken: string;
-    refreshToken: string;
   }>
 > => {
   const response = await fetch(`${API_URL}/users/login`, {

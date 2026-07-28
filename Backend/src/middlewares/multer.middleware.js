@@ -11,6 +11,7 @@ const allowedImageTypes = [
   "image/png",
   "image/webp",
 ];
+const allowedImageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 const allowedAttachmentTypes = [
   "application/pdf",
   "image/png",
@@ -18,24 +19,31 @@ const allowedAttachmentTypes = [
   "image/jpeg",
   "image/gif",
   "image/webp",
-  "image/svg+xml",
   "text/plain",
   "application/zip",
   "application/x-zip-compressed",
-  "application/vnd.rar",
-  "application/x-rar-compressed",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.android.package-archive",
-  "application/x-msdownload",
-  "application/postscript",
-  "image/vnd.adobe.photoshop",
-  "application/x-photoshop",
-  "application/illustrator",
+];
+const allowedAttachmentExtensions = [
+  ".pdf",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".txt",
+  ".zip",
+  ".doc",
+  ".docx",
+  ".ppt",
+  ".pptx",
+  ".xls",
+  ".xlsx",
 ];
 const allowedCertificateTypes = [
   "application/pdf",
@@ -43,7 +51,25 @@ const allowedCertificateTypes = [
   "image/jpg",
   "image/jpeg",
 ];
-const allowedRawAttachmentExtensions = [".fig", ".psd", ".ai", ".exe"];
+const allowedCertificateExtensions = [".pdf", ".png", ".jpg", ".jpeg"];
+const allowedVerificationDocumentTypes = [...allowedCertificateTypes];
+const allowedVerificationDocumentExtensions = [...allowedCertificateExtensions];
+
+const isAllowedFile = (file, allowedTypes, allowedExtensions) => {
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+
+  return (
+    allowedTypes.includes(file.mimetype) &&
+    allowedExtensions.includes(fileExtension)
+  );
+};
+
+const sanitizeFileNamePart = (value) =>
+  value
+    .replace(/[^a-zA-Z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40) || "file";
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -51,17 +77,15 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    const safeFieldName = sanitizeFileNamePart(file.fieldname);
 
-    //  2. Get the extension of the original file (e.g., '.jpg' or '.png')
-    const fileExtension = path.extname(file.originalname);
-
-    // 3. Append the extension to the end of your filename
-    cb(null, file.fieldname + "-" + uniqueSuffix + fileExtension);
+    cb(null, `${safeFieldName}-${uniqueSuffix}${fileExtension}`);
   },
 });
 
 const fileFilter = function (req, file, cb) {
-  if (!allowedImageTypes.includes(file.mimetype)) {
+  if (!isAllowedFile(file, allowedImageTypes, allowedImageExtensions)) {
     cb(
       new ApiError(400, "Only JPG, JPEG, PNG and WEBP image files are allowed")
     );
@@ -72,13 +96,9 @@ const fileFilter = function (req, file, cb) {
 };
 
 const attachmentFileFilter = function (req, file, cb) {
-  const fileExtension = path.extname(file.originalname).toLowerCase();
-  const isAllowedRawFile =
-    file.mimetype === "application/octet-stream" &&
-    allowedRawAttachmentExtensions.includes(fileExtension);
-
-  // Some design/source files arrive as octet-stream, so validate them by extension too.
-  if (!allowedAttachmentTypes.includes(file.mimetype) && !isAllowedRawFile) {
+  if (
+    !isAllowedFile(file, allowedAttachmentTypes, allowedAttachmentExtensions)
+  ) {
     cb(new ApiError(400, "This attachment file type is not allowed"));
     return;
   }
@@ -87,8 +107,32 @@ const attachmentFileFilter = function (req, file, cb) {
 };
 
 const certificateFileFilter = function (req, file, cb) {
-  if (!allowedCertificateTypes.includes(file.mimetype)) {
-    cb(new ApiError(400, "Only PDF, JPG, JPEG and PNG certificate files are allowed"));
+  if (
+    !isAllowedFile(file, allowedCertificateTypes, allowedCertificateExtensions)
+  ) {
+    cb(
+      new ApiError(
+        400,
+        "Only PDF, JPG, JPEG and PNG certificate files are allowed"
+      )
+    );
+    return;
+  }
+
+  cb(null, true);
+};
+
+const verificationFileFilter = function (req, file, cb) {
+  const selfieFields = ["selfie", "citizenshipSelfie"];
+  const allowedTypes = selfieFields.includes(file.fieldname)
+    ? allowedImageTypes
+    : allowedVerificationDocumentTypes;
+  const allowedExtensions = selfieFields.includes(file.fieldname)
+    ? allowedImageExtensions
+    : allowedVerificationDocumentExtensions;
+
+  if (!isAllowedFile(file, allowedTypes, allowedExtensions)) {
+    cb(new ApiError(400, "Verification files must be JPG, JPEG, PNG or PDF"));
     return;
   }
 
@@ -119,4 +163,13 @@ export const certificateUpload = multer({
     files: 1,
   },
   fileFilter: certificateFileFilter,
+});
+
+export const verificationUpload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 3,
+  },
+  fileFilter: verificationFileFilter,
 });

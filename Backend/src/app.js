@@ -13,6 +13,10 @@ import reviewRouter from "./routes/review.routes.js";
 import reportRouter from "./routes/report.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import { maintenanceModeMiddleware } from "./middlewares/maintenance.middleware.js";
+import {
+  helmetMiddleware,
+  sanitizeNoSqlInput,
+} from "./middlewares/security.middleware.js";
 import { ApiError } from "./utils/ApiError.js";
 
 /**
@@ -20,10 +24,14 @@ import { ApiError } from "./utils/ApiError.js";
  */
 const app = express();
 
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 const configuredOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
-  .filter(Boolean);
+  .filter((origin) => origin && origin !== "*");
 
 const devOrigins =
   process.env.NODE_ENV === "production"
@@ -33,6 +41,7 @@ const devOrigins =
 const allowedOrigins = [...new Set([...configuredOrigins, ...devOrigins])];
 
 // Allow configured frontend origins while still supporting local Vite ports.
+app.use(helmetMiddleware);
 app.use(
   cors({
     origin(origin, callback) {
@@ -41,18 +50,23 @@ app.use(
         return;
       }
 
-      callback(new Error(`CORS origin not allowed: ${origin}`));
+      const error = new Error("CORS origin not allowed");
+      error.statusCode = 403;
+      callback(error);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204,
   })
 );
 
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(sanitizeNoSqlInput);
 app.use(express.static("public"));
 app.use(cookieParser());
 app.use(maintenanceModeMiddleware);
-
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/jobs", jobRouter);
@@ -70,6 +84,5 @@ app.use("/api", (req, res, next) => {
 });
 
 app.use(globalErrorHandler);
-
 
 export { app };

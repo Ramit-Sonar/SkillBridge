@@ -24,7 +24,7 @@ describe("Authentication Controller", () => {
     jest.clearAllMocks();
   });
 
-  test("logs in a valid user and returns tokens", async () => {
+  test("logs in a valid user and sets auth cookies", async () => {
     const foundUser = {
       _id: "user-1",
       role: "student",
@@ -73,8 +73,6 @@ describe("Authentication Controller", () => {
         message: "Login successful",
         data: {
           user: safeUser,
-          accessToken: "access-token",
-          refreshToken: "refresh-token",
         },
       })
     );

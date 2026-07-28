@@ -43,6 +43,7 @@ const getAuthCookieOptions = (req) => {
     httpOnly: true,
     secure: isHttpsRequest,
     sameSite: isHttpsRequest ? "none" : "strict",
+    path: "/",
   };
 };
 
@@ -149,8 +150,6 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         {
           user: loggedInUser,
-          accessToken,
-          refreshToken,
         },
         "Login successful"
       )
@@ -217,16 +216,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options)
-      .json(
-        new ApiResponse(
-          200,
-          {
-            accessToken,
-            refreshToken,
-          },
-          "Access token refreshed"
-        )
-      );
+      .json(new ApiResponse(200, {}, "Access token refreshed"));
   } catch (error) {
     throw new ApiError(401, error?.message || "Invalid refresh token");
   }
@@ -323,9 +313,6 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Password Change Successfully"));
 });
-
-
-
 
 //this two sendVerificationOtp and verifyEmail for verify user email(register)
 const sendVerificationOtp = asyncHandler(async (req, res) => {
@@ -482,14 +469,9 @@ const verifyEmail = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(
-      new ApiResponse(
-        201,
-        createdUser,
-        "Registration completed successfully."
-      )
+      new ApiResponse(201, createdUser, "Registration completed successfully.")
     );
 });
-
 
 //this two forgotPassword and resetPassword is for forgot passwod logic
 const forgotPassword = asyncHandler(async (req, res) => {

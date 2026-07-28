@@ -10,8 +10,7 @@ export interface UploadedFile {
   type: string;
 }
 
-const DEFAULT_ACCEPT =
-  ".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.svg,.zip,.rar,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.fig,.psd,.ai,.apk,.exe";
+const DEFAULT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.zip,.doc,.docx,.ppt,.pptx,.xls,.xlsx";
 
 type FileUploadAreaProps = {
   files: UploadedFile[];
