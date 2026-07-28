@@ -1,10 +1,12 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users";
+import { getApiBaseUrl } from "./apiConfig";
+
+const API_URL = getApiBaseUrl();
 
 /**
  * Refreshes the cookie session without exposing token details to components.
  */
 export const refreshToken = async () => {
-  const response = await fetch(`${API_URL}/refresh-token`, {
+  const response = await fetch(`${API_URL}/users/refresh-token`, {
     method: "POST",
     credentials: "include",
   });

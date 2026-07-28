@@ -1,11 +1,12 @@
 import { refreshToken } from "./refreshToken";
 import {
+  getApiBaseUrl,
   isMaintenanceResponseData,
   MaintenanceModeError,
   redirectToMaintenance,
 } from "./apiConfig";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users";
+const API_URL = getApiBaseUrl();
 
 /**
  * Auth service methods call the user API and keep cookie-based sessions intact.

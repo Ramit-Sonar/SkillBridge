@@ -32,6 +32,20 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const getAuthCookieOptions = (req) => {
+  const forwardedProto = req.get?.("x-forwarded-proto");
+  const isHttpsRequest =
+    process.env.NODE_ENV === "production" ||
+    req.secure ||
+    forwardedProto === "https";
+
+  return {
+    httpOnly: true,
+    secure: isHttpsRequest,
+    sameSite: isHttpsRequest ? "none" : "strict",
+  };
+};
+
 const isStudentEmail = (email) => {
   const domain = email.split("@")[1];
   return domain?.toLowerCase().endsWith("edu.np");
@@ -123,11 +137,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   // 7. COOKIE OPTIONS
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
+  const options = getAuthCookieOptions(req);
 
   // 8. SEND RESPONSE
   return res
@@ -161,11 +171,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     }
   );
 
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
+  const options = getAuthCookieOptions(req);
 
   return res
     .status(200)
@@ -205,11 +211,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       user._id
     );
 
-    const options = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    };
+    const options = getAuthCookieOptions(req);
 
     return res
       .status(200)

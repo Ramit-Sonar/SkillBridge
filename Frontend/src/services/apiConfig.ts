@@ -39,7 +39,7 @@ export const getApiBaseUrl = () => {
 
   const apiPath = normalizeApiPath(url.pathname);
 
-  if (typeof window !== "undefined" && url.origin === window.location.origin) {
+  if (typeof window !== "undefined") {
     return apiPath;
   }
 
