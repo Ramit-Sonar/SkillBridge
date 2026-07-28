@@ -777,7 +777,7 @@ const getPlatformSettingsData = async () => {
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       setDefaultsOnInsert: true,
     }
@@ -835,7 +835,7 @@ const updateGeneralSettingsData = async ({
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       setDefaultsOnInsert: true,
     }
@@ -868,7 +868,7 @@ const updateMaintenanceSettingsData = async ({
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       setDefaultsOnInsert: true,
     }
