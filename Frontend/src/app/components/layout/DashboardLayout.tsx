@@ -260,8 +260,8 @@ function Sidebar({
   onLogout: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const expandTimer = useRef<ReturnType<typeof setTimeout>>();
-  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
+  const expandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const config = roleConfig[role];
   const displayName = currentUser?.fullName ?? "";
@@ -270,12 +270,12 @@ function Sidebar({
   const displayAvatar = currentUser?.avatar;
 
   const handleMouseEnter = () => {
-    clearTimeout(collapseTimer.current);
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
     expandTimer.current = setTimeout(() => setExpanded(true), 130);
   };
 
   const handleMouseLeave = () => {
-    clearTimeout(expandTimer.current);
+    if (expandTimer.current) clearTimeout(expandTimer.current);
     collapseTimer.current = setTimeout(() => setExpanded(false), 180);
   };
 
