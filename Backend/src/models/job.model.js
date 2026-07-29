@@ -124,4 +124,9 @@ jobSchema.pre("init", function (data) {
     .filter(Boolean);
 });
 
+jobSchema.index({ status: 1, createdAt: -1 });
+jobSchema.index({ client: 1, createdAt: -1 });
+jobSchema.index({ client: 1, status: 1, createdAt: -1 });
+jobSchema.index({ category: 1, status: 1 });
+
 export const Job = mongoose.model("Job", jobSchema);

@@ -9,6 +9,7 @@ export default function Root() {
   const location = useLocation();
 
   useEffect(() => {
+    if (location.pathname === "/") return;
     if (location.pathname === "/maintenance") return;
     if (location.pathname.startsWith("/dashboard")) return;
 

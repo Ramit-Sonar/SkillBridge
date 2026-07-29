@@ -33,6 +33,8 @@ type ApiResponse<T> = {
   success: boolean;
 };
 
+let currentUserRequest: Promise<ApiResponse<AuthUser>> | null = null;
+
 export const registerUser = async (userData: {
   fullName: string;
   email: string;
@@ -259,8 +261,8 @@ export const logoutUser = async () => {
   return data;
 };
 
-export const getCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
-  const requestCurrentUser = () =>
+const requestCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
+  const fetchCurrentUser = () =>
     fetch(`${API_URL}/users/current-user`, {
       method: "GET",
       credentials: "include",
@@ -276,14 +278,14 @@ export const getCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
 
   const redirectPath = window.location.pathname.startsWith("/admin") ? "/admin/login" : "/login";
 
-  let response = await requestCurrentUser();
+  let response = await fetchCurrentUser();
 
   if (response.status === 401 && isProtectedPage) {
     // Try refresh once, then retry the original request once.
     const refreshSuccess = await refreshToken();
 
     if (refreshSuccess) {
-      response = await requestCurrentUser();
+      response = await fetchCurrentUser();
     } else {
       window.location.href = redirectPath;
     }
@@ -305,4 +307,16 @@ export const getCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
   }
 
   return data;
+};
+
+export const getCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
+  if (currentUserRequest) {
+    return currentUserRequest;
+  }
+
+  currentUserRequest = requestCurrentUser().finally(() => {
+    currentUserRequest = null;
+  });
+
+  return currentUserRequest;
 };

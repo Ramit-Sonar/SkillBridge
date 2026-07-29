@@ -290,7 +290,8 @@ const getAdminStudentVerifications = asyncHandler(async (req, res) => {
   // Populate only the user fields required to render admin review cards.
   const verifications = await Verification.find({ type: "student" })
     .populate("user", "fullName email role avatar")
-    .sort({ submittedAt: -1, createdAt: -1 });
+    .sort({ submittedAt: -1, createdAt: -1 })
+    .lean();
 
   return res
     .status(200)
@@ -314,7 +315,9 @@ const getAdminStudentVerificationById = asyncHandler(async (req, res) => {
   const verification = await Verification.findOne({
     _id: req.params.id,
     type: "student",
-  }).populate("user", "fullName email role avatar");
+  })
+    .populate("user", "fullName email role avatar")
+    .lean();
 
   if (!verification) {
     throw new ApiError(404, "Student verification not found");
@@ -338,7 +341,8 @@ const getAdminClientVerifications = asyncHandler(async (req, res) => {
   // Populate only the user fields required to render admin review cards.
   const verifications = await Verification.find({ type: "client" })
     .populate("user", "fullName email role avatar")
-    .sort({ submittedAt: -1, createdAt: -1 });
+    .sort({ submittedAt: -1, createdAt: -1 })
+    .lean();
 
   return res
     .status(200)

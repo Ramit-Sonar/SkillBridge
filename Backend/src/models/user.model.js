@@ -144,6 +144,10 @@ userSchema.methods.generatePasswordResetToken = function () {
   return resetToken;
 };
 
+userSchema.index({ role: 1, createdAt: -1 });
+userSchema.index({ accountStatus: 1, createdAt: -1 });
+userSchema.index({ passwordResetToken: 1, passwordResetExpires: 1 });
+
 const pendingRegistrationSchema = new mongoose.Schema(
   {
     fullName: {

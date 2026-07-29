@@ -128,4 +128,8 @@ const verificationSchema = new mongoose.Schema(
   }
 );
 
+verificationSchema.index({ type: 1, submittedAt: -1, createdAt: -1 });
+verificationSchema.index({ status: 1, submittedAt: -1, createdAt: -1 });
+verificationSchema.index({ type: 1, status: 1, submittedAt: -1 });
+
 export const Verification = mongoose.model("Verification", verificationSchema);

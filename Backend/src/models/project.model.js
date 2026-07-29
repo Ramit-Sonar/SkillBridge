@@ -68,7 +68,10 @@ projectSchema.index({ application: 1 }, { unique: true });
 projectSchema.index({ job: 1 }, { unique: true });
 projectSchema.index({ student: 1, status: 1 });
 projectSchema.index({ client: 1, status: 1 });
+projectSchema.index({ student: 1, lastActivityAt: -1 });
+projectSchema.index({ client: 1, lastActivityAt: -1 });
 projectSchema.index({ status: 1 });
+projectSchema.index({ status: 1, completedAt: -1, lastActivityAt: -1 });
 
 projectSchema.pre("save", function () {
   if (
