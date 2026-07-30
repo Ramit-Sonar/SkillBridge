@@ -33,6 +33,11 @@ import {
   type NotificationMessage,
 } from "../../app/components/shared/ui";
 import {
+  AVATAR_FILE_ACCEPT,
+  AvatarCropModal,
+  validateAvatarImageFile,
+} from "../../app/components/shared/AvatarCropModal";
+import {
   deleteStudentCertificate,
   getStudentCertificates,
   getStudentProfile,
@@ -331,6 +336,8 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
   const [university, setUniversity] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -352,24 +359,41 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
     return subscribeProfile(loadProfileFromStore);
   }, [currentUser]);
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+
     if (suspended) {
       onNotify({ type: "error", text: ACCOUNT_SUSPENDED_MESSAGE });
       return;
     }
 
+    const validationMessage = validateAvatarImageFile(file);
+
+    if (validationMessage) {
+      onNotify({ type: "error", text: validationMessage });
+      return;
+    }
+
+    setSelectedAvatarFile(file);
+  };
+
+  const handleCroppedAvatarSave = async (file: File) => {
+    setAvatarUploading(true);
+
     try {
       const response = await uploadAvatar(file);
       setAvatarUrl(response.data.avatar ?? "");
+      setSelectedAvatarFile(null);
       window.dispatchEvent(new Event("skillbridge:user-updated"));
       onNotify({ type: "success", text: "Profile picture updated successfully." });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Profile picture could not be updated.";
       onNotify({ type: "error", text: message });
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -493,12 +517,25 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept={AVATAR_FILE_ACCEPT}
             className="hidden"
             onChange={handleAvatarChange}
           />
         </div>
       </div>
+
+      {selectedAvatarFile && (
+        <AvatarCropModal
+          file={selectedAvatarFile}
+          initials={initials}
+          currentAvatar={avatarUrl}
+          loading={avatarUploading}
+          onClose={() => {
+            if (!avatarUploading) setSelectedAvatarFile(null);
+          }}
+          onSave={handleCroppedAvatarSave}
+        />
+      )}
 
       {/* Fields */}
       <div className="flex flex-col gap-4">
@@ -1130,7 +1167,10 @@ function CertificateSection({ onNotify }: { onNotify: (message: NotificationMess
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <FieldLabel text={editingId ? "Replacement File" : "Certificate File"} required={!editingId} />
+          <FieldLabel
+            text={editingId ? "Replacement File" : "Certificate File"}
+            required={!editingId}
+          />
           {editingCertificate?.file && files.length === 0 && (
             <FileAttachmentCard attachment={editingCertificate.file} />
           )}
