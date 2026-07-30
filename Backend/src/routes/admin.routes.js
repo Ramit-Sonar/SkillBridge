@@ -19,48 +19,39 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 const router = Router();
 const adminRoles = authorizeRoles("admin");
 
-// GET /api/v1/admin/settings/public -> public platform display settings.
+// Public admin settings route.
 router.route("/settings/public").get(getPublicPlatformSettings);
 
-// GET /api/v1/admin/dashboard -> getAdminDashboardSummary powers admin overview cards.
+// Protected admin dashboard and settings routes.
 router.route("/dashboard").get(verifyJWT, adminRoles, getAdminDashboardSummary);
 
-// GET /api/v1/admin/settings -> getAdminSettings powers platform settings.
 router.route("/settings").get(verifyJWT, adminRoles, getAdminSettings);
 
-// PATCH /api/v1/admin/settings/general -> updateGeneralSettings saves platform identity settings.
 router
   .route("/settings/general")
   .patch(verifyJWT, adminRoles, updateGeneralSettings);
 
-// PATCH /api/v1/admin/settings/maintenance -> updateMaintenanceSettings toggles maintenance mode.
 router
   .route("/settings/maintenance")
   .patch(verifyJWT, adminRoles, updateMaintenanceSettings);
 
-// GET /api/v1/admin/users -> getAdminUsers powers admin user cards.
+// Protected admin user and job management routes.
 router.route("/users").get(verifyJWT, adminRoles, getAdminUsers);
 
-// GET /api/v1/admin/jobs -> getAdminJobs powers admin job cards.
 router.route("/jobs").get(verifyJWT, adminRoles, getAdminJobs);
 
-// GET /api/v1/admin/jobs/:jobId -> getAdminJobById powers job detail modals.
 router.route("/jobs/:jobId").get(verifyJWT, adminRoles, getAdminJobById);
 
-// PATCH /api/v1/admin/jobs/:jobId/suspend -> suspendAdminJob moderates open jobs.
 router
   .route("/jobs/:jobId/suspend")
   .patch(verifyJWT, adminRoles, suspendAdminJob);
 
-// GET /api/v1/admin/users/:userId -> getAdminUserById powers user detail modals.
 router.route("/users/:userId").get(verifyJWT, adminRoles, getAdminUserById);
 
-// PATCH /api/v1/admin/users/:userId/suspend -> suspendAdminUser disables an account.
 router
   .route("/users/:userId/suspend")
   .patch(verifyJWT, adminRoles, suspendAdminUser);
 
-// PATCH /api/v1/admin/users/:userId/activate -> activateAdminUser restores an account.
 router
   .route("/users/:userId/activate")
   .patch(verifyJWT, adminRoles, activateAdminUser);

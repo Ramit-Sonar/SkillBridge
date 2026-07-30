@@ -28,26 +28,24 @@ const authenticatedRoles = authorizeRoles("student", "client");
 const currentUserRoles = authorizeRoles("student", "client", "admin");
 const logoutRoles = authorizeRoles("student", "client", "admin");
 
-// Authentication, account, and recovery routes for all user roles.
+// Public authentication and recovery routes.
 router.route("/register").post(registerRateLimiter, registerUser);
 
 router.route("/login").post(loginRateLimiter, loginUser);
 
-//for logout
 router
   .route("/send-verification-otp")
   .post(otpRateLimiter, sendVerificationOtp);
 
 router.route("/verify-email").post(otpRateLimiter, verifyEmail);
 
-//for forgot password
 router.route("/forgot-password").post(passwordResetRateLimiter, forgotPassword);
 
 router
   .route("/reset-password/:token")
   .post(passwordResetRateLimiter, resetPassword);
 
-//secure route
+// Protected account routes.
 router.route("/logout").post(verifyJWT, logoutRoles, logoutUser);
 
 router.route("/refresh-token").post(refreshAccessToken);
