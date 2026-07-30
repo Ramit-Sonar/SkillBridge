@@ -17,6 +17,7 @@ import {
   StatusBadge,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
+import { useModalScrollLock } from "../../app/components/shared/useModalScrollLock";
 import {
   approveVerification,
   getAdminClientVerifications,
@@ -217,15 +218,22 @@ function DocumentPlaceholder({ label, fileUrl }: { label: string; fileUrl?: stri
         href={fileUrl}
         target="_blank"
         rel="noreferrer"
-        className="bg-slate-100 border border-slate-200 rounded-xl h-24 flex flex-col items-center justify-center gap-1.5 overflow-hidden"
+        className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col hover:border-blue-200 transition-colors"
       >
-        <img src={fileUrl} alt={label} className="w-full h-full object-cover" />
+        <div className="px-4 py-3 border-b border-slate-100">
+          <p className="text-slate-700 font-semibold" style={{ fontSize: "0.75rem" }}>
+            {label}
+          </p>
+        </div>
+        <div className="h-56 sm:h-64 bg-slate-100 flex items-center justify-center p-2">
+          <img src={fileUrl} alt={label} className="w-full h-full object-contain" />
+        </div>
       </a>
     );
   }
 
   return (
-    <div className="bg-slate-100 border border-slate-200 rounded-xl h-24 flex flex-col items-center justify-center gap-1.5">
+    <div className="bg-slate-100 border border-slate-200 rounded-2xl h-56 sm:h-64 flex flex-col items-center justify-center gap-1.5">
       <User className="w-6 h-6 text-slate-300" />
       <p className="text-slate-400 font-medium text-center" style={{ fontSize: "0.65rem" }}>
         {label}
@@ -254,6 +262,8 @@ function StudentDetailModal({
   isProcessing: boolean;
   processingAction: "approve" | "reject" | null;
 }) {
+  useModalScrollLock();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -269,9 +279,9 @@ function StudentDetailModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
       >
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-black/[0.05]">
+        <div className="bg-white flex items-center justify-between px-5 py-4 border-b border-black/[0.05] shrink-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-blue-600" />
             <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
@@ -285,7 +295,7 @@ function StudentDetailModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-6 py-5 flex-1 overflow-y-auto flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
           <div className="flex items-center gap-4">
             <div
               className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold overflow-hidden"
@@ -337,47 +347,47 @@ function StudentDetailModal({
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DocumentPlaceholder label="Student ID Card" fileUrl={request.collegeIdCard} />
             <DocumentPlaceholder label="Selfie with ID" fileUrl={request.studentSelfie} />
           </div>
-          {request.status === "pending" && (
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={async () => {
-                  const success = await onApprove(request.id);
-                  if (success) onClose();
-                }}
-                disabled={isProcessing}
-                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <CheckCircle className="w-4 h-4" />{" "}
-                {isProcessing && processingAction === "approve"
-                  ? "Approving..."
-                  : "Approve Verification"}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={async () => {
-                  const success = await onReject(request.id);
-                  if (success) onClose();
-                }}
-                disabled={isProcessing}
-                className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <XCircle className="w-4 h-4" />{" "}
-                {isProcessing && processingAction === "reject"
-                  ? "Rejecting..."
-                  : "Reject Verification"}
-              </motion.button>
-            </div>
-          )}
         </div>
+        {request.status === "pending" && (
+          <div className="bg-white flex gap-3 px-5 py-4 shrink-0 border-t border-black/[0.05]">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                const success = await onApprove(request.id);
+                if (success) onClose();
+              }}
+              disabled={isProcessing}
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
+              style={{ fontSize: "0.875rem" }}
+            >
+              <CheckCircle className="w-4 h-4" />{" "}
+              {isProcessing && processingAction === "approve"
+                ? "Approving..."
+                : "Approve Verification"}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                const success = await onReject(request.id);
+                if (success) onClose();
+              }}
+              disabled={isProcessing}
+              className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
+              style={{ fontSize: "0.875rem" }}
+            >
+              <XCircle className="w-4 h-4" />{" "}
+              {isProcessing && processingAction === "reject"
+                ? "Rejecting..."
+                : "Reject Verification"}
+            </motion.button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -400,6 +410,8 @@ function ClientDetailModal({
   isProcessing: boolean;
   processingAction: "approve" | "reject" | null;
 }) {
+  useModalScrollLock();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -415,9 +427,9 @@ function ClientDetailModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
       >
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-black/[0.05] sticky top-0 bg-white z-10">
+        <div className="bg-white flex items-center justify-between px-5 py-4 border-b border-black/[0.05] shrink-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-blue-600" />
             <p className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
@@ -431,7 +443,7 @@ function ClientDetailModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-6 py-5 flex-1 overflow-y-auto flex flex-col gap-5">
+        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
           {/* Client info */}
           <div className="flex items-center gap-4">
             <div
@@ -480,7 +492,7 @@ function ClientDetailModal({
           </div>
 
           {/* Documents */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <DocumentPlaceholder
               label="Citizenship Front Photo"
               fileUrl={request.citizenshipFront}
@@ -522,44 +534,43 @@ function ClientDetailModal({
               />
             </div>
           )}
-
-          {request.status === "pending" && (
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={async () => {
-                  const success = await onApprove(request.id);
-                  if (success) onClose();
-                }}
-                disabled={isProcessing}
-                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <CheckCircle className="w-4 h-4" />{" "}
-                {isProcessing && processingAction === "approve"
-                  ? "Approving..."
-                  : "Approve Verification"}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={async () => {
-                  const success = await onReject(request.id);
-                  if (success) onClose();
-                }}
-                disabled={isProcessing}
-                className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <XCircle className="w-4 h-4" />{" "}
-                {isProcessing && processingAction === "reject"
-                  ? "Rejecting..."
-                  : "Reject Verification"}
-              </motion.button>
-            </div>
-          )}
         </div>
+        {request.status === "pending" && (
+          <div className="bg-white flex gap-3 px-5 py-4 shrink-0 border-t border-black/[0.05]">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                const success = await onApprove(request.id);
+                if (success) onClose();
+              }}
+              disabled={isProcessing}
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 transition-colors shadow-md"
+              style={{ fontSize: "0.875rem" }}
+            >
+              <CheckCircle className="w-4 h-4" />{" "}
+              {isProcessing && processingAction === "approve"
+                ? "Approving..."
+                : "Approve Verification"}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                const success = await onReject(request.id);
+                if (success) onClose();
+              }}
+              disabled={isProcessing}
+              className="flex-1 flex items-center justify-center gap-2 bg-white text-red-600 font-semibold py-3 rounded-xl border border-red-200 hover:bg-red-50 transition-colors"
+              style={{ fontSize: "0.875rem" }}
+            >
+              <XCircle className="w-4 h-4" />{" "}
+              {isProcessing && processingAction === "reject"
+                ? "Rejecting..."
+                : "Reject Verification"}
+            </motion.button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

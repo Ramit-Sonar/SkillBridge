@@ -50,6 +50,7 @@ import {
 import { ReportUserAction } from "../../app/components/shared/ReportUserAction";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { Timeline } from "../../app/components/shared/Timeline";
+import { useModalScrollLock } from "../../app/components/shared/useModalScrollLock";
 import {
   ConfirmDialog,
   Notification,
@@ -454,6 +455,8 @@ function RevisionRequestDialog({
   const messageId = `${dialogId}-revision-message`;
   const referenceLinksId = `${dialogId}-reference-links`;
 
+  useModalScrollLock();
+
   const handleSubmit = async () => {
     if (!canSubmit || submitLockedRef.current) return;
 
@@ -623,6 +626,8 @@ function StudentProfileModal({
   profile: ProfileViewProps;
   onClose: () => void;
 }) {
+  useModalScrollLock();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -638,7 +643,7 @@ function StudentProfileModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.93 }}
         transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-        className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
       >
         <div className="bg-white border-b border-black/[0.05] px-5 py-4 flex items-start justify-between gap-3 shrink-0">
           <div>
@@ -659,9 +664,7 @@ function StudentProfileModal({
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="w-full max-w-xl mx-auto">
-            <StudentProfileView profile={profile} showReport={true} />
-          </div>
+          <StudentProfileView profile={profile} showReport={true} />
         </div>
       </motion.div>
     </motion.div>

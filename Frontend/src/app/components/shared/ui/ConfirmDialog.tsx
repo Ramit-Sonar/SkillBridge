@@ -1,5 +1,6 @@
 import { useRef, useState, type ElementType, type ReactNode } from "react";
 import { motion } from "motion/react";
+import { useModalScrollLock } from "../useModalScrollLock";
 
 type ConfirmDialogProps = {
   title: string;
@@ -39,6 +40,8 @@ export function ConfirmDialog({
   const confirmLockedRef = useRef(false);
   const centered = align === "center";
   const isBusy = busy || Boolean(loading);
+
+  useModalScrollLock();
 
   const handleConfirm = async () => {
     if (isBusy || confirmLockedRef.current) return;

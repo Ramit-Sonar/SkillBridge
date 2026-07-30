@@ -22,6 +22,7 @@ import { ReportUserAction } from "../../app/components/shared/ReportUserAction";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { StudentSummaryCard } from "../../app/components/shared/StudentSummaryCard";
 import { SharedJobDetailsContent } from "../../app/components/shared/SharedJobDetailsContent";
+import { useModalScrollLock } from "../../app/components/shared/useModalScrollLock";
 import {
   ReadOnlyApplicationView,
   type ApplicationDetailsData,
@@ -546,6 +547,8 @@ function ApplicantWorkspaceModal({
     { label: "Student Profile", value: "profile" },
   ];
 
+  useModalScrollLock();
+
   useEffect(() => {
     previouslyFocusedElement.current = document.activeElement as HTMLElement | null;
     closeButtonRef.current?.focus();
@@ -579,7 +582,7 @@ function ApplicantWorkspaceModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-4xl h-[90vh] max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="applicant-workspace-title"
@@ -798,6 +801,8 @@ function ApplicationsPanel({
   const [notification, setNotification] = useState<NotificationMessage>(null);
   const isSuspendedJob = job.status === "suspended";
 
+  useModalScrollLock();
+
   const loadApplicants = useCallback(
     async ({ showLoading = true, preserveCurrentData = false } = {}) => {
       if (showLoading) setLoadingApplicants(true);
@@ -971,7 +976,7 @@ function ApplicationsPanel({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-2xl max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+          className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="applications-list-title"
@@ -1160,6 +1165,8 @@ function JobDetailsPanel({
 }) {
   const isSuspendedJob = job.status === "suspended";
 
+  useModalScrollLock();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -1176,7 +1183,7 @@ function JobDetailsPanel({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-4xl h-[90vh] max-h-[90vh] bg-slate-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+        className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="job-details-title"

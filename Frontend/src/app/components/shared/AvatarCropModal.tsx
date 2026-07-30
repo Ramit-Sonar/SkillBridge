@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
+import { useModalScrollLock } from "./useModalScrollLock";
 
 const OUTPUT_SIZE = 1024;
 const DEFAULT_ZOOM = 2.2;
@@ -98,6 +99,8 @@ export function AvatarCropModal({
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  useModalScrollLock();
+
   useEffect(() => {
     const nextImageUrl = URL.createObjectURL(file);
     setImageUrl(nextImageUrl);
@@ -119,15 +122,6 @@ export function AvatarCropModal({
 
     return () => {
       window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
     };
   }, []);
 

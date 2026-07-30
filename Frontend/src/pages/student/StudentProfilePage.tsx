@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Share2, Copy, Check, ExternalLink, X } from "lucide-react";
+import { useModalScrollLock } from "../../app/components/shared/useModalScrollLock";
 
 function ShareModal({
   onClose,
@@ -12,6 +13,8 @@ function ShareModal({
   publicPath: string;
 }) {
   const [copied, setCopied] = useState(false);
+  useModalScrollLock();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

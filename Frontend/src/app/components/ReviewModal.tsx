@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Star, CheckCircle } from "lucide-react";
 import { usePlatformSettings } from "../data/platformSettingsStore";
+import { useModalScrollLock } from "./shared/useModalScrollLock";
 
 interface ReviewModalProps {
   studentName: string;
@@ -27,6 +28,8 @@ export function ReviewModal({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+
+  useModalScrollLock();
 
   const canSubmit = rating > 0 && !submitting;
 

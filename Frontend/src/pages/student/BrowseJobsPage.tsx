@@ -31,6 +31,7 @@ import {
   SharedJobDetailsContent,
   type JobDetailData as SharedJobDetailData,
 } from "../../app/components/shared/SharedJobDetailsContent";
+import { useModalScrollLock } from "../../app/components/shared/useModalScrollLock";
 import { Notification, type NotificationMessage } from "../../app/components/shared/ui";
 import { VerificationReminderCard } from "../../app/components/shared/VerificationReminderCard";
 import { usePlatformSettings } from "../../app/data/platformSettingsStore";
@@ -489,7 +490,7 @@ function ApplyJobButton({
           ? "bg-emerald-50 text-emerald-600 cursor-default"
           : disabled
             ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
-          : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-lg"
+            : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200 hover:shadow-lg"
       }`}
       style={{ fontSize: "0.875rem" }}
     >
@@ -806,6 +807,9 @@ function FilterChip({
 export function GuestApplyModal({ onClose, jobId }: { onClose: () => void; jobId?: string }) {
   const { platformName } = usePlatformSettings();
   const returnParam = jobId ? `?returnTo=/browse&jobId=${jobId}` : "";
+
+  useModalScrollLock();
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

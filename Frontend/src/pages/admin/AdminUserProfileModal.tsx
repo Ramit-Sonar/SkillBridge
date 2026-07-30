@@ -11,6 +11,7 @@ import {
   type NotificationMessage,
   type StatusBadgeConfig,
 } from "../../app/components/shared/ui";
+import { useModalScrollLock } from "../../app/components/shared/useModalScrollLock";
 import {
   activateUser,
   suspendUser,
@@ -161,6 +162,8 @@ function SuspendUserModal({
   const [customReason, setCustomReason] = useState("");
   const [error, setError] = useState("");
   const requiresCustomReason = reason === "Other";
+
+  useModalScrollLock();
 
   const handleConfirm = async () => {
     if (!reason) {
@@ -366,6 +369,8 @@ export function AdminUserProfileModal({
   const [confirmAction, setConfirmAction] = useState<"suspend" | "activate" | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const isActive = user.status === "active";
+
+  useModalScrollLock();
 
   const handleUserUpdated = (updatedUser: PlatformUser) => {
     onUserUpdated?.(updatedUser);

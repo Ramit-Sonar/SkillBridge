@@ -19,10 +19,18 @@ export function VerificationReminderCard({
   const navigate = useNavigate();
   const currentUser = useDashboardCurrentUser();
   const [verificationStatus, setVerificationStatus] = useState<
-    "pending" | "approved" | "rejected" | null
-  >(null);
+    "pending" | "approved" | "rejected" | null | undefined
+  >(undefined);
+  const [statusLoadFailed, setStatusLoadFailed] = useState(false);
+  const loadingVerificationStatus =
+    isVerified === undefined &&
+    Boolean(currentUser?._id) &&
+    verificationStatus === undefined &&
+    !statusLoadFailed;
   const accountVerified =
-    isVerified === true || (isVerified === undefined && verificationStatus === "approved");
+    isVerified === true ||
+    (isVerified === undefined && verificationStatus === "approved") ||
+    (isVerified === undefined && statusLoadFailed && currentUser?.isVerified === true);
 
   useEffect(() => {
     if (isVerified !== undefined || !currentUser?._id) return;
@@ -30,6 +38,9 @@ export function VerificationReminderCard({
     let mounted = true;
 
     const loadVerificationStatus = async () => {
+      setVerificationStatus(undefined);
+      setStatusLoadFailed(false);
+
       try {
         // Verification.status is authoritative; User.isVerified can lag after resubmission.
         const response = await getVerificationStatus();
@@ -40,6 +51,7 @@ export function VerificationReminderCard({
       } catch {
         if (mounted) {
           setVerificationStatus(null);
+          setStatusLoadFailed(true);
         }
       }
     };
@@ -51,7 +63,7 @@ export function VerificationReminderCard({
     };
   }, [currentUser?._id, isVerified]);
 
-  if (accountVerified) return null;
+  if (accountVerified || loadingVerificationStatus) return null;
 
   return (
     <motion.div

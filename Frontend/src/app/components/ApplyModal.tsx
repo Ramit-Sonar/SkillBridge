@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertCircle, ArrowRight, CheckCircle, Clock, Tag, X } from "lucide-react";
 import { FileUploadArea, type UploadedFile } from "./shared/FileUploadArea";
+import { useModalScrollLock } from "./shared/useModalScrollLock";
 import {
   JOB_CATEGORY_LABELS,
   JOB_DURATION_LABELS,
@@ -117,6 +118,8 @@ export function ApplyModal({ job, onClose, onSubmitted, onError }: ApplyModalPro
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previouslyFocusedElement = useRef<HTMLElement | null>(null);
+
+  useModalScrollLock();
 
   const canSubmit =
     coverLetter.trim().length > 0 &&

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { useModalScrollLock } from "@/app/components/shared/useModalScrollLock";
 import { getCurrentUser, logoutUser, type AuthUser } from "@/services/authService";
 import { isMaintenanceModeError } from "@/services/apiConfig";
 
@@ -29,6 +30,8 @@ export default function PublicAuthGuard({ page, children }: PublicAuthGuardProps
   const [dialogOpen, setDialogOpen] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [notification, setNotification] = useState<NotificationMessage>(null);
+
+  useModalScrollLock(dialogOpen && Boolean(user && user.role !== "admin"));
 
   useEffect(() => {
     let waitingForMaintenanceRedirect = false;

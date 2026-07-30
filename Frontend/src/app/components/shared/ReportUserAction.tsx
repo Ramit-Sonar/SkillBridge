@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertCircle, Flag, X } from "lucide-react";
 import { Notification, type NotificationMessage } from "./ui";
+import { useModalScrollLock } from "./useModalScrollLock";
 import { usePlatformSettings } from "../../data/platformSettingsStore";
 import {
   submitReport,
@@ -48,6 +49,8 @@ function ReportUserModal({
   const reasonId = `${dialogId}-reason`;
   const descriptionId = `${dialogId}-description`;
   const canSubmit = !busy;
+
+  useModalScrollLock();
 
   const handleSubmit = async () => {
     if (!canSubmit) return;

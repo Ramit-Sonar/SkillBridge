@@ -906,7 +906,7 @@ export function DashboardLayout({
             onMobileMenuOpen={() => setMobileOpen(true)}
             onLogout={handleLogout}
           />
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto" data-dashboard-scroll-container>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
