@@ -53,46 +53,20 @@ const isStudentEmail = (email) => {
 };
 
 const getEmailTransporter = () => {
-  const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const emailPassword =
-    process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
-
-  // Temporary debug logs (remove after debugging)
-  console.log("========== EMAIL CONFIG ==========");
-  console.log({
-    EMAIL_USER: process.env.EMAIL_USER,
-    EMAIL_SERVICE: process.env.EMAIL_SERVICE,
-    HAS_PASSWORD: !!process.env.EMAIL_PASSWORD,
-    SMTP_HOST: process.env.SMTP_HOST || "(not set)",
-    SMTP_PORT: process.env.SMTP_PORT || "(not set)",
-  });
-  console.log("==================================");
-
-  if (process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: emailUser,
-        pass: emailPassword,
-      },
-
-      // Temporary timeout settings
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    });
-  }
+  const emailUser = process.env.EMAIL_USER;
+  const emailPassword = process.env.EMAIL_PASSWORD;
 
   return nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    requireTLS: true,
+
     auth: {
       user: emailUser,
       pass: emailPassword,
     },
 
-    // Temporary timeout settings
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
