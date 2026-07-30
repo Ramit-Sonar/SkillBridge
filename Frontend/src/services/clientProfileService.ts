@@ -1,7 +1,6 @@
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
-  /\/users\/?$/,
-  ""
-);
+import { getApiBaseUrl } from "./apiConfig";
+
+const API_URL = getApiBaseUrl();
 
 /**
  * Client profile service handles authenticated client profile reads and updates.

@@ -2,11 +2,9 @@ import type { ApiResponse } from "./applicationService";
 import type { StudentCertificate } from "./studentProfileService";
 import type { JobAttachment } from "./jobService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
+import { getApiBaseUrl } from "./apiConfig";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
-  /\/users\/?$/,
-  ""
-);
+const API_URL = getApiBaseUrl();
 
 /**
  * Project service mirrors the project workspace API contract used by both roles.

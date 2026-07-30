@@ -1,10 +1,8 @@
 import type { StudentSummary } from "./applicationService";
 import type { FileAttachment } from "../utils/fileUtils";
+import { getApiBaseUrl } from "./apiConfig";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
-  /\/users\/?$/,
-  ""
-);
+const API_URL = getApiBaseUrl();
 
 /**
  * Student profile service handles private edits and public profile reads.

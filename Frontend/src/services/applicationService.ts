@@ -2,11 +2,9 @@ import type { ClientSummary, JobAttachment } from "./jobService";
 import type { ProjectProfileCompletedProject } from "./projectService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
 import type { StudentCertificate } from "./studentProfileService";
+import { getApiBaseUrl } from "./apiConfig";
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1/users").replace(
-  /\/users\/?$/,
-  ""
-);
+const API_URL = getApiBaseUrl();
 
 /**
  * Application service owns student application and client applicant-review API calls.
