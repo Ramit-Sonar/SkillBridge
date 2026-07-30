@@ -81,5 +81,8 @@ const revisionSchema = new mongoose.Schema(
 
 revisionSchema.index({ project: 1, revisionNumber: 1 }, { unique: true });
 revisionSchema.index({ project: 1, resolved: 1 });
+revisionSchema.index({ project: 1, resolved: 1, revisionNumber: -1 });
+revisionSchema.index({ deliverable: 1, revisionNumber: -1 });
+revisionSchema.index({ resolvedByDeliverable: 1, revisionNumber: -1 });
 
 export const Revision = mongoose.model("Revision", revisionSchema);
