@@ -205,7 +205,8 @@ function ReportDetailsModal({
   onDismiss: () => void;
 }) {
   const cfg = REPORT_STATUS_CFG[report.status];
-  const canUpdateStatus = report.status === "pending" && !actionLoading;
+  const hasPendingAction = report.status === "pending";
+  const canUpdateStatus = hasPendingAction && !actionLoading;
 
   useModalScrollLock();
 
@@ -325,26 +326,30 @@ function ReportDetailsModal({
           >
             <User className="w-4 h-4" /> View Reported User
           </button>
-          <button
-            type="button"
-            disabled={!canUpdateStatus}
-            onClick={onResolve}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors"
-            style={{ fontSize: "0.82rem" }}
-          >
-            <CheckCircle className="w-4 h-4" />{" "}
-            {actionLoading === "resolve" ? "Resolving..." : "Resolve"}
-          </button>
-          <button
-            type="button"
-            disabled={!canUpdateStatus}
-            onClick={onDismiss}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-60"
-            style={{ fontSize: "0.82rem" }}
-          >
-            <XCircle className="w-4 h-4" />{" "}
-            {actionLoading === "dismiss" ? "Dismissing..." : "Dismiss"}
-          </button>
+          {hasPendingAction && (
+            <>
+              <button
+                type="button"
+                disabled={!canUpdateStatus}
+                onClick={onResolve}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors"
+                style={{ fontSize: "0.82rem" }}
+              >
+                <CheckCircle className="w-4 h-4" />{" "}
+                {actionLoading === "resolve" ? "Resolving..." : "Resolve"}
+              </button>
+              <button
+                type="button"
+                disabled={!canUpdateStatus}
+                onClick={onDismiss}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-60"
+                style={{ fontSize: "0.82rem" }}
+              >
+                <XCircle className="w-4 h-4" />{" "}
+                {actionLoading === "dismiss" ? "Dismissing..." : "Dismiss"}
+              </button>
+            </>
+          )}
         </div>
       </motion.div>
     </motion.div>
