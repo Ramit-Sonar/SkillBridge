@@ -1,5 +1,6 @@
 import type { ProjectProfileCompletedProject } from "./projectService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
+import type { StudentCertificate } from "./studentProfileService";
 import type { ApiResponse } from "./reportService";
 import { getApiBaseUrl } from "./apiConfig";
 
@@ -38,6 +39,7 @@ export type PlatformUser = {
   github?: string;
   linkedin?: string;
   portfolio?: string;
+  certificates?: StudentCertificate[];
   ratingSummary?: StudentRatingSummary | null;
   completedProjects?: ProjectProfileCompletedProject[];
   latestReviews?: StudentReviewSummary[];
@@ -89,7 +91,12 @@ export type PlatformSettings = {
 export type AdminJobStatus = "open" | "closed" | "cancelled" | "suspended";
 
 export type JobModerationReason =
-  "Spam" | "Fake Job" | "Duplicate Listing" | "Policy Violation" | "Copyright Issue" | "Other";
+  | "Spam"
+  | "Fake Job"
+  | "Duplicate Listing"
+  | "Policy Violation"
+  | "Copyright Issue"
+  | "Other";
 
 export type AdminJobClient = {
   id: string;

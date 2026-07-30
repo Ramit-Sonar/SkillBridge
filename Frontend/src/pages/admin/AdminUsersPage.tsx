@@ -24,6 +24,7 @@ import {
   type PlatformUser,
   type UserStatus,
 } from "../../services/adminService";
+import { getPublicStudentProfile } from "../../services/studentProfileService";
 import { AdminUserProfileModal } from "./AdminUserProfileModal";
 
 const STATUS_CFG: Record<
@@ -220,10 +221,29 @@ export default function AdminUsersPage() {
     );
   });
 
+  const loadStudentCertificateFallback = async (user: PlatformUser) => {
+    if (user.role !== "student" || (user.certificates ?? []).length > 0) {
+      return user;
+    }
+
+    try {
+      const publicProfileResponse = await getPublicStudentProfile(user.id);
+      const certificates = publicProfileResponse.data.profile.certificates ?? [];
+
+      return {
+        ...user,
+        certificates,
+      };
+    } catch {
+      return user;
+    }
+  };
+
   const handleViewDetails = async (userId: string) => {
     try {
       const response = await getUserDetails(userId);
-      setSelectedUser(response.data);
+      const userDetails = await loadStudentCertificateFallback(response.data);
+      setSelectedUser(userDetails);
     } catch (detailsError) {
       setNotification({
         type: "error",

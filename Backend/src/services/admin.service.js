@@ -300,6 +300,7 @@ const buildAdminUserSummary = ({
     summary.github = studentProfile?.github || "";
     summary.linkedin = studentProfile?.linkedin || "";
     summary.portfolio = studentProfile?.portfolio || "";
+    summary.certificates = studentProfile?.certificates || [];
     summary.skills = buildProfileSkillList(
       studentProfile?.skills,
       studentProfile?.verifiedSkills

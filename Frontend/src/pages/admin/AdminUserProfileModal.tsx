@@ -108,6 +108,7 @@ function buildAdminStudentProfile(user: PlatformUser) {
       github: user.github,
       linkedin: user.linkedin,
       portfolio: user.portfolio,
+      certificates: user.certificates ?? [],
       statistics: user.ratingSummary
         ? {
             ...user.ratingSummary,
