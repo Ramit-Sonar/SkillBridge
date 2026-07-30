@@ -125,14 +125,14 @@ function VerificationCard<
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
             style={{ background: avatarGradient, fontSize: "0.65rem" }}
           >
             {item.avatar ? (
               <img
                 src={item.avatar}
                 alt={`${item.name} avatar`}
-                className="w-full h-full object-cover rounded-xl"
+                className="w-full h-full object-cover rounded-full"
               />
             ) : (
               item.initials
@@ -288,14 +288,14 @@ function StudentDetailModal({
         <div className="px-6 py-5 flex-1 overflow-y-auto flex flex-col gap-5">
           <div className="flex items-center gap-4">
             <div
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold"
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold overflow-hidden"
               style={{ fontSize: "1rem" }}
             >
               {request.avatar ? (
                 <img
                   src={request.avatar}
                   alt={`${request.name} avatar`}
-                  className="w-full h-full object-cover rounded-2xl"
+                  className="w-full h-full object-cover rounded-full"
                 />
               ) : (
                 request.initials

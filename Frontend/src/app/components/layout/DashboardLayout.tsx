@@ -475,7 +475,7 @@ function Sidebar({
           className={`flex items-center rounded-xl p-3 bg-slate-50 border border-black/[0.05] transition-all duration-200 ${!expanded ? "justify-center" : "gap-3"}`}
         >
           <div
-            className={`w-7 h-7 rounded-lg ${config.user.avatarClassName} flex items-center justify-center text-white shrink-0 overflow-hidden`}
+            className={`w-7 h-7 rounded-full ${config.user.avatarClassName} flex items-center justify-center text-white shrink-0 overflow-hidden`}
             style={{ fontSize: "0.6rem", fontWeight: 800 }}
           >
             {displayAvatar ? (
@@ -568,7 +568,7 @@ function TopNavbar({
             className="flex items-center gap-2.5 pl-1 pr-3 py-1.5 rounded-xl hover:bg-slate-50 transition-colors"
           >
             <div
-              className={`w-8 h-8 rounded-xl ${config.user.avatarClassName} flex items-center justify-center text-white overflow-hidden`}
+              className={`w-8 h-8 rounded-full ${config.user.avatarClassName} flex items-center justify-center text-white overflow-hidden`}
               style={{ fontSize: "0.65rem", fontWeight: 800 }}
             >
               {displayAvatar ? (

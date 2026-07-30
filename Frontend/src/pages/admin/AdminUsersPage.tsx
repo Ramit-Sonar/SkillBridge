@@ -95,7 +95,7 @@ function UserCard({ user, onViewDetails }: { user: PlatformUser; onViewDetails: 
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div
-            className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
             style={{ fontSize: "0.65rem" }}
           >
             {user.avatar ? (

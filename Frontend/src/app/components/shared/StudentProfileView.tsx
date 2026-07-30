@@ -168,7 +168,7 @@ function ProfileOverview({ profile }: { profile: ProfileViewProps }) {
     <div className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5">
       <div className="flex items-start gap-4">
         <div
-          className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 shadow-sm"
+          className="w-14 h-14 rounded-full overflow-hidden shrink-0 shadow-sm"
           style={{ background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}
         >
           {avatar ? (
@@ -705,7 +705,7 @@ function Reviews({
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
+                    className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
                     style={{ fontSize: "0.48rem" }}
                   >
                     {review.clientAvatar ? (

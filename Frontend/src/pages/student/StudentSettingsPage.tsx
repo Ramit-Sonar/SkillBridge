@@ -485,7 +485,7 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
       {/* Avatar */}
       <div className="flex items-center gap-4">
         <div
-          className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 shadow-sm"
+          className="w-16 h-16 rounded-full overflow-hidden shrink-0 shadow-sm"
           style={{ background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}
         >
           {avatarUrl ? (

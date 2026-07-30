@@ -87,7 +87,7 @@ export function ClientInformationCard({
       {/* Avatar + name + badge */}
       <div className="flex items-start gap-3">
         <div
-          className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
+          className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
           style={{ fontSize: "0.65rem" }}
         >
           {client.avatar ? (

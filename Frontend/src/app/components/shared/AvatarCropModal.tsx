@@ -3,7 +3,10 @@ import Cropper, { type Area } from "react-easy-crop";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 
-const OUTPUT_SIZE = 768;
+const OUTPUT_SIZE = 1024;
+const DEFAULT_ZOOM = 2.2;
+const MIN_ZOOM = 1.65;
+const MAX_ZOOM = 4.5;
 const MAX_AVATAR_SOURCE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_AVATAR_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
@@ -30,6 +33,15 @@ type AvatarCropModalProps = {
   onSave: (file: File) => Promise<void> | void;
 };
 
+const getCropSize = () => {
+  if (typeof window === "undefined") return { width: 260, height: 260 };
+
+  if (window.innerWidth < 420) return { width: 210, height: 210 };
+  if (window.innerWidth < 768) return { width: 230, height: 230 };
+
+  return { width: 260, height: 260 };
+};
+
 const createImage = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -52,7 +64,12 @@ const getCroppedAvatarFile = async (imageUrl: string, crop: Area) => {
   canvas.height = OUTPUT_SIZE;
 
   context.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  context.save();
+  context.beginPath();
+  context.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2);
+  context.clip();
   context.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  context.restore();
 
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, "image/webp", 0.92)
@@ -75,7 +92,8 @@ export function AvatarCropModal({
 }: AvatarCropModalProps) {
   const [imageUrl, setImageUrl] = useState("");
   const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [cropSize, setCropSize] = useState(getCropSize);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -83,11 +101,35 @@ export function AvatarCropModal({
   useEffect(() => {
     const nextImageUrl = URL.createObjectURL(file);
     setImageUrl(nextImageUrl);
+    setCrop({ x: 0, y: 0 });
+    setZoom(DEFAULT_ZOOM);
 
     return () => {
       URL.revokeObjectURL(nextImageUrl);
     };
   }, [file]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setCropSize(getCropSize());
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -153,15 +195,15 @@ export function AvatarCropModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-3 sm:px-6">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-4 py-3 sm:px-6">
           <div>
             <h2 className="text-slate-950 font-bold" style={{ fontSize: "1rem" }}>
               Position Profile Picture
             </h2>
             <p className="mt-1 text-slate-500" style={{ fontSize: "0.8rem" }}>
-              Drag and zoom until your face fits naturally inside the profile frame.
+              Drag your photo so your face, hair, neck, and upper shoulders fill the avatar.
             </p>
           </div>
           <button
@@ -175,19 +217,20 @@ export function AvatarCropModal({
           </button>
         </div>
 
-        <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_180px]">
+        <div className="grid min-h-0 gap-4 p-4 sm:p-5 lg:grid-cols-[1fr_180px]">
           <div className="flex flex-col">
-            <div className="relative h-[min(58vw,380px)] min-h-[250px] overflow-hidden rounded-3xl bg-slate-950">
+            <div className="relative h-[clamp(210px,40vh,380px)] overflow-hidden rounded-3xl bg-slate-950">
               {imageUrl && (
                 <Cropper
                   image={imageUrl}
                   crop={crop}
                   zoom={zoom}
                   aspect={1}
-                  cropShape="rect"
+                  cropShape="round"
+                  cropSize={cropSize}
                   showGrid={false}
-                  minZoom={1}
-                  maxZoom={4}
+                  minZoom={MIN_ZOOM}
+                  maxZoom={MAX_ZOOM}
                   objectFit="contain"
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
@@ -201,7 +244,7 @@ export function AvatarCropModal({
             <p className="font-semibold text-slate-900" style={{ fontSize: "0.82rem" }}>
               Preview
             </p>
-            <div className="relative h-28 w-28 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-teal-500 shadow-sm sm:h-32 sm:w-32">
+            <div className="relative h-28 w-28 overflow-hidden rounded-full bg-gradient-to-br from-blue-600 to-teal-500 shadow-sm sm:h-32 sm:w-32">
               {previewUrl ? (
                 <img
                   src={previewUrl}
@@ -238,7 +281,7 @@ export function AvatarCropModal({
           </aside>
         </div>
 
-        <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
+        <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:justify-end sm:px-6">
           <button
             type="button"
             onClick={onClose}
