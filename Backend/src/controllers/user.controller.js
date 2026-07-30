@@ -53,23 +53,27 @@ const isStudentEmail = (email) => {
 };
 
 const getEmailTransporter = () => {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPassword = process.env.EMAIL_PASSWORD;
+  const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
+
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+    });
+  }
 
   return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    requireTLS: true,
-
+    service: process.env.EMAIL_SERVICE || "gmail",
     auth: {
       user: emailUser,
       pass: emailPassword,
     },
-
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
   });
 };
 
