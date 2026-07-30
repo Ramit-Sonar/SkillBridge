@@ -34,12 +34,12 @@ type AvatarCropModalProps = {
 };
 
 const getCropSize = () => {
-  if (typeof window === "undefined") return { width: 260, height: 260 };
+  if (typeof window === "undefined") return { width: 210, height: 210 };
 
-  if (window.innerWidth < 420) return { width: 210, height: 210 };
-  if (window.innerWidth < 768) return { width: 230, height: 230 };
+  if (window.innerWidth < 420) return { width: 170, height: 170 };
+  if (window.innerWidth < 768) return { width: 190, height: 190 };
 
-  return { width: 260, height: 260 };
+  return { width: 210, height: 210 };
 };
 
 const createImage = (url: string) =>

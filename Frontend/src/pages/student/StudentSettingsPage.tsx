@@ -483,9 +483,9 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
       </div>
 
       {/* Avatar */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-5">
         <div
-          className="w-16 h-16 rounded-full overflow-hidden shrink-0 shadow-sm"
+          className="w-20 h-20 rounded-full overflow-hidden shrink-0 border-4 border-white shadow-md ring-1 ring-slate-200"
           style={{ background: "linear-gradient(135deg,#2563EB,#14B8A6)" }}
         >
           {avatarUrl ? (
@@ -499,20 +499,17 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
             </div>
           )}
         </div>
-        <div>
+        <div className="flex flex-col items-start gap-2">
           <p className="text-slate-900 font-semibold" style={{ fontSize: "0.82rem" }}>
             Profile Picture
-          </p>
-          <p className="text-slate-400 mt-0.5 mb-2" style={{ fontSize: "0.72rem" }}>
-            JPG or PNG · Max 2 MB
           </p>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-500 font-semibold px-3 py-1.5 rounded-xl hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
-            style={{ fontSize: "0.75rem" }}
+            className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 font-semibold text-blue-600 transition-all hover:border-blue-300 hover:bg-blue-100"
+            style={{ fontSize: "0.8rem" }}
           >
-            <Upload className="w-3.5 h-3.5" /> Upload Photo
+            <Upload className="w-4 h-4" /> Change Photo
           </button>
           <input
             ref={fileRef}
