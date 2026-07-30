@@ -56,6 +56,15 @@ const getEmailTransporter = () => {
   const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
   const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
 
+  // Debug log (temporary)
+  console.log({
+    EMAIL_USER: process.env.EMAIL_USER,
+    EMAIL_SERVICE: process.env.EMAIL_SERVICE,
+    HAS_PASSWORD: !!process.env.EMAIL_PASSWORD,
+    SMTP_HOST: process.env.SMTP_HOST || "(not set)",
+    SMTP_PORT: process.env.SMTP_PORT || "(not set)",
+  });
+
   if (process.env.SMTP_HOST) {
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
