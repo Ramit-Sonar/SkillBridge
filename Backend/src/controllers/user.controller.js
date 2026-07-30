@@ -7,6 +7,7 @@ import { getPlatformSettingsData } from "../services/admin.service.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import dns from "dns/promises";
 
 /**
  * Handles account authentication, email verification, and password recovery.
@@ -52,28 +53,65 @@ const isStudentEmail = (email) => {
   return domain?.toLowerCase().endsWith("edu.np");
 };
 
-const getEmailTransporter = () => {
-  const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
+const getEnv = (key) => process.env[key]?.trim();
 
-  if (process.env.SMTP_HOST) {
+const getEmailTransporter = async () => {
+  const emailUser = getEnv("EMAIL_USER") || getEnv("SMTP_USER");
+  const emailPassword =
+    getEnv("EMAIL_PASSWORD") || getEnv("SMTP_PASSWORD") || getEnv("SMTP_PASS");
+  const emailService = (getEnv("EMAIL_SERVICE") || "gmail").toLowerCase();
+  const smtpHost = getEnv("SMTP_HOST");
+  const isGmailService = !smtpHost && emailService === "gmail";
+  const configuredHost = smtpHost || (isGmailService ? "smtp.gmail.com" : "");
+  const port = Number(getEnv("SMTP_PORT")) || (isGmailService ? 465 : 587);
+  const secure = getEnv("SMTP_SECURE")
+    ? getEnv("SMTP_SECURE") === "true"
+    : port === 465;
+  const timeoutOptions = {
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    dnsTimeout: 10000,
+  };
+
+  if (configuredHost) {
+    let host = configuredHost;
+
+    if (process.env.NODE_ENV === "production") {
+      const ipv4Addresses = await dns.resolve4(configuredHost);
+      host = ipv4Addresses[0] || configuredHost;
+      console.info("SMTP IPv4 resolution successful", {
+        host: configuredHost,
+        resolvedHost: host,
+        port,
+        secure,
+      });
+    }
+
     return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === "true",
+      host,
+      port,
+      secure,
+      requireTLS: port === 587,
       auth: {
         user: emailUser,
         pass: emailPassword,
       },
+      tls: {
+        minVersion: "TLSv1.2",
+        servername: configuredHost,
+      },
+      ...timeoutOptions,
     });
   }
 
   return nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || "gmail",
+    service: emailService,
     auth: {
       user: emailUser,
       pass: emailPassword,
     },
+    ...timeoutOptions,
   });
 };
 
@@ -394,18 +432,32 @@ This OTP expires in 5 minutes.
 If you did not request this, ignore this email.`;
 
   try {
-    const transporter = getEmailTransporter();
+    console.info("SMTP connection started for OTP email", {
+      email: normalizedEmail,
+      service: getEnv("EMAIL_SERVICE") || "gmail",
+      smtpHostConfigured: Boolean(getEnv("SMTP_HOST")),
+    });
+    const transporter = await getEmailTransporter();
     await transporter.verify();
+    console.info("SMTP connection successful for OTP email", {
+      email: normalizedEmail,
+    });
 
+    console.info("Email sending started for OTP email", {
+      email: normalizedEmail,
+    });
     await transporter.sendMail({
       from:
-        process.env.EMAIL_FROM ||
-        process.env.SMTP_FROM ||
-        process.env.EMAIL_USER ||
-        process.env.SMTP_USER,
+        getEnv("EMAIL_FROM") ||
+        getEnv("SMTP_FROM") ||
+        getEnv("EMAIL_USER") ||
+        getEnv("SMTP_USER"),
       to: normalizedEmail,
       subject: `Verify your ${platformName} email`,
       text: message,
+    });
+    console.info("Email sent successfully for OTP email", {
+      email: normalizedEmail,
     });
   } catch (error) {
     console.error("Nodemailer email verification error:", error);
@@ -506,18 +558,32 @@ ${resetUrl}
 This link expires in 15 minutes.`;
 
   try {
-    const transporter = getEmailTransporter();
+    console.info("SMTP connection started for password reset email", {
+      email: user.email,
+      service: getEnv("EMAIL_SERVICE") || "gmail",
+      smtpHostConfigured: Boolean(getEnv("SMTP_HOST")),
+    });
+    const transporter = await getEmailTransporter();
     await transporter.verify();
+    console.info("SMTP connection successful for password reset email", {
+      email: user.email,
+    });
 
+    console.info("Email sending started for password reset email", {
+      email: user.email,
+    });
     await transporter.sendMail({
       from:
-        process.env.EMAIL_FROM ||
-        process.env.SMTP_FROM ||
-        process.env.EMAIL_USER ||
-        process.env.SMTP_USER,
+        getEnv("EMAIL_FROM") ||
+        getEnv("SMTP_FROM") ||
+        getEnv("EMAIL_USER") ||
+        getEnv("SMTP_USER"),
       to: user.email,
       subject: `Reset your ${platformName} password`,
       text: message,
+    });
+    console.info("Email sent successfully for password reset email", {
+      email: user.email,
     });
   } catch (error) {
     console.error("Nodemailer password reset error:", error);
