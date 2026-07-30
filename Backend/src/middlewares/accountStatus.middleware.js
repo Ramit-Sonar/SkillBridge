@@ -1,3 +1,5 @@
+import { ApiError } from "../utils/ApiError.js";
+
 /**
  * Blocks marketplace write actions for suspended authenticated accounts.
  */
@@ -7,9 +9,12 @@ export const ensureActiveAccount = (req, res, next) => {
     return;
   }
 
-  return res.status(403).json({
-    success: false,
-    errorCode: "ACCOUNT_SUSPENDED",
-    message: "Your account has been suspended.",
-  });
+  next(
+    new ApiError(
+      403,
+      "Your account has been suspended.",
+      [],
+      "ACCOUNT_SUSPENDED"
+    )
+  );
 };

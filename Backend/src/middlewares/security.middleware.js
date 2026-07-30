@@ -10,8 +10,11 @@ const createRateLimiter = ({ windowMs, max, message }) =>
     standardHeaders: true,
     legacyHeaders: false,
     message: {
+      statusCode: 429,
       success: false,
+      errorCode: "RATE_LIMIT_EXCEEDED",
       message,
+      errors: [],
     },
   });
 

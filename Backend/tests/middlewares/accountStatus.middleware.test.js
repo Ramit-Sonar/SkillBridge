@@ -29,12 +29,13 @@ describe("ensureActiveAccount Middleware", () => {
 
     ensureActiveAccount(req, res, next);
 
-    expect(next).not.toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      errorCode: "ACCOUNT_SUSPENDED",
-      message: "Your account has been suspended.",
-    });
+    expect(res.status).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        statusCode: 403,
+        errorCode: "ACCOUNT_SUSPENDED",
+        message: "Your account has been suspended.",
+      })
+    );
   });
 });

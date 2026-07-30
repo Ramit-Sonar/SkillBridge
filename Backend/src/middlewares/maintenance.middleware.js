@@ -89,10 +89,12 @@ export const maintenanceModeMiddleware = asyncHandler(
         : getDefaultMaintenanceMessage(platformName);
 
     return res.status(503).json({
+      statusCode: 503,
       success: false,
       code: "MAINTENANCE_MODE",
       errorCode: "MAINTENANCE_MODE",
       message: maintenanceMessage,
+      errors: [],
       authenticated: ["student", "client"].includes(requestRole),
       platformName,
       supportEmail: settings.supportEmail || "",

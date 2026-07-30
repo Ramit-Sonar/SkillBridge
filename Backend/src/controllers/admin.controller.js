@@ -18,6 +18,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 /**
  * Handles admin-only user management actions.
  */
+const VALID_ADMIN_JOB_STATUSES = [
+  "all",
+  "open",
+  "closed",
+  "cancelled",
+  "suspended",
+];
+
 const getAdminUsers = asyncHandler(async (req, res) => {
   const users = await getAdminUsersData();
 
@@ -156,9 +164,16 @@ const updateMaintenanceSettings = asyncHandler(async (req, res) => {
 });
 
 const getAdminJobs = asyncHandler(async (req, res) => {
+  const status =
+    typeof req.query.status === "string" ? req.query.status : "all";
+
+  if (!VALID_ADMIN_JOB_STATUSES.includes(status.toLowerCase())) {
+    throw new ApiError(400, "Job status filter is invalid");
+  }
+
   const jobs = await getAdminJobsData({
     search: typeof req.query.search === "string" ? req.query.search : "",
-    status: typeof req.query.status === "string" ? req.query.status : "all",
+    status,
   });
 
   return res.status(200).json(

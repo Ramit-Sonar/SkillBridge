@@ -21,6 +21,7 @@ const router = Router();
 const studentRoles = authorizeRoles("student");
 const clientRoles = authorizeRoles("client");
 const adminRoles = authorizeRoles("admin");
+const verificationOwnerRoles = authorizeRoles("student", "client");
 
 // Admin review endpoints are mounted before user submission routes.
 router
@@ -91,6 +92,8 @@ router
     updateClientVerification
   );
 
-router.route("/status").get(verifyJWT, getVerificationStatus);
+router
+  .route("/status")
+  .get(verifyJWT, verificationOwnerRoles, getVerificationStatus);
 
 export default router;
