@@ -54,9 +54,11 @@ const isStudentEmail = (email) => {
 
 const getEmailTransporter = () => {
   const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
-  const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
+  const emailPassword =
+    process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
 
-  // Debug log (temporary)
+  // Temporary debug logs (remove after debugging)
+  console.log("========== EMAIL CONFIG ==========");
   console.log({
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_SERVICE: process.env.EMAIL_SERVICE,
@@ -64,6 +66,7 @@ const getEmailTransporter = () => {
     SMTP_HOST: process.env.SMTP_HOST || "(not set)",
     SMTP_PORT: process.env.SMTP_PORT || "(not set)",
   });
+  console.log("==================================");
 
   if (process.env.SMTP_HOST) {
     return nodemailer.createTransport({
@@ -74,6 +77,11 @@ const getEmailTransporter = () => {
         user: emailUser,
         pass: emailPassword,
       },
+
+      // Temporary timeout settings
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
   }
 
@@ -83,6 +91,11 @@ const getEmailTransporter = () => {
       user: emailUser,
       pass: emailPassword,
     },
+
+    // Temporary timeout settings
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 };
 
