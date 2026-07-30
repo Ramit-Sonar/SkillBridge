@@ -75,18 +75,14 @@ const getEmailTransporter = async () => {
   };
 
   if (configuredHost) {
-    let host = configuredHost;
-
-    if (process.env.NODE_ENV === "production") {
-      const ipv4Addresses = await dns.resolve4(configuredHost);
-      host = ipv4Addresses[0] || configuredHost;
-      console.info("SMTP IPv4 resolution successful", {
-        host: configuredHost,
-        resolvedHost: host,
-        port,
-        secure,
-      });
-    }
+    const ipv4Addresses = await dns.resolve4(configuredHost);
+    const host = ipv4Addresses[0] || configuredHost;
+    console.info("SMTP IPv4 resolution successful", {
+      host: configuredHost,
+      resolvedHost: host,
+      port,
+      secure,
+    });
 
     return nodemailer.createTransport({
       host,
