@@ -8,10 +8,7 @@ import {
   Notification,
   type NotificationMessage,
 } from "../../app/components/shared/ui";
-import {
-  setPlatformSettings,
-  usePlatformSettings,
-} from "../../app/data/platformSettingsStore";
+import { setPlatformSettings, usePlatformSettings } from "../../app/data/platformSettingsStore";
 import { changePassword } from "../../services/authService";
 import {
   getAdminSettings,
@@ -209,13 +206,10 @@ function GeneralSection() {
 function SecuritySection() {
   const platformSettings = usePlatformSettings();
   const [maintenance, setMaintenance] = useState(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState(
-    platformSettings.maintenanceMessage
-  );
+  const [maintenanceMessage, setMaintenanceMessage] = useState(platformSettings.maintenanceMessage);
   const [maintenanceDraft, setMaintenanceDraft] = useState("");
   const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
   const [maintenanceSaving, setMaintenanceSaving] = useState(false);
-  const [maintenanceSaved, setMaintenanceSaved] = useState(false);
   const [current, setCurrent] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -274,9 +268,7 @@ function SecuritySection() {
       setMaintenance(response.data.maintenanceMode);
       setMaintenanceMessage(response.data.maintenanceMessage);
       setPlatformSettings(response.data);
-      setMaintenanceSaved(true);
       setNotification({ type: "success", text: response.message });
-      setTimeout(() => setMaintenanceSaved(false), 3000);
       return true;
     } catch (error) {
       if (rollbackMaintenance !== undefined) {

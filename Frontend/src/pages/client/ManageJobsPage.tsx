@@ -271,27 +271,12 @@ function formatApplicationDate(date?: string | null) {
   });
 }
 
-function getInitials(name?: string) {
-  if (!name) return "ST";
-
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
-
 function getSuspensionReason(job: Job) {
   if (job.moderationReason === "Other" && job.customModerationReason) {
     return job.customModerationReason;
   }
 
   return job.moderationReason || "Not provided";
-}
-
-function isStudentVerified(student: ApplicantCard["student"] | ApplicationDetails["student"]) {
-  return student?.verification.status === "approved" || Boolean(student?.verification.verifiedAt);
 }
 
 function mapApplicantFromApi(applicant: ApplicantCard): Applicant {

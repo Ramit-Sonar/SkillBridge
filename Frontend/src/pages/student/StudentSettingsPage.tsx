@@ -21,7 +21,6 @@ import {
   VerificationLoadingMessage,
   VerificationRejectionReason,
   VerificationStatusCard,
-  type VerificationDisplayStatus,
   type VerificationStatusValue,
 } from "../../app/components/shared/VerificationStatusCard";
 import { PasswordChangeForm } from "../../app/components/shared/PasswordChangeForm";
@@ -427,7 +426,7 @@ function ProfileSection({ onNotify }: { onNotify: (message: NotificationMessage)
     setSaved(false);
 
     try {
-      const accountResponse = await updateAccountDetails({
+      await updateAccountDetails({
         fullName: displayName,
         email: currentUser?.email ?? "",
       });
