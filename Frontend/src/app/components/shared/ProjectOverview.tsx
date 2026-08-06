@@ -1,7 +1,7 @@
-import { Calendar, Clock, MessageSquare, Tag } from "lucide-react";
-import { PROJECT_STATUS_CFG, type ProjectStatus } from "../../data/projects";
+import { useRef } from "react";
+import { Clock, MessageSquare } from "lucide-react";
+import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
-import { StatusBadge } from "./ui";
 
 type ProjectOverviewPerson = {
   name: string;
@@ -27,17 +27,58 @@ type ProjectOverviewProps = {
   profileAction?: React.ReactNode;
 };
 
-// Keeps each project state metric visually consistent across both workspace roles.
-function StateItem({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-slate-50 rounded-xl p-3 border border-black/[0.04] min-w-0">
-      <p className="text-slate-400 font-semibold" style={{ fontSize: "0.62rem" }}>
-        {label}
-      </p>
-      <div className="mt-1 min-w-0">{children}</div>
-    </div>
-  );
-}
+type ProjectMessagePreview = {
+  id: string;
+  senderRole: "student" | "client";
+  senderName: string;
+  message: string;
+  timestamp: string;
+};
+
+const projectMessagePreviews: ProjectMessagePreview[] = [
+  {
+    id: "msg-1",
+    senderRole: "client",
+    senderName: "Client",
+    message: "Please use the brand blue from the reference file for the primary buttons.",
+    timestamp: "10:15 AM",
+  },
+  {
+    id: "msg-2",
+    senderRole: "student",
+    senderName: "Student",
+    message: "Got it. I will update the first draft and share the preview today.",
+    timestamp: "10:22 AM",
+  },
+  {
+    id: "msg-3",
+    senderRole: "client",
+    senderName: "Client",
+    message: "Can you also make the dashboard cards easier to scan on mobile?",
+    timestamp: "11:05 AM",
+  },
+  {
+    id: "msg-4",
+    senderRole: "student",
+    senderName: "Student",
+    message: "Yes, I will adjust the card spacing without changing the layout.",
+    timestamp: "11:18 AM",
+  },
+  {
+    id: "msg-5",
+    senderRole: "student",
+    senderName: "Student",
+    message: "Latest files are ready for review in the deliverables tab.",
+    timestamp: "1:40 PM",
+  },
+  {
+    id: "msg-6",
+    senderRole: "client",
+    senderName: "Client",
+    message: "Thanks, I will review them and send feedback before evening.",
+    timestamp: "2:10 PM",
+  },
+];
 
 export function ProjectOverview({
   project,
@@ -51,37 +92,67 @@ export function ProjectOverview({
   const partner = project.partner;
   const partnerRole = role === "student" ? "Client" : "Student";
   const lastActivity = formatProjectRelativeDate(lastUpdated);
+  const messagesRef = useRef<HTMLElement | null>(null);
+  const latestMessages = projectMessagePreviews.slice(-6);
+
+  const handleMessageClick = () => {
+    messagesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    messagesRef.current?.focus({ preventScroll: true });
+  };
 
   return (
     <div className="grid lg:grid-cols-3 gap-4 items-start">
-      <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4">
+      <section
+        ref={messagesRef}
+        tabIndex={-1}
+        className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4 outline-none focus:border-blue-200 focus:ring-4 focus:ring-blue-50"
+      >
         <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
-          Project State
+          Project Messages
         </h2>
-        <div className="grid sm:grid-cols-3 lg:grid-cols-1 gap-3">
-          <StateItem label="Current Status">
-            <StatusBadge config={PROJECT_STATUS_CFG[status]} />
-          </StateItem>
-          <StateItem label="Started">
-            <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span style={{ fontSize: "0.76rem" }}>{project.startedAt}</span>
+        <div className="bg-slate-50 rounded-xl border border-black/[0.04] p-3 max-h-[254px] overflow-y-auto flex flex-col gap-2.5">
+          {latestMessages.length > 0 ? (
+            latestMessages.map((message) => {
+              const isCurrentViewer = message.senderRole === role;
+
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${isCurrentViewer ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[86%] rounded-2xl px-3 py-2 border ${
+                      isCurrentViewer
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-slate-700 border-black/[0.06]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span
+                        className={isCurrentViewer ? "text-blue-50" : "text-slate-500"}
+                        style={{ fontSize: "0.62rem", fontWeight: 700 }}
+                      >
+                        {message.senderName}
+                      </span>
+                      <span
+                        className={isCurrentViewer ? "text-blue-100" : "text-slate-400"}
+                        style={{ fontSize: "0.6rem" }}
+                      >
+                        {message.timestamp}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "0.72rem", lineHeight: 1.45 }}>{message.message}</p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="min-h-[190px] flex items-center justify-center text-center">
+              <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
+                No messages yet. Start discussing your project.
+              </p>
             </div>
-          </StateItem>
-          <StateItem label={status === "completed" ? "Completed" : "Deadline"}>
-            <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span style={{ fontSize: "0.76rem" }}>
-                {status === "completed" ? project.completedAt : project.deadline}
-              </span>
-            </div>
-          </StateItem>
-          <StateItem label="Budget">
-            <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
-              <Tag className="w-3.5 h-3.5 text-slate-400" />
-              <span style={{ fontSize: "0.76rem" }}>Rs. {project.budget}</span>
-            </div>
-          </StateItem>
+          )}
         </div>
       </section>
 
@@ -106,35 +177,48 @@ export function ProjectOverview({
         <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
           Project Partner
         </h2>
-        {partner ? (
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0 overflow-hidden">
-              {partner.avatar ? (
-                <img
-                  src={partner.avatar}
-                  alt={partner.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span style={{ fontSize: "0.78rem" }}>{partner.initials}</span>
-              )}
+        <div className="flex flex-col gap-3">
+          {partner ? (
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0 overflow-hidden">
+                {partner.avatar ? (
+                  <img
+                    src={partner.avatar}
+                    alt={partner.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span style={{ fontSize: "0.78rem" }}>{partner.initials}</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p
+                  className="text-slate-900 font-semibold truncate"
+                  style={{ fontSize: "0.86rem" }}
+                >
+                  {partner.name}
+                </p>
+                <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
+                  {partnerRole}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-slate-900 font-semibold truncate" style={{ fontSize: "0.86rem" }}>
-                {partner.name}
-              </p>
-              <p className="text-slate-400" style={{ fontSize: "0.68rem" }}>
-                {partnerRole}
+          ) : (
+            <div className="bg-slate-50 border border-black/[0.04] rounded-xl p-3">
+              <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
+                Partner information is unavailable.
               </p>
             </div>
-          </div>
-        ) : (
-          <div className="bg-slate-50 border border-black/[0.04] rounded-xl p-3">
-            <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
-              Partner information is unavailable.
-            </p>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={handleMessageClick}
+            className="w-full flex items-center justify-center gap-2 bg-white text-blue-600 font-semibold py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors"
+            style={{ fontSize: "0.82rem" }}
+          >
+            Message
+          </button>
+        </div>
         <div
           title={lastUpdated}
           className="flex items-center gap-2 text-slate-500 bg-slate-50 rounded-xl p-3 border border-black/[0.04]"
