@@ -53,11 +53,11 @@ export function StudentSummaryCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
             style={{ fontSize: "0.65rem" }}
           >
             {avatarUrl ? (
-              <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+              <img src={avatarUrl} alt={name} className="w-full h-full rounded-full object-cover" />
             ) : (
               initials
             )}
