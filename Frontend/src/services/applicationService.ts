@@ -63,6 +63,7 @@ export type StudentSummary = {
   verification: {
     status: string | null;
     verifiedAt: string | null;
+    collegeName?: string;
   };
   profile: {
     bio?: string;

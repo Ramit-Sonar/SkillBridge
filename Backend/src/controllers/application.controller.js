@@ -260,7 +260,7 @@ const getJobApplications = asyncHandler(async (req, res) => {
       )
       .lean(),
     Verification.find({ user: { $in: studentIds }, type: "student" })
-      .select("user status verifiedAt")
+      .select("user status verifiedAt collegeName")
       .lean(),
     getStudentCompletedProjectProfileMap(studentIds),
     getStudentReviewProfileMap(studentIds),
@@ -366,7 +366,7 @@ const getApplicationById = asyncHandler(async (req, res) => {
       : null,
     studentId
       ? Verification.findOne({ user: studentId, type: "student" })
-          .select("status verifiedAt")
+          .select("status verifiedAt collegeName")
           .lean()
       : null,
     application.job?.client ? buildClientSummary(application.job.client) : null,

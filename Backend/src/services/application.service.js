@@ -25,44 +25,56 @@ export const buildStudentSummary = ({
   studentVerification,
   studentProjectProfile,
   studentReviewProfile,
-}) => ({
-  studentId: student._id,
-  fullName: student.fullName,
-  avatar: student.avatar,
-  profileCompleted: student.profileCompleted,
-  statistics: {
-    averageRating: studentReviewProfile?.ratingSummary?.averageRating || 0,
-    reviewCount: studentReviewProfile?.ratingSummary?.reviewCount || 0,
-    ratingDistribution: studentReviewProfile?.ratingSummary
-      ?.ratingDistribution || {
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
+}) => {
+  const education = studentProfile?.education || "";
+  const verifiedUniversity = studentVerification?.collegeName || "";
+  const profileUniversity = studentProfile?.university || "";
+  const university =
+    profileUniversity && profileUniversity !== education
+      ? profileUniversity
+      : verifiedUniversity || profileUniversity;
+
+  return {
+    studentId: student._id,
+    fullName: student.fullName,
+    avatar: student.avatar,
+    profileCompleted: student.profileCompleted,
+    statistics: {
+      averageRating: studentReviewProfile?.ratingSummary?.averageRating || 0,
+      reviewCount: studentReviewProfile?.ratingSummary?.reviewCount || 0,
+      ratingDistribution: studentReviewProfile?.ratingSummary
+        ?.ratingDistribution || {
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+      },
+      completedProjectsCount:
+        studentProjectProfile?.completedProjectsCount || 0,
     },
-    completedProjectsCount: studentProjectProfile?.completedProjectsCount || 0,
-  },
-  verification: {
-    status: studentVerification?.status || null,
-    verifiedAt: studentVerification?.verifiedAt || null,
-  },
-  profile: {
-    bio: studentProfile?.bio || "",
-    education: studentProfile?.education || "",
-    university: studentProfile?.university || "",
-    skills: buildProfileSkillList(
-      studentProfile?.skills,
-      studentProfile?.verifiedSkills
-    ),
-    github: studentProfile?.github || "",
-    linkedin: studentProfile?.linkedin || "",
-    portfolio: studentProfile?.portfolio || "",
-    certificates: studentProfile?.certificates || [],
-  },
-  completedProjects: studentProjectProfile?.completedProjects || [],
-  latestReviews: studentReviewProfile?.latestReviews || [],
-});
+    verification: {
+      status: studentVerification?.status || null,
+      verifiedAt: studentVerification?.verifiedAt || null,
+      collegeName: verifiedUniversity,
+    },
+    profile: {
+      bio: studentProfile?.bio || "",
+      education,
+      university,
+      skills: buildProfileSkillList(
+        studentProfile?.skills,
+        studentProfile?.verifiedSkills
+      ),
+      github: studentProfile?.github || "",
+      linkedin: studentProfile?.linkedin || "",
+      portfolio: studentProfile?.portfolio || "",
+      certificates: studentProfile?.certificates || [],
+    },
+    completedProjects: studentProjectProfile?.completedProjects || [],
+    latestReviews: studentReviewProfile?.latestReviews || [],
+  };
+};
 
 export const buildApplicantSummary = ({
   application,
@@ -135,7 +147,13 @@ export const buildApplicationDetails = ({
         profile: {
           bio: studentProfile?.bio || "",
           education: studentProfile?.education || "",
-          university: studentProfile?.university || "",
+          university:
+            studentProfile?.university &&
+            studentProfile.university !== studentProfile?.education
+              ? studentProfile.university
+              : studentVerification?.collegeName ||
+                studentProfile?.university ||
+                "",
           skills: buildProfileSkillList(
             studentProfile?.skills,
             studentProfile?.verifiedSkills

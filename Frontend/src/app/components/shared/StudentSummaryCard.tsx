@@ -5,6 +5,7 @@ import { Star, ShieldCheck, CheckCircle } from "lucide-react";
 export interface StudentSummaryCardProps {
   initials: string;
   name: string;
+  avatarUrl?: string;
   headline: string;
   education?: string;
   verified: boolean;
@@ -25,6 +26,7 @@ export interface StudentSummaryCardProps {
 export function StudentSummaryCard({
   initials,
   name,
+  avatarUrl,
   headline,
   education,
   verified,
@@ -51,10 +53,14 @@ export function StudentSummaryCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0"
+            className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
             style={{ fontSize: "0.65rem" }}
           >
-            {initials}
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">

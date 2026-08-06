@@ -293,9 +293,9 @@ function mapApplicantFromApi(applicant: ApplicantCard): Applicant {
     id: applicant.applicationId,
     name: profileData.name,
     initials: profileData.initials,
-    education: profileData.education || university,
+    education: profileData.education || "",
     university,
-    headline: profileData.headline || university,
+    headline: university,
     verified: profileData.verified,
     skills: profileData.skills,
     rating: profileData.rating ?? 0,
@@ -326,9 +326,9 @@ function mapApplicantDetailsFromApi(application: ApplicationDetails): Applicant 
     id: application.applicationId,
     name: profileData.name,
     initials: profileData.initials,
-    education: profileData.education || university,
+    education: profileData.education || "",
     university,
-    headline: profileData.headline || university,
+    headline: university,
     verified: profileData.verified,
     skills: profileData.skills,
     rating: profileData.rating ?? 0,
@@ -1045,6 +1045,7 @@ function ApplicationsPanel({
                     key={applicant.id}
                     initials={applicant.initials}
                     name={applicant.name}
+                    avatarUrl={applicant.avatarUrl}
                     education={applicant.education}
                     headline={applicant.headline}
                     verified={applicant.verified}
