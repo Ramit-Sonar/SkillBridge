@@ -41,6 +41,20 @@ const formatMessageTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
+const DISCUSSION_POLL_INTERVAL_MS = 5000;
+
+const didMessageListChange = (
+  currentMessages: ProjectMessage[],
+  nextMessages: ProjectMessage[]
+) => {
+  if (currentMessages.length !== nextMessages.length) return true;
+
+  const currentLastMessage = currentMessages[currentMessages.length - 1];
+  const nextLastMessage = nextMessages[nextMessages.length - 1];
+
+  return currentLastMessage?.id !== nextLastMessage?.id;
+};
+
 export function ProjectOverview({
   projectId,
   project,
@@ -58,6 +72,8 @@ export function ProjectOverview({
   const messagesRef = useRef<HTMLElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
+  const mountedRef = useRef(false);
+  const messagesSnapshotRef = useRef<ProjectMessage[]>([]);
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
   const [messagesLoading, setMessagesLoading] = useState(true);
@@ -74,24 +90,34 @@ export function ProjectOverview({
     }, 0);
   };
 
+  const setDiscussionMessages = (nextMessages: ProjectMessage[]) => {
+    messagesSnapshotRef.current = nextMessages;
+    setMessages(nextMessages);
+  };
+
   const loadMessages = async (showLoading = true) => {
     if (showLoading) setMessagesLoading(true);
     setMessagesError("");
 
     try {
       const response = await getProjectMessages(projectId);
-      setMessages(response.data.messages);
+
+      if (!mountedRef.current) return;
+
+      setDiscussionMessages(response.data.messages);
       scrollMessagesToBottom();
     } catch (error) {
+      if (!mountedRef.current) return;
+
       const message = error instanceof Error ? error.message : "Failed to fetch project messages.";
       setMessagesError(message);
     } finally {
-      if (showLoading) setMessagesLoading(false);
+      if (showLoading && mountedRef.current) setMessagesLoading(false);
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
+    mountedRef.current = true;
 
     const fetchMessages = async () => {
       setMessagesLoading(true);
@@ -100,25 +126,49 @@ export function ProjectOverview({
       try {
         const response = await getProjectMessages(projectId);
 
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
 
-        setMessages(response.data.messages);
+        setDiscussionMessages(response.data.messages);
         scrollMessagesToBottom();
       } catch (error) {
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
 
         const message =
           error instanceof Error ? error.message : "Failed to fetch project messages.";
         setMessagesError(message);
       } finally {
-        if (isMounted) setMessagesLoading(false);
+        if (mountedRef.current) setMessagesLoading(false);
+      }
+    };
+
+    const pollMessages = async () => {
+      try {
+        const response = await getProjectMessages(projectId);
+
+        if (!mountedRef.current) return;
+
+        const nextMessages = response.data.messages;
+
+        if (!didMessageListChange(messagesSnapshotRef.current, nextMessages)) return;
+
+        setMessagesError("");
+        setDiscussionMessages(nextMessages);
+        scrollMessagesToBottom();
+      } catch (error) {
+        if (!mountedRef.current || messagesSnapshotRef.current.length > 0) return;
+
+        const message =
+          error instanceof Error ? error.message : "Failed to fetch project messages.";
+        setMessagesError(message);
       }
     };
 
     fetchMessages();
+    const pollingIntervalId = window.setInterval(pollMessages, DISCUSSION_POLL_INTERVAL_MS);
 
     return () => {
-      isMounted = false;
+      mountedRef.current = false;
+      window.clearInterval(pollingIntervalId);
     };
   }, [projectId]);
 
@@ -140,13 +190,15 @@ export function ProjectOverview({
       await loadMessages(false);
       scrollMessagesToBottom();
     } catch (error) {
+      if (!mountedRef.current) return;
+
       const message = error instanceof Error ? error.message : "Failed to send project message.";
       if (messages.length === 0) {
         setMessagesError(message);
       }
       onNotify?.({ type: "error", text: message });
     } finally {
-      setMessageSending(false);
+      if (mountedRef.current) setMessageSending(false);
     }
   };
 
