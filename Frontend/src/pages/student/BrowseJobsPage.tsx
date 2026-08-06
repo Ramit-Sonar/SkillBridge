@@ -10,6 +10,7 @@ import {
   User,
   Clock,
   Tag,
+  ChevronDown,
   ChevronRight,
   Globe,
   Layout,
@@ -767,39 +768,68 @@ function EmptyState({ onClear }: { onClear: () => void }) {
   );
 }
 
-// Filter chip
+// Category dropdown
 
-function FilterChip({
-  label,
-  active,
-  onClick,
-  color = "#2563EB",
-  bg = "#EFF6FF",
+function CategoryDropdown({
+  value,
+  onChange,
 }: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  color?: string;
-  bg?: string;
+  value: JobCategoryId | "all";
+  onChange: (value: JobCategoryId | "all") => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = value === "all" ? "All" : CATEGORY_CONFIG[value].label;
+  const options = [
+    { value: "all" as const, label: "All" },
+    ...Object.entries(CATEGORY_CONFIG).map(([categoryValue, config]) => ({
+      value: categoryValue as JobCategoryId,
+      label: config.label,
+    })),
+  ];
+
   return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      whileTap={{ scale: 0.94 }}
-      transition={{ duration: 0.12 }}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-semibold transition-all duration-200 whitespace-nowrap"
-      style={{
-        background: active ? bg : "#F8FAFC",
-        color: active ? color : "#64748B",
-        borderColor: active ? color : "#E2E8F0",
-        boxShadow: active ? `0 0 0 2px ${color}18` : "none",
-        fontSize: "0.75rem",
-      }}
-    >
-      {active && <CheckCircle className="w-3 h-3" style={{ color }} />}
-      {label}
-    </motion.button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex min-w-[90px] items-center justify-between gap-2 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 font-semibold hover:border-slate-300 transition-colors"
+        style={{ fontSize: "0.82rem" }}
+      >
+        <span className="whitespace-nowrap">{selectedLabel}</span>
+        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: -4 }}
+            transition={{ duration: 0.14 }}
+            className="absolute right-0 top-full mt-1 w-52 bg-white border border-black/[0.07] rounded-xl shadow-lg z-20 overflow-hidden py-1"
+          >
+            {options.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3.5 py-2 text-left transition-colors ${
+                  value === option.value
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-slate-600 hover:bg-slate-50"
+                }`}
+                style={{ fontSize: "0.8rem" }}
+              >
+                {option.label}
+                {value === option.value && <CheckCircle className="w-3.5 h-3.5" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -873,9 +903,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   const currentUser = useDashboardCurrentUser();
   const suspended = !isGuest && isAccountSuspended(currentUser);
   const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [complexity, setComplexity] = useState<string[]>([]);
-  const [durations, setDurations] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<JobCategoryId | "all">("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
   const [submittedJobIds, setSubmittedJobIds] = useState<string[]>([]);
@@ -1016,9 +1044,6 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     });
   };
 
-  const toggleArr = (arr: string[], setArr: (a: string[]) => void, v: string) =>
-    setArr(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
-
   const openJobs = useMemo(() => jobs.filter((job) => (job.status ?? "open") === "open"), [jobs]);
 
   const filtered = useMemo(() => {
@@ -1028,22 +1053,15 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
       const matchesQuery =
         !q ||
         job.title.toLowerCase().includes(q) ||
-        job.skills.some((s) => s.toLowerCase().includes(q)) ||
-        job.description.toLowerCase().includes(q);
-      const matchesCat = !categories.length || categories.includes(job.category);
-      const matchesComp = !complexity.length || complexity.includes(job.complexity);
-      const matchesDur = !durations.length || durations.includes(job.duration);
-      return matchesQuery && matchesCat && matchesComp && matchesDur;
+        CATEGORY_CONFIG[job.category]?.label.toLowerCase().includes(q);
+      const matchesCategory = categoryFilter === "all" || job.category === categoryFilter;
+      return matchesQuery && matchesCategory;
     });
-  }, [query, categories, complexity, durations, openJobs]);
-
-  const hasFilters = query || categories.length || complexity.length || durations.length;
+  }, [query, categoryFilter, openJobs]);
 
   const clearAll = () => {
     setQuery("");
-    setCategories([]);
-    setComplexity([]);
-    setDurations([]);
+    setCategoryFilter("all");
   };
 
   return (
@@ -1075,113 +1093,20 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
             </div>
           )}
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search jobs by title, skill, or keyword..."
-              className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-12 py-4 text-slate-900 placeholder-slate-300 outline-none transition-all duration-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 focus:shadow-lg shadow-sm"
-              style={{ fontSize: "0.9rem" }}
-            />
-            <AnimatePresence>
-              {query && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={() => setQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Filters */}
-          <div className="bg-white border border-black/[0.05] rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-            {/* Categories */}
-            <div className="flex items-start gap-3">
-              <span
-                className="text-slate-400 font-semibold pt-1 shrink-0"
-                style={{ fontSize: "0.7rem", width: 72 }}
-              >
-                Category
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(CATEGORY_CONFIG).map(([val, cfg]) => (
-                  <FilterChip
-                    key={val}
-                    label={cfg.label}
-                    active={categories.includes(val)}
-                    onClick={() => toggleArr(categories, setCategories, val)}
-                    color={cfg.color}
-                    bg={cfg.bg}
-                  />
-                ))}
-              </div>
+          {/* Search and category filter */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search jobs by title or category..."
+                className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+                style={{ fontSize: "0.85rem" }}
+              />
             </div>
-
-            <div className="border-t border-black/[0.04]" />
-
-            {/* Complexity + Duration */}
-            <div className="flex flex-wrap gap-6">
-              <div className="flex items-center gap-3">
-                <span
-                  className="text-slate-400 font-semibold shrink-0"
-                  style={{ fontSize: "0.7rem", width: 72 }}
-                >
-                  Complexity
-                </span>
-                <div className="flex gap-2">
-                  {[
-                    { v: "small", l: "Small Task" },
-                    { v: "medium", l: "Medium Task" },
-                  ].map((o) => (
-                    <FilterChip
-                      key={o.v}
-                      label={o.l}
-                      active={complexity.includes(o.v)}
-                      onClick={() => toggleArr(complexity, setComplexity, o.v)}
-                    />
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span
-                  className="text-slate-400 font-semibold pt-1 shrink-0"
-                  style={{ fontSize: "0.7rem", width: 60 }}
-                >
-                  Duration
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {DURATIONS.map((d) => (
-                    <FilterChip
-                      key={d.value}
-                      label={d.label}
-                      active={durations.includes(d.value)}
-                      onClick={() => toggleArr(durations, setDurations, d.value)}
-                      color="#14B8A6"
-                      bg="#F0FDFA"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Clear */}
-            {hasFilters && (
-              <button
-                onClick={clearAll}
-                className="self-end text-red-400 hover:text-red-500 font-semibold transition-colors"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Clear all
-              </button>
-            )}
+            <CategoryDropdown value={categoryFilter} onChange={setCategoryFilter} />
           </div>
 
           {/* Results header */}
