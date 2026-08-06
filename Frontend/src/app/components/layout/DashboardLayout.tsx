@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { createContext, useContext } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -364,7 +364,9 @@ function Sidebar({
 
           return (
             <div key={item.id} className="relative group/nav">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.12 }}
                 onClick={() => handleNav(item.id)}
                 className={`w-full flex items-center rounded-xl text-left transition-all duration-200 overflow-hidden ${
                   expanded ? "px-3 py-2.5 gap-3" : "px-0 py-2.5 justify-center"
@@ -423,7 +425,7 @@ function Sidebar({
                     />
                   )}
                 </AnimatePresence>
-              </button>
+              </motion.button>
 
               {!expanded && renderTooltip(item.label)}
             </div>
@@ -438,7 +440,9 @@ function Sidebar({
           const Icon = item.icon;
           return (
             <div key={item.id} className="relative group/nav">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.12 }}
                 onClick={() => handleNav(item.id)}
                 className={`w-full flex items-center rounded-xl text-left transition-all duration-200 overflow-hidden ${
                   expanded ? "px-3 py-2.5 gap-3" : "px-0 py-2.5 justify-center"
@@ -469,7 +473,7 @@ function Sidebar({
                     </motion.span>
                   )}
                 </AnimatePresence>
-              </button>
+              </motion.button>
 
               {!expanded && renderTooltip(item.label, false)}
             </div>
@@ -797,6 +801,7 @@ export function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { platformName } = usePlatformSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState<DashboardNavId>(activeNav as DashboardNavId);
@@ -914,55 +919,62 @@ export function DashboardLayout({
             onLogout={handleLogout}
           />
           <main className="flex-1 overflow-y-auto" data-dashboard-scroll-container>
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-              className="p-6 lg:p-8 max-w-6xl"
-            >
-              {showSuspensionNotice && (
-                <div className="mb-5 bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white border border-red-200 flex items-center justify-center shrink-0">
-                    <ShieldAlert className="w-5 h-5 text-red-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="text-red-700 font-bold" style={{ fontSize: "0.95rem" }}>
-                      Account Suspended
-                    </h2>
-                    <p
-                      className="text-red-600 mt-1 leading-relaxed"
-                      style={{ fontSize: "0.82rem" }}
-                    >
-                      Your {platformName} account has been temporarily suspended. Some marketplace
-                      features have been disabled. If you believe this is a mistake, please contact
-                      the administrator.
-                    </p>
-                    {currentUser?.suspensionReason && (
-                      <div className="mt-3 bg-white border border-red-200 rounded-xl px-3 py-2">
-                        <p className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
-                          Suspension Reason
-                        </p>
-                        <p
-                          className="text-red-700 font-semibold mt-0.5"
-                          style={{ fontSize: "0.78rem" }}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 16, scale: 0.995 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.998 }}
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                className="p-6 lg:p-8 max-w-6xl"
+              >
+                {showSuspensionNotice && (
+                  <div className="mb-5 bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-red-200 flex items-center justify-center shrink-0">
+                      <ShieldAlert className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-red-700 font-bold" style={{ fontSize: "0.95rem" }}>
+                        Account Suspended
+                      </h2>
+                      <p
+                        className="text-red-600 mt-1 leading-relaxed"
+                        style={{ fontSize: "0.82rem" }}
+                      >
+                        Your {platformName} account has been temporarily suspended. Some marketplace
+                        features have been disabled. If you believe this is a mistake, please
+                        contact the administrator.
+                      </p>
+                      {currentUser?.suspensionReason && (
+                        <div className="mt-3 bg-white border border-red-200 rounded-xl px-3 py-2">
+                          <p className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
+                            Suspension Reason
+                          </p>
+                          <p
+                            className="text-red-700 font-semibold mt-0.5"
+                            style={{ fontSize: "0.78rem" }}
+                          >
+                            {currentUser.suspensionReason}
+                          </p>
+                        </div>
+                      )}
+                      <div className="mt-3 inline-flex items-center gap-2 bg-white border border-red-200 rounded-xl px-3 py-1.5">
+                        <span
+                          className="text-red-400 font-semibold"
+                          style={{ fontSize: "0.68rem" }}
                         >
-                          {currentUser.suspensionReason}
-                        </p>
+                          Status
+                        </span>
+                        <span className="text-red-700 font-bold" style={{ fontSize: "0.72rem" }}>
+                          Suspended
+                        </span>
                       </div>
-                    )}
-                    <div className="mt-3 inline-flex items-center gap-2 bg-white border border-red-200 rounded-xl px-3 py-1.5">
-                      <span className="text-red-400 font-semibold" style={{ fontSize: "0.68rem" }}>
-                        Status
-                      </span>
-                      <span className="text-red-700 font-bold" style={{ fontSize: "0.72rem" }}>
-                        Suspended
-                      </span>
                     </div>
                   </div>
-                </div>
-              )}
-              {children}
-            </motion.div>
+                )}
+                {children}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
         <Notification message={notification} onClose={() => setNotification(null)} />

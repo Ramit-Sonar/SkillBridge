@@ -353,6 +353,7 @@ function ViewDetailsPanel({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 flex items-center justify-center p-4"
         role="presentation"
         onClick={(e) => {
@@ -360,10 +361,10 @@ function ViewDetailsPanel({
         }}
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 14 }}
+          initial={{ opacity: 0, scale: 0.94, y: 24 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 10 }}
-          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          exit={{ opacity: 0, scale: 0.97, y: 18 }}
+          transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
           className="bg-slate-50 rounded-2xl shadow-xl w-full max-w-4xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
           role="dialog"
           aria-modal="true"
@@ -382,15 +383,17 @@ function ViewDetailsPanel({
                 Applied {app.appliedAt}
               </p>
             </div>
-            <button
+            <motion.button
               ref={closeButtonRef}
               type="button"
+              whileTap={{ scale: 0.92 }}
+              transition={{ duration: 0.12 }}
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
               aria-label="Close application workspace"
             >
               <X className="w-4 h-4" />
-            </button>
+            </motion.button>
           </div>
 
           <div className="bg-white border-b border-black/[0.05] px-5 py-3 flex gap-2 shrink-0">
@@ -547,14 +550,16 @@ function AppCard({
         </div>
 
         <div className="flex sm:flex-col items-center sm:items-end gap-2 shrink-0">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            transition={{ duration: 0.12 }}
             onClick={() => onViewDetails(app.id)}
             disabled={loadingDetails}
             className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-xl border border-slate-200 hover:border-blue-200 transition-all duration-200 disabled:opacity-60"
             style={{ fontSize: "0.75rem" }}
           >
             {loadingDetails ? "Loading..." : "View Details"} <ChevronRight className="w-3 h-3" />
-          </button>
+          </motion.button>
 
           {app.status === "pending" && (
             <button
