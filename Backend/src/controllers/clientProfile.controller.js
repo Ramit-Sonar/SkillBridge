@@ -10,7 +10,9 @@ const getClientProfile = asyncHandler(async (req, res) => {
   const profile = await ClientProfile.findOne({ user: req.user._id });
 
   if (!profile) {
-    throw new ApiError(404, "Client profile not found");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Client profile is empty."));
   }
 
   return res
