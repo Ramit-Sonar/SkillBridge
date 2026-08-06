@@ -171,6 +171,146 @@ function SelectField({
   );
 }
 
+function CategorySelector({
+  value,
+  onChange,
+  hasError,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  hasError?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectedCategory = CATEGORIES.find((category) => category.value === value);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return CATEGORIES;
+
+    const q = query.toLowerCase();
+    return CATEGORIES.filter((category) => category.label.toLowerCase().includes(q));
+  }, [query]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const selectCategory = (categoryValue: string) => {
+    onChange(categoryValue);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <div ref={dropdownRef} className="flex flex-col gap-3">
+      {selectedCategory && (
+        <div className="flex flex-wrap gap-2">
+          <motion.span
+            key={selectedCategory.value}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.18 }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold border"
+            style={{
+              background: CHIP_COLORS[0].bg,
+              color: CHIP_COLORS[0].color,
+              borderColor: CHIP_COLORS[0].border,
+              fontSize: "0.75rem",
+            }}
+          >
+            {selectedCategory.label}
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="hover:opacity-60 transition-opacity"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </motion.span>
+        </div>
+      )}
+
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          value={query}
+          onClick={() => setOpen(true)}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          className={`w-full bg-slate-50 border rounded-xl pl-10 pr-4 py-3 text-slate-900 placeholder-slate-300 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 ${
+            hasError ? "border-red-300" : "border-slate-200"
+          }`}
+          style={{ fontSize: "0.875rem" }}
+          placeholder="Search categories..."
+        />
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10"
+          >
+            <div className="max-h-64 overflow-y-auto pr-1">
+              {filtered.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  {filtered.map((category) => {
+                    const selected = category.value === value;
+                    const color = CHIP_COLORS[0];
+                    return (
+                      <motion.button
+                        key={category.value}
+                        type="button"
+                        onClick={() => selectCategory(category.value)}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ duration: 0.12 }}
+                        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-600"
+                        style={{
+                          background: selected ? color.bg : "transparent",
+                          color: selected ? color.color : undefined,
+                          fontSize: "0.82rem",
+                        }}
+                      >
+                        <span>{category.label}</span>
+                        {selected && (
+                          <CheckCircle className="w-4 h-4" style={{ color: color.color }} />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="px-3 py-4 text-slate-400" style={{ fontSize: "0.75rem" }}>
+                  No category found.
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // Skills selector
 
 function SkillSelector({
@@ -629,41 +769,11 @@ export default function PostJobPage() {
             {/* Category */}
             <div className="flex flex-col gap-1.5">
               <Label text="Category" required />
-              <div className="relative">
-                <select
-                  value={form.category}
-                  onChange={(e) => set("category")(e.target.value)}
-                  className={`w-full appearance-none bg-slate-50 border rounded-xl px-4 py-3 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 pr-10 ${form.category === "" ? "text-slate-300" : "text-slate-900"} ${errors.category ? "border-red-300" : "border-slate-200"}`}
-                  style={{ fontSize: "0.875rem" }}
-                >
-                  <option value="" disabled hidden>
-                    Select a category
-                  </option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none flex flex-col gap-0.5">
-                  <div
-                    className="w-0 h-0"
-                    style={{
-                      borderLeft: "3.5px solid transparent",
-                      borderRight: "3.5px solid transparent",
-                      borderBottom: "3.5px solid #94A3B8",
-                    }}
-                  />
-                  <div
-                    className="w-0 h-0"
-                    style={{
-                      borderLeft: "3.5px solid transparent",
-                      borderRight: "3.5px solid transparent",
-                      borderTop: "3.5px solid #94A3B8",
-                    }}
-                  />
-                </div>
-              </div>
+              <CategorySelector
+                value={form.category}
+                onChange={set("category")}
+                hasError={Boolean(errors.category)}
+              />
               {errors.category && (
                 <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
                   {errors.category}
