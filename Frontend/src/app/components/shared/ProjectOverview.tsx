@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { Clock, MessageSquare } from "lucide-react";
+import { useRef, useState } from "react";
+import { Clock, MessageSquare, Send } from "lucide-react";
 import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
 
@@ -93,11 +93,43 @@ export function ProjectOverview({
   const partnerRole = role === "student" ? "Client" : "Student";
   const lastActivity = formatProjectRelativeDate(lastUpdated);
   const messagesRef = useRef<HTMLElement | null>(null);
-  const latestMessages = projectMessagePreviews.slice(-6);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const messageInputRef = useRef<HTMLInputElement | null>(null);
+  const [messages, setMessages] = useState(projectMessagePreviews);
+  const [messageDraft, setMessageDraft] = useState("");
+  const latestMessages = messages.slice(-8);
 
   const handleMessageClick = () => {
     messagesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     messagesRef.current?.focus({ preventScroll: true });
+    messageInputRef.current?.focus({ preventScroll: true });
+  };
+
+  const handleSendMessage = () => {
+    const messageText = messageDraft.trim();
+    if (!messageText) return;
+
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: `draft-${Date.now()}`,
+        senderRole: role,
+        senderName: role === "client" ? "Client" : "Student",
+        message: messageText,
+        timestamp: new Intl.DateTimeFormat("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date()),
+      },
+    ]);
+    setMessageDraft("");
+
+    window.setTimeout(() => {
+      messageListRef.current?.scrollTo({
+        top: messageListRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 0);
   };
 
   return (
@@ -110,7 +142,10 @@ export function ProjectOverview({
         <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
           Project Messages
         </h2>
-        <div className="bg-slate-50 rounded-xl border border-black/[0.04] p-3 max-h-[254px] overflow-y-auto flex flex-col gap-2.5">
+        <div
+          ref={messageListRef}
+          className="bg-slate-50 rounded-xl border border-black/[0.04] p-3 max-h-[214px] overflow-y-auto flex flex-col gap-2.5"
+        >
           {latestMessages.length > 0 ? (
             latestMessages.map((message) => {
               const isCurrentViewer = message.senderRole === role;
@@ -153,6 +188,32 @@ export function ProjectOverview({
               </p>
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-2 bg-slate-50 rounded-xl border border-black/[0.06] px-3 py-2 focus-within:border-blue-200 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
+          <input
+            ref={messageInputRef}
+            type="text"
+            value={messageDraft}
+            onChange={(event) => setMessageDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            placeholder="Type a message..."
+            className="min-w-0 flex-1 bg-transparent text-slate-900 placeholder:text-slate-400 outline-none"
+            style={{ fontSize: "0.78rem" }}
+          />
+          <button
+            type="button"
+            onClick={handleSendMessage}
+            disabled={!messageDraft.trim()}
+            className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+            aria-label="Send message"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </button>
         </div>
       </section>
 
