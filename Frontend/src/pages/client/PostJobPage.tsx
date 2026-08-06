@@ -214,41 +214,19 @@ function CategorySelector({
 
   return (
     <div ref={dropdownRef} className="flex flex-col gap-3">
-      {selectedCategory && (
-        <div className="flex flex-wrap gap-2">
-          <motion.span
-            key={selectedCategory.value}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.18 }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold border"
-            style={{
-              background: CHIP_COLORS[0].bg,
-              color: CHIP_COLORS[0].color,
-              borderColor: CHIP_COLORS[0].border,
-              fontSize: "0.75rem",
-            }}
-          >
-            {selectedCategory.label}
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="hover:opacity-60 transition-opacity"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </motion.span>
-        </div>
-      )}
-
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
-          value={query}
-          onClick={() => setOpen(true)}
-          onFocus={() => setOpen(true)}
+          value={open ? query : selectedCategory?.label || ""}
+          onClick={() => {
+            setQuery("");
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setQuery("");
+            setOpen(true);
+          }}
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
