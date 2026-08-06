@@ -79,8 +79,10 @@ describe("Message Service", () => {
       },
     ];
 
+    const messageListQuery = createMessageListQuery(messages);
+
     projectFindByIdMock.mockReturnValue(createLeanQuery(project));
-    messageFindMock.mockReturnValue(createMessageListQuery(messages));
+    messageFindMock.mockReturnValue(messageListQuery);
 
     await expect(getProjectMessages(projectId, clientId)).resolves.toEqual([
       {
@@ -99,6 +101,7 @@ describe("Message Service", () => {
       },
     ]);
     expect(messageFindMock).toHaveBeenCalledWith({ project: projectId });
+    expect(messageListQuery.sort).toHaveBeenCalledWith({ createdAt: 1 });
   });
 
   test("rejects message access when the user is not assigned to the project", async () => {
@@ -159,6 +162,55 @@ describe("Message Service", () => {
       message: "Message is required",
     });
     expect(messageCreateMock).not.toHaveBeenCalled();
+  });
+
+  test("creates a trimmed message for an assigned student", async () => {
+    const createdAt = new Date("2026-08-06T10:00:00.000Z");
+    const createdMessage = {
+      _id: messageId,
+    };
+    const populatedMessage = {
+      _id: messageId,
+      project: projectId,
+      sender: {
+        _id: studentId,
+        fullName: "Student User",
+        avatar: "",
+        role: "student",
+      },
+      message: "Hello client",
+      isRead: false,
+      createdAt,
+      updatedAt: createdAt,
+    };
+
+    projectFindByIdMock.mockReturnValue(createLeanQuery(project));
+    messageCreateMock.mockResolvedValue(createdMessage);
+    messageFindByIdMock.mockReturnValue(
+      createPopulatedMessageQuery(populatedMessage)
+    );
+
+    await expect(
+      createProjectMessage({
+        projectId,
+        senderId: studentId,
+        message: "  Hello client  ",
+      })
+    ).resolves.toMatchObject({
+      id: messageId,
+      project: projectId,
+      message: "Hello client",
+      isRead: false,
+      sender: {
+        id: studentId,
+        role: "student",
+      },
+    });
+    expect(messageCreateMock).toHaveBeenCalledWith({
+      project: projectId,
+      sender: studentId,
+      message: "Hello client",
+    });
   });
 
   test("marks a message as read only after project access is verified", async () => {
