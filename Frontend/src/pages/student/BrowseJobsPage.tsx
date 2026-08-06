@@ -1052,6 +1052,27 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
         <div className="flex-1 min-w-0 flex flex-col gap-5">
           {!isGuest && <VerificationReminderCard />}
 
+          {!isGuest && (
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-slate-900" style={{ fontSize: "1.1rem", fontWeight: 800 }}>
+                  Browse Jobs
+                </h2>
+                <p className="text-slate-500 mt-0.5" style={{ fontSize: "0.82rem" }}>
+                  Find jobs that match your skills and availability.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                <span className="text-slate-900 font-bold" style={{ fontSize: "0.85rem" }}>
+                  {filtered.length}
+                </span>
+                <span className="text-slate-500" style={{ fontSize: "0.82rem" }}>
+                  jobs
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Search bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -1162,11 +1183,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
           </div>
 
           {/* Results header */}
-          <div className="flex items-center justify-between">
-            <p className="text-slate-500" style={{ fontSize: "0.82rem" }}>
-              <span className="text-slate-900 font-bold">{filtered.length}</span> job
-              {filtered.length !== 1 ? "s" : ""} found
-            </p>
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
               {(["grid", "list"] as const).map((v) => (
                 <button
