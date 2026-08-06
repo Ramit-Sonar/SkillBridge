@@ -274,7 +274,7 @@ export function ProjectOverview({
           ) : (
             <div className="min-h-[190px] flex items-center justify-center text-center">
               <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
-                Start your project discussion.
+                No messages yet. Start the discussion.
               </p>
             </div>
           )}
