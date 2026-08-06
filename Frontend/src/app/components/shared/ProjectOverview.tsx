@@ -69,9 +69,7 @@ export function ProjectOverview({
   const partner = project.partner;
   const partnerRole = role === "student" ? "Client" : "Student";
   const lastActivity = formatProjectRelativeDate(lastUpdated);
-  const messagesRef = useRef<HTMLElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null);
-  const messageInputRef = useRef<HTMLInputElement | null>(null);
   const mountedRef = useRef(false);
   const messagesSnapshotRef = useRef<ProjectMessage[]>([]);
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
@@ -172,12 +170,6 @@ export function ProjectOverview({
     };
   }, [projectId]);
 
-  const handleMessageClick = () => {
-    messagesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    messagesRef.current?.focus({ preventScroll: true });
-    messageInputRef.current?.focus({ preventScroll: true });
-  };
-
   const handleSendMessage = async () => {
     const messageText = messageDraft.trim();
     if (!messageText || messageSending) return;
@@ -205,7 +197,6 @@ export function ProjectOverview({
   return (
     <div className="grid lg:grid-cols-3 gap-4 items-start">
       <section
-        ref={messagesRef}
         tabIndex={-1}
         className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4 outline-none focus:border-blue-200 focus:ring-4 focus:ring-blue-50"
       >
@@ -255,13 +246,19 @@ export function ProjectOverview({
                         : "bg-white text-slate-700 border-black/[0.06]"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <span
-                        className={isCurrentViewer ? "text-blue-50" : "text-slate-500"}
-                        style={{ fontSize: "0.62rem", fontWeight: 700 }}
-                      >
-                        {senderName}
-                      </span>
+                    <div
+                      className={`flex items-center gap-3 mb-1 ${
+                        isCurrentViewer ? "justify-end" : "justify-between"
+                      }`}
+                    >
+                      {!isCurrentViewer && (
+                        <span
+                          className="text-slate-500"
+                          style={{ fontSize: "0.62rem", fontWeight: 700 }}
+                        >
+                          {senderName}
+                        </span>
+                      )}
                       <span
                         className={isCurrentViewer ? "text-blue-100" : "text-slate-400"}
                         style={{ fontSize: "0.6rem" }}
@@ -277,14 +274,13 @@ export function ProjectOverview({
           ) : (
             <div className="min-h-[190px] flex items-center justify-center text-center">
               <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
-                No messages yet. Start discussing your project.
+                Start your project discussion.
               </p>
             </div>
           )}
         </div>
         <div className="flex items-center gap-2 bg-slate-50 rounded-xl border border-black/[0.06] px-3 py-2 focus-within:border-blue-200 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
           <input
-            ref={messageInputRef}
             type="text"
             value={messageDraft}
             onChange={(event) => setMessageDraft(event.target.value)}
@@ -364,14 +360,6 @@ export function ProjectOverview({
               </p>
             </div>
           )}
-          <button
-            type="button"
-            onClick={handleMessageClick}
-            className="w-full flex items-center justify-center gap-2 bg-white text-blue-600 font-semibold py-2.5 rounded-xl border border-blue-200 hover:bg-blue-50 transition-colors"
-            style={{ fontSize: "0.82rem" }}
-          >
-            Message
-          </button>
         </div>
         <div
           title={lastUpdated}
