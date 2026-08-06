@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, useLocation } from "react-router";
 import {
@@ -25,6 +25,7 @@ import {
   Search,
   Plus,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 
 // Config
@@ -181,12 +182,28 @@ function SkillSelector({
   onChange: (s: string[]) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return ALL_SKILLS;
     const q = query.toLowerCase();
     return ALL_SKILLS.filter((s) => s.toLowerCase().includes(q));
   }, [query]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const toggle = (skill: string) => {
     if (skills.includes(skill)) onChange(skills.filter((s) => s !== skill));
@@ -213,7 +230,33 @@ function SkillSelector({
     query.trim() && !ALL_SKILLS.some((s) => s.toLowerCase() === query.toLowerCase().trim());
 
   return (
-    <div className="flex flex-col gap-3">
+    <div ref={dropdownRef} className="relative flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="w-full min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-left outline-none transition-all duration-200 hover:bg-white hover:border-blue-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900" style={{ fontSize: "0.84rem" }}>
+              {skills.length > 0
+                ? `${skills.length} skill${skills.length > 1 ? "s" : ""} selected`
+                : "Choose required skills"}
+            </p>
+            <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
+              Search, select, or add a custom skill
+            </p>
+          </div>
+          <motion.span
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </motion.span>
+        </div>
+      </button>
+
       {skills.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <AnimatePresence>
@@ -248,62 +291,79 @@ function SkillSelector({
           </AnimatePresence>
         </div>
       )}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKey}
-          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
-          style={{ fontSize: "0.875rem" }}
-          placeholder="Search or type a custom skill..."
-        />
-        {isCustom && (
-          <button
-            type="button"
-            onClick={addCustom}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors"
-            style={{ fontSize: "0.68rem" }}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute left-0 right-0 top-[58px] z-30 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10"
           >
-            <Plus className="w-2.5 h-2.5" /> Add
-          </button>
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKey}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-20 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+                style={{ fontSize: "0.875rem" }}
+                placeholder="Search skills..."
+                autoFocus
+              />
+              {isCustom && (
+                <button
+                  type="button"
+                  onClick={addCustom}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors"
+                  style={{ fontSize: "0.68rem" }}
+                >
+                  <Plus className="w-2.5 h-2.5" /> Add
+                </button>
+              )}
+            </div>
+
+            <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+              {filtered.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  {filtered.map((skill) => {
+                    const selected = skills.includes(skill);
+                    const idx = skills.indexOf(skill);
+                    const c = selected ? CHIP_COLORS[idx % CHIP_COLORS.length] : null;
+                    return (
+                      <motion.button
+                        key={skill}
+                        type="button"
+                        onClick={() => toggle(skill)}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ duration: 0.12 }}
+                        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left font-medium transition-all duration-200 hover:bg-slate-50"
+                        style={{
+                          background: selected ? c!.bg : "transparent",
+                          color: selected ? c!.color : "#334155",
+                          fontSize: "0.82rem",
+                        }}
+                      >
+                        <span>{skill}</span>
+                        {selected && (
+                          <CheckCircle className="w-4 h-4" style={{ color: c!.color }} />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="px-3 py-4 text-slate-400" style={{ fontSize: "0.75rem" }}>
+                  No skill found. Press Enter to add "{query.trim()}".
+                </p>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
-      <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
-        {filtered.length > 0 ? (
-          filtered.map((skill) => {
-            const selected = skills.includes(skill);
-            const idx = skills.indexOf(skill);
-            const c = selected ? CHIP_COLORS[idx % CHIP_COLORS.length] : null;
-            return (
-              <motion.button
-                key={skill}
-                type="button"
-                onClick={() => toggle(skill)}
-                whileTap={{ scale: 0.93 }}
-                transition={{ duration: 0.12 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-medium transition-all duration-200"
-                style={{
-                  background: selected ? c!.bg : "#F1F5F9",
-                  color: selected ? c!.color : "#64748B",
-                  borderColor: selected ? c!.border : "transparent",
-                  fontSize: "0.75rem",
-                }}
-              >
-                {selected && <CheckCircle className="w-3 h-3" style={{ color: c!.color }} />}
-                {skill}
-              </motion.button>
-            );
-          })
-        ) : (
-          <p className="text-slate-400" style={{ fontSize: "0.75rem" }}>
-            No skill found. Press Enter to add "{query.trim()}".
-          </p>
-        )}
-      </div>
+      </AnimatePresence>
       <p className="text-slate-300" style={{ fontSize: "0.68rem" }}>
-        {skills.length}/10 skills · Press Enter to add custom skills
+        {skills.length}/10 skills - press Enter to add custom skills
       </p>
     </div>
   );
