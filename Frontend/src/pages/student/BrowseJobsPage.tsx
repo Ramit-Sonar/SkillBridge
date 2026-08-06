@@ -2,6 +2,7 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
+  Briefcase,
   Search,
   X,
   LayoutGrid,
@@ -1062,11 +1063,12 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
                   Find jobs that match your skills and availability.
                 </p>
               </div>
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                <span className="text-slate-900 font-bold" style={{ fontSize: "0.85rem" }}>
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2">
+                <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-blue-600 font-semibold" style={{ fontSize: "0.85rem" }}>
                   {filtered.length}
                 </span>
-                <span className="text-slate-500" style={{ fontSize: "0.82rem" }}>
+                <span className="text-blue-600 font-semibold" style={{ fontSize: "0.82rem" }}>
                   jobs
                 </span>
               </div>
