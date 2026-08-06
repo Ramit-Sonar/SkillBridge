@@ -113,6 +113,38 @@ describe("Message Service", () => {
     expect(messageFindMock).not.toHaveBeenCalled();
   });
 
+  test("rejects message creation before a project exists", async () => {
+    projectFindByIdMock.mockReturnValue(createLeanQuery(null));
+
+    await expect(
+      createProjectMessage({
+        projectId,
+        senderId: studentId,
+        message: "Hello",
+      })
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Project not found",
+    });
+    expect(messageCreateMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects message creation when the user is not assigned to the project", async () => {
+    projectFindByIdMock.mockReturnValue(createLeanQuery(project));
+
+    await expect(
+      createProjectMessage({
+        projectId,
+        senderId: outsiderId,
+        message: "Hello",
+      })
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message: "You can access messages only for your own project",
+    });
+    expect(messageCreateMock).not.toHaveBeenCalled();
+  });
+
   test("rejects empty messages before creating a document", async () => {
     projectFindByIdMock.mockReturnValue(createLeanQuery(project));
 
