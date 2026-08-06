@@ -1230,6 +1230,7 @@ export default function ProjectWorkspacePage() {
     if (activeTab === "overview") {
       return (
         <ProjectOverview
+          projectId={id || projectData.id}
           project={{
             status,
             startedAt: projectData.startDate,
@@ -1242,6 +1243,7 @@ export default function ProjectWorkspacePage() {
           role={role === "client" ? "client" : "student"}
           lastUpdated={lastUpdated}
           action={renderOverviewAction()}
+          onNotify={setNotification}
           profileAction={
             role === "client" && studentProfile ? (
               <div className="flex flex-col gap-2">

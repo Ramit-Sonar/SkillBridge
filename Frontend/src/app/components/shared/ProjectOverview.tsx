@@ -1,7 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock, MessageSquare, Send } from "lucide-react";
 import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
+import {
+  getProjectMessages,
+  sendProjectMessage,
+  type ProjectMessage,
+} from "../../../services/messageService";
+import type { NotificationMessage } from "./ui";
 
 type ProjectOverviewPerson = {
   name: string;
@@ -19,74 +25,31 @@ export type ProjectOverviewData = {
 };
 
 type ProjectOverviewProps = {
+  projectId: string;
   project: ProjectOverviewData;
   status: ProjectStatus;
   role: "student" | "client";
   lastUpdated: string;
   action?: React.ReactNode;
   profileAction?: React.ReactNode;
+  onNotify?: (message: NotificationMessage) => void;
 };
 
-type ProjectMessagePreview = {
-  id: string;
-  senderRole: "student" | "client";
-  senderName: string;
-  message: string;
-  timestamp: string;
-};
-
-const projectMessagePreviews: ProjectMessagePreview[] = [
-  {
-    id: "msg-1",
-    senderRole: "client",
-    senderName: "Client",
-    message: "Please use the brand blue from the reference file for the primary buttons.",
-    timestamp: "10:15 AM",
-  },
-  {
-    id: "msg-2",
-    senderRole: "student",
-    senderName: "Student",
-    message: "Got it. I will update the first draft and share the preview today.",
-    timestamp: "10:22 AM",
-  },
-  {
-    id: "msg-3",
-    senderRole: "client",
-    senderName: "Client",
-    message: "Can you also make the dashboard cards easier to scan on mobile?",
-    timestamp: "11:05 AM",
-  },
-  {
-    id: "msg-4",
-    senderRole: "student",
-    senderName: "Student",
-    message: "Yes, I will adjust the card spacing without changing the layout.",
-    timestamp: "11:18 AM",
-  },
-  {
-    id: "msg-5",
-    senderRole: "student",
-    senderName: "Student",
-    message: "Latest files are ready for review in the deliverables tab.",
-    timestamp: "1:40 PM",
-  },
-  {
-    id: "msg-6",
-    senderRole: "client",
-    senderName: "Client",
-    message: "Thanks, I will review them and send feedback before evening.",
-    timestamp: "2:10 PM",
-  },
-];
+const formatMessageTime = (value: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
 
 export function ProjectOverview({
+  projectId,
   project,
   status,
   role,
   lastUpdated,
   action,
   profileAction,
+  onNotify,
 }: ProjectOverviewProps) {
   const currentAction = getProjectOverviewAction(status, role);
   const partner = project.partner;
@@ -95,9 +58,69 @@ export function ProjectOverview({
   const messagesRef = useRef<HTMLElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLInputElement | null>(null);
-  const [messages, setMessages] = useState(projectMessagePreviews);
+  const [messages, setMessages] = useState<ProjectMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [messagesLoading, setMessagesLoading] = useState(true);
+  const [messageSending, setMessageSending] = useState(false);
+  const [messagesError, setMessagesError] = useState("");
   const latestMessages = messages.slice(-8);
+
+  const scrollMessagesToBottom = () => {
+    window.setTimeout(() => {
+      messageListRef.current?.scrollTo({
+        top: messageListRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 0);
+  };
+
+  const loadMessages = async (showLoading = true) => {
+    if (showLoading) setMessagesLoading(true);
+    setMessagesError("");
+
+    try {
+      const response = await getProjectMessages(projectId);
+      setMessages(response.data.messages);
+      scrollMessagesToBottom();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to fetch project messages.";
+      setMessagesError(message);
+    } finally {
+      if (showLoading) setMessagesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchMessages = async () => {
+      setMessagesLoading(true);
+      setMessagesError("");
+
+      try {
+        const response = await getProjectMessages(projectId);
+
+        if (!isMounted) return;
+
+        setMessages(response.data.messages);
+        scrollMessagesToBottom();
+      } catch (error) {
+        if (!isMounted) return;
+
+        const message =
+          error instanceof Error ? error.message : "Failed to fetch project messages.";
+        setMessagesError(message);
+      } finally {
+        if (isMounted) setMessagesLoading(false);
+      }
+    };
+
+    fetchMessages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId]);
 
   const handleMessageClick = () => {
     messagesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -105,31 +128,26 @@ export function ProjectOverview({
     messageInputRef.current?.focus({ preventScroll: true });
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const messageText = messageDraft.trim();
-    if (!messageText) return;
+    if (!messageText || messageSending) return;
 
-    setMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: `draft-${Date.now()}`,
-        senderRole: role,
-        senderName: role === "client" ? "Client" : "Student",
-        message: messageText,
-        timestamp: new Intl.DateTimeFormat("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        }).format(new Date()),
-      },
-    ]);
-    setMessageDraft("");
+    setMessageSending(true);
 
-    window.setTimeout(() => {
-      messageListRef.current?.scrollTo({
-        top: messageListRef.current.scrollHeight,
-        behavior: "smooth",
-      });
-    }, 0);
+    try {
+      await sendProjectMessage(projectId, messageText);
+      setMessageDraft("");
+      await loadMessages(false);
+      scrollMessagesToBottom();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to send project message.";
+      if (messages.length === 0) {
+        setMessagesError(message);
+      }
+      onNotify?.({ type: "error", text: message });
+    } finally {
+      setMessageSending(false);
+    }
   };
 
   return (
@@ -146,9 +164,32 @@ export function ProjectOverview({
           ref={messageListRef}
           className="bg-slate-50 rounded-xl border border-black/[0.04] p-3 max-h-[214px] overflow-y-auto flex flex-col gap-2.5"
         >
-          {latestMessages.length > 0 ? (
+          {messagesLoading ? (
+            <div className="min-h-[190px] flex items-center justify-center text-center">
+              <p className="text-slate-400" style={{ fontSize: "0.78rem" }}>
+                Loading messages...
+              </p>
+            </div>
+          ) : messagesError ? (
+            <div className="min-h-[190px] flex flex-col items-center justify-center text-center gap-2">
+              <p className="text-red-500 font-semibold" style={{ fontSize: "0.78rem" }}>
+                {messagesError}
+              </p>
+              <button
+                type="button"
+                onClick={() => loadMessages()}
+                className="text-blue-600 font-semibold hover:text-blue-700"
+                style={{ fontSize: "0.72rem" }}
+              >
+                Try again
+              </button>
+            </div>
+          ) : latestMessages.length > 0 ? (
             latestMessages.map((message) => {
-              const isCurrentViewer = message.senderRole === role;
+              const isCurrentViewer = message.sender.role === role;
+              const senderName =
+                message.sender.fullName ||
+                (message.sender.role === "client" ? "Client" : "Student");
 
               return (
                 <div
@@ -167,13 +208,13 @@ export function ProjectOverview({
                         className={isCurrentViewer ? "text-blue-50" : "text-slate-500"}
                         style={{ fontSize: "0.62rem", fontWeight: 700 }}
                       >
-                        {message.senderName}
+                        {senderName}
                       </span>
                       <span
                         className={isCurrentViewer ? "text-blue-100" : "text-slate-400"}
                         style={{ fontSize: "0.6rem" }}
                       >
-                        {message.timestamp}
+                        {formatMessageTime(message.createdAt)}
                       </span>
                     </div>
                     <p style={{ fontSize: "0.72rem", lineHeight: 1.45 }}>{message.message}</p>
@@ -208,7 +249,7 @@ export function ProjectOverview({
           <button
             type="button"
             onClick={handleSendMessage}
-            disabled={!messageDraft.trim()}
+            disabled={!messageDraft.trim() || messageSending}
             className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
             aria-label="Send message"
           >
