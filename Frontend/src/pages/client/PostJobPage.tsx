@@ -25,7 +25,6 @@ import {
   Search,
   Plus,
   ArrowRight,
-  ChevronDown,
 } from "lucide-react";
 
 // Config
@@ -230,33 +229,7 @@ function SkillSelector({
     query.trim() && !ALL_SKILLS.some((s) => s.toLowerCase() === query.toLowerCase().trim());
 
   return (
-    <div ref={dropdownRef} className="relative flex flex-col gap-3">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="w-full min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-left outline-none transition-all duration-200 hover:bg-white hover:border-blue-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-semibold text-slate-900" style={{ fontSize: "0.84rem" }}>
-              {skills.length > 0
-                ? `${skills.length} skill${skills.length > 1 ? "s" : ""} selected`
-                : "Choose required skills"}
-            </p>
-            <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.72rem" }}>
-              Search, select, or add a custom skill
-            </p>
-          </div>
-          <motion.span
-            animate={{ rotate: open ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500"
-          >
-            <ChevronDown className="w-4 h-4" />
-          </motion.span>
-        </div>
-      </button>
-
+    <div ref={dropdownRef} className="flex flex-col gap-3">
       {skills.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <AnimatePresence>
@@ -291,40 +264,45 @@ function SkillSelector({
           </AnimatePresence>
         </div>
       )}
+
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          value={query}
+          onClick={() => setOpen(true)}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onKeyDown={handleKey}
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-20 py-3 text-slate-900 placeholder-slate-300 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
+          style={{ fontSize: "0.875rem" }}
+          placeholder="Search skills..."
+        />
+        {isCustom && (
+          <button
+            type="button"
+            onClick={addCustom}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors"
+            style={{ fontSize: "0.68rem" }}
+          >
+            <Plus className="w-2.5 h-2.5" /> Add
+          </button>
+        )}
+      </div>
+
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute left-0 right-0 top-[58px] z-30 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10"
+            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xl shadow-slate-900/10"
           >
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKey}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-20 py-2.5 text-slate-900 placeholder-slate-300 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10"
-                style={{ fontSize: "0.875rem" }}
-                placeholder="Search skills..."
-                autoFocus
-              />
-              {isCustom && (
-                <button
-                  type="button"
-                  onClick={addCustom}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors"
-                  style={{ fontSize: "0.68rem" }}
-                >
-                  <Plus className="w-2.5 h-2.5" /> Add
-                </button>
-              )}
-            </div>
-
-            <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+            <div className="max-h-64 overflow-y-auto pr-1">
               {filtered.length > 0 ? (
                 <div className="flex flex-col gap-1">
                   {filtered.map((skill) => {
@@ -338,10 +316,10 @@ function SkillSelector({
                         onClick={() => toggle(skill)}
                         whileTap={{ scale: 0.98 }}
                         transition={{ duration: 0.12 }}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left font-medium transition-all duration-200 hover:bg-slate-50"
+                        className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-600"
                         style={{
                           background: selected ? c!.bg : "transparent",
-                          color: selected ? c!.color : "#334155",
+                          color: selected ? c!.color : undefined,
                           fontSize: "0.82rem",
                         }}
                       >
