@@ -158,7 +158,7 @@ export function ProjectOverview({
         className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-5 flex flex-col gap-4 outline-none focus:border-blue-200 focus:ring-4 focus:ring-blue-50"
       >
         <h2 className="text-slate-900 font-bold" style={{ fontSize: "0.95rem" }}>
-          Project Messages
+          Project Discussion
         </h2>
         <div
           ref={messageListRef}
