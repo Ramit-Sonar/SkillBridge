@@ -1,12 +1,5 @@
 import { motion } from "motion/react";
-import {
-  ShieldCheck,
-  Briefcase,
-  BookOpen,
-  DollarSign,
-  CheckCircle,
-  Clock,
-} from "lucide-react";
+import { ShieldCheck, Briefcase, BookOpen, DollarSign, CheckCircle, Clock } from "lucide-react";
 import { usePlatformSettings } from "../data/platformSettingsStore";
 
 // Inline marketing mockups avoid numeric claims that are not backed by product data.
@@ -16,10 +9,24 @@ function VerifiedCardMockup() {
     <div className="relative w-fit select-none">
       <div className="bg-white rounded-2xl shadow-xl border border-black/[0.06] p-5 w-[230px]">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-200 to-teal-200 shrink-0" />
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-200 to-teal-200 shrink-0 overflow-hidden border border-blue-100">
+            <img
+              src="/temp/coverImage.jpeg"
+              alt="Ramit"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: "center 28%" }}
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
           <div className="min-w-0">
-            <div className="h-3 w-24 bg-slate-200 rounded mb-1.5" />
-            <div className="h-2.5 w-32 bg-slate-100 rounded" />
+            <p className="font-bold text-slate-900 leading-tight" style={{ fontSize: "0.78rem" }}>
+              Ramit
+            </p>
+            <p className="text-slate-400 mt-0.5" style={{ fontSize: "0.62rem" }}>
+              Computer Science Student
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5 mb-3">
