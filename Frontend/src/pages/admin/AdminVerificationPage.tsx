@@ -8,6 +8,7 @@
   type SetStateAction,
 } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useLocation, useNavigate } from "react-router";
 import { DashboardLayout } from "../../app/components/layout/DashboardLayout";
 import {
   ConfirmDialog,
@@ -841,7 +842,9 @@ function VerificationListPanel<
 // Main page
 
 export default function AdminVerificationPage() {
-  const [tab, setTab] = useState<"students" | "clients">("students");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tab = location.pathname.endsWith("/clients") ? "clients" : "students";
   const [studentRequests, setStudentRequests] = useState<AdminStudentVerification[]>([]);
   const [clientRequests, setClientRequests] = useState<AdminClientVerification[]>([]);
   const [notification, setNotification] = useState<NotificationMessage>(null);
@@ -928,7 +931,9 @@ export default function AdminVerificationPage() {
             ].map((t) => (
               <motion.button
                 key={t.value}
-                onClick={() => setTab(t.value)}
+                onClick={() =>
+                  navigate(t.value === "clients" ? "/admin/clients" : "/admin/students")
+                }
                 whileTap={{ scale: 0.97 }}
                 className="flex items-center gap-2 px-5 py-2 rounded-xl font-semibold transition-all duration-200"
                 style={{

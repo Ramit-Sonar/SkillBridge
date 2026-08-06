@@ -197,6 +197,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "admin/clients",
+    element: (
+      <AuthenticationGuard allowedRole="admin">
+        <AdminVerificationPage />
+      </AuthenticationGuard>
+    ),
+  },
+  {
     path: "admin/users",
     element: (
       <AuthenticationGuard allowedRole="admin">
