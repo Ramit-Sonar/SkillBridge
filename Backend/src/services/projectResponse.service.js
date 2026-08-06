@@ -1,18 +1,11 @@
 import { buildProfileSkillList } from "./project.service.js";
+import { getInitials } from "../utils/text.js";
 
 const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
 
 /**
  * Builds project API response shapes consumed by workspace and project list views.
  */
-const getInitials = (name = "") =>
-  name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
 const formatCardDate = (date) => {
   if (!date) return "";
 

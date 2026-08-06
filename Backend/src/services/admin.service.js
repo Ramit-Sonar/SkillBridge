@@ -12,6 +12,7 @@ import {
   getStudentCompletedProjectProfileMap,
 } from "./project.service.js";
 import { getStudentReviewProfileMap } from "./review.service.js";
+import { getInitials } from "../utils/text.js";
 
 const JOB_MODERATION_REASONS = [
   "Spam",
@@ -81,16 +82,6 @@ const createAdmin = async () => {
   } catch (error) {
     console.error(" Error creating admin:", error.message);
   }
-};
-
-const getInitials = (fullName = "") => {
-  return fullName
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 };
 
 const mapByUserId = (items) =>

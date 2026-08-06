@@ -4,6 +4,7 @@ import { Job } from "../models/job.model.js";
 import { Revision } from "../models/revision.model.js";
 import { StudentProfile } from "../models/studentProfile.model.js";
 import { ApiError } from "../utils/ApiError.js";
+import { MONGO_DUPLICATE_KEY_ERROR_CODE } from "../constants.js";
 
 const PROJECT_CREATED_MESSAGE = "Project created after application acceptance.";
 export const SKILL_VERIFICATION_THRESHOLD = 1;
@@ -403,7 +404,7 @@ export const createProjectFromAcceptedApplication = async ({
 
     return project;
   } catch (error) {
-    if (error?.code === 11000) {
+    if (error?.code === MONGO_DUPLICATE_KEY_ERROR_CODE) {
       throw new ApiError(
         409,
         "Project already exists for this application or job"

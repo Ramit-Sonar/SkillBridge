@@ -1,18 +1,9 @@
 import { getAdminUserDetailsData } from "./admin.service.js";
+import { getInitials } from "../utils/text.js";
 
 /**
  * Shapes report records for report investigation screens.
  */
-const getInitials = (fullName = "") => {
-  return fullName
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-};
-
 const buildReportUserSummary = (user) => {
   if (!user) return null;
 

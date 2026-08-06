@@ -2,6 +2,12 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 
 const isProduction = process.env.NODE_ENV === "production";
+const MINUTE_MS = 60 * 1000;
+const LOGIN_WINDOW_MS = 15 * MINUTE_MS;
+const REGISTER_WINDOW_MS = 60 * MINUTE_MS;
+const OTP_WINDOW_MS = 10 * MINUTE_MS;
+const PASSWORD_RESET_WINDOW_MS = 15 * MINUTE_MS;
+const VERIFICATION_WINDOW_MS = 60 * MINUTE_MS;
 
 const createRateLimiter = ({ windowMs, max, message }) =>
   rateLimit({
@@ -73,31 +79,31 @@ export const sanitizeNoSqlInput = (req, res, next) => {
 };
 
 export const loginRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
+  windowMs: LOGIN_WINDOW_MS,
   max: 10,
   message: "Too many login attempts. Please try again later.",
 });
 
 export const registerRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000,
+  windowMs: REGISTER_WINDOW_MS,
   max: 10,
   message: "Too many registration attempts. Please try again later.",
 });
 
 export const otpRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000,
+  windowMs: OTP_WINDOW_MS,
   max: 5,
   message: "Too many OTP attempts. Please try again later.",
 });
 
 export const passwordResetRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
+  windowMs: PASSWORD_RESET_WINDOW_MS,
   max: 5,
   message: "Too many password reset attempts. Please try again later.",
 });
 
 export const verificationRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000,
+  windowMs: VERIFICATION_WINDOW_MS,
   max: 10,
   message: "Too many verification attempts. Please try again later.",
 });

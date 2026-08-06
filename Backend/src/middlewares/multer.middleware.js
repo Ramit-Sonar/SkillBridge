@@ -54,6 +54,14 @@ const allowedCertificateTypes = [
 const allowedCertificateExtensions = [".pdf", ".png", ".jpg", ".jpeg"];
 const allowedVerificationDocumentTypes = [...allowedCertificateTypes];
 const allowedVerificationDocumentExtensions = [...allowedCertificateExtensions];
+const MB = 1024 * 1024;
+const AVATAR_FILE_SIZE_LIMIT = 2 * MB;
+const ATTACHMENT_FILE_SIZE_LIMIT = 20 * MB;
+const CERTIFICATE_FILE_SIZE_LIMIT = 5 * MB;
+const VERIFICATION_FILE_SIZE_LIMIT = 5 * MB;
+const JOB_ATTACHMENT_FILE_LIMIT = 3;
+const SINGLE_CERTIFICATE_FILE_LIMIT = 1;
+const VERIFICATION_FILE_LIMIT = 3;
 
 const isAllowedFile = (file, allowedTypes, allowedExtensions) => {
   const fileExtension = path.extname(file.originalname).toLowerCase();
@@ -142,7 +150,7 @@ const verificationFileFilter = function (req, file, cb) {
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 2 * 1024 * 1024,
+    fileSize: AVATAR_FILE_SIZE_LIMIT,
   },
   fileFilter,
 });
@@ -150,8 +158,8 @@ export const upload = multer({
 export const jobAttachmentUpload = multer({
   storage,
   limits: {
-    fileSize: 20 * 1024 * 1024,
-    files: 3,
+    fileSize: ATTACHMENT_FILE_SIZE_LIMIT,
+    files: JOB_ATTACHMENT_FILE_LIMIT,
   },
   fileFilter: attachmentFileFilter,
 });
@@ -159,8 +167,8 @@ export const jobAttachmentUpload = multer({
 export const certificateUpload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 1,
+    fileSize: CERTIFICATE_FILE_SIZE_LIMIT,
+    files: SINGLE_CERTIFICATE_FILE_LIMIT,
   },
   fileFilter: certificateFileFilter,
 });
@@ -168,8 +176,8 @@ export const certificateUpload = multer({
 export const verificationUpload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 3,
+    fileSize: VERIFICATION_FILE_SIZE_LIMIT,
+    files: VERIFICATION_FILE_LIMIT,
   },
   fileFilter: verificationFileFilter,
 });

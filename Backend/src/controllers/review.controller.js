@@ -8,6 +8,7 @@ import {
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { MONGO_DUPLICATE_KEY_ERROR_CODE } from "../constants.js";
 
 /**
  * Handles client reviews for completed projects and student rating summaries.
@@ -64,7 +65,7 @@ const createReview = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    if (error?.code === 11000) {
+    if (error?.code === MONGO_DUPLICATE_KEY_ERROR_CODE) {
       throw new ApiError(409, "This project has already been reviewed");
     }
 

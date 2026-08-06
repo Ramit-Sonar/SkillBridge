@@ -21,6 +21,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { buildClientSummary } from "../services/client.service.js";
+import { MONGO_DUPLICATE_KEY_ERROR_CODE } from "../constants.js";
 import {
   buildApproveDeliverableResponse,
   buildDeliverablesSummary,
@@ -879,7 +880,7 @@ const requestRevision = asyncHandler(async (req, res) => {
   } catch (error) {
     await deleteAttachments(uploadedAttachments);
 
-    if (error?.code === 11000) {
+    if (error?.code === MONGO_DUPLICATE_KEY_ERROR_CODE) {
       throw new ApiError(409, "Revision request already exists");
     }
 
@@ -1080,7 +1081,7 @@ const submitDeliverable = asyncHandler(async (req, res) => {
   } catch (error) {
     await deleteAttachments(uploadedAttachments);
 
-    if (error?.code === 11000) {
+    if (error?.code === MONGO_DUPLICATE_KEY_ERROR_CODE) {
       throw new ApiError(409, "Deliverable version already exists");
     }
 

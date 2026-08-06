@@ -13,6 +13,7 @@ import {
 import { buildClientSummary } from "../services/client.service.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { MONGO_DUPLICATE_KEY_ERROR_CODE } from "../constants.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 import {
   createProjectFromAcceptedApplication,
@@ -145,7 +146,7 @@ const submitApplication = asyncHandler(async (req, res) => {
     } catch (error) {
       await deleteAttachments(attachments);
 
-      if (error?.code === 11000) {
+      if (error?.code === MONGO_DUPLICATE_KEY_ERROR_CODE) {
         throw new ApiError(409, "You have already applied for this job");
       }
 

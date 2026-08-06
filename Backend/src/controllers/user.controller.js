@@ -31,6 +31,9 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_MIN = 100000;
+const OTP_MAX = 1000000;
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
 
 const getAuthCookieOptions = (req) => {
   const forwardedProto = req.get?.("x-forwarded-proto");
@@ -353,7 +356,7 @@ const sendVerificationOtp = asyncHandler(async (req, res) => {
     throw new ApiError(409, "Email already registered.");
   }
 
-  const otp = crypto.randomInt(100000, 1000000).toString();
+  const otp = crypto.randomInt(OTP_MIN, OTP_MAX).toString();
   const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
   // Store pending registrations separately until email ownership is verified.
@@ -368,14 +371,14 @@ const sendVerificationOtp = asyncHandler(async (req, res) => {
       password,
       role,
       verificationOtp: hashedOtp,
-      verificationOtpExpires: Date.now() + 5 * 60 * 1000,
+      verificationOtpExpires: Date.now() + OTP_EXPIRY_MS,
     });
   } else {
     pendingUser.fullName = normalizedFullName;
     pendingUser.password = password;
     pendingUser.role = role;
     pendingUser.verificationOtp = hashedOtp;
-    pendingUser.verificationOtpExpires = Date.now() + 5 * 60 * 1000;
+    pendingUser.verificationOtpExpires = Date.now() + OTP_EXPIRY_MS;
   }
 
   await pendingUser.save();

@@ -8,17 +8,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { getInitials } from "../utils/text.js";
 import mongoose from "mongoose";
-
-const getInitials = (fullName = "") => {
-  return fullName
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-};
 
 const toAdminStudentVerification = (verification) => {
   const user = verification.user || {};
@@ -637,8 +628,6 @@ const updateClientVerification = asyncHandler(async (req, res) => {
     );
 });
 
-const updateVerification = asyncHandler(async (req, res) => {});
-
 export {
   submitStudentVerification,
   submitClientVerification,
@@ -650,5 +639,4 @@ export {
   rejectVerification,
   updateStudentVerification,
   updateClientVerification,
-  updateVerification,
 };
