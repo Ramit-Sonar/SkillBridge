@@ -269,14 +269,21 @@ function Sidebar({
   const displayInitials = displayName ? getInitials(displayName) : "";
   const displayAvatar = currentUser?.avatar;
 
+  useEffect(() => {
+    return () => {
+      if (expandTimer.current) clearTimeout(expandTimer.current);
+      if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    };
+  }, []);
+
   const handleMouseEnter = () => {
     if (collapseTimer.current) clearTimeout(collapseTimer.current);
-    expandTimer.current = setTimeout(() => setExpanded(true), 130);
+    expandTimer.current = setTimeout(() => setExpanded(true), 220);
   };
 
   const handleMouseLeave = () => {
     if (expandTimer.current) clearTimeout(expandTimer.current);
-    collapseTimer.current = setTimeout(() => setExpanded(false), 180);
+    collapseTimer.current = setTimeout(() => setExpanded(false), 220);
   };
 
   const handleNav = (id: DashboardNavId) => {
@@ -320,9 +327,9 @@ function Sidebar({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       animate={{ width: expanded ? 240 : 68 }}
-      transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.46, ease: [0.16, 1, 0.3, 1] }}
       className="hidden lg:flex flex-col h-screen bg-white border-r border-black/[0.06] shrink-0 z-20 relative"
-      style={{ minWidth: expanded ? 240 : 68 }}
+      style={{ minWidth: 68 }}
     >
       <div className="flex items-center h-16 border-b border-black/[0.05] shrink-0 px-[18px] overflow-hidden">
         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm shrink-0">
