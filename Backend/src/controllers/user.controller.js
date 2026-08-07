@@ -58,16 +58,43 @@ const isStudentEmail = (email) => {
 const getEmailTransporter = () => {
   const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
   const emailPassword = process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD;
+  const timeout = Number(process.env.SMTP_TIMEOUT_MS) || 15000;
+  const timeoutOptions = {
+    connectionTimeout: timeout,
+    greetingTimeout: timeout,
+    socketTimeout: timeout,
+  };
 
   if (process.env.SMTP_HOST) {
+    const port = Number(process.env.SMTP_PORT) || 587;
+    const secure =
+      process.env.SMTP_SECURE === "true" ||
+      (!process.env.SMTP_SECURE && port === 465);
+
     return nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === "true",
+      port,
+      secure,
+      requireTLS: !secure && port === 587,
       auth: {
         user: emailUser,
         pass: emailPassword,
       },
+      ...timeoutOptions,
+    });
+  }
+
+  if ((process.env.EMAIL_SERVICE || "gmail").toLowerCase() === "gmail") {
+    return nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: emailUser,
+        pass: emailPassword,
+      },
+      ...timeoutOptions,
     });
   }
 
@@ -77,6 +104,7 @@ const getEmailTransporter = () => {
       user: emailUser,
       pass: emailPassword,
     },
+    ...timeoutOptions,
   });
 };
 
@@ -398,7 +426,6 @@ If you did not request this, ignore this email.`;
 
   try {
     const transporter = getEmailTransporter();
-    await transporter.verify();
 
     await transporter.sendMail({
       from:
@@ -510,7 +537,6 @@ This link expires in 15 minutes.`;
 
   try {
     const transporter = getEmailTransporter();
-    await transporter.verify();
 
     await transporter.sendMail({
       from:
