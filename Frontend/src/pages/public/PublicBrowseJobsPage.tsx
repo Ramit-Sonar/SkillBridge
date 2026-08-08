@@ -1,5 +1,5 @@
 ﻿import { Link } from "react-router";
-import { Zap } from "lucide-react";
+import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 import { BrowseJobsCore } from "../student/BrowseJobsPage";
 
 export default function PublicBrowseJobsPage() {
@@ -8,9 +8,7 @@ export default function PublicBrowseJobsPage() {
       {/* Minimal public navbar */}
       <header className="bg-white border-b border-black/[0.06] px-6 h-16 flex items-center justify-between sticky top-0 z-20">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
-            <Zap className="w-3.5 h-3.5 text-white" fill="white" />
-          </div>
+          <BrandLogoMark className="w-9 h-7" />
           <span className="font-bold text-slate-900" style={{ fontSize: "1rem" }}>
             Skill<span style={{ color: "#2563EB" }}>Bridge</span>
           </span>

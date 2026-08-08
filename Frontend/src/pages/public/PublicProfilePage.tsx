@@ -1,7 +1,7 @@
 ﻿import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { Zap } from "lucide-react";
+import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 import { StudentProfileView } from "../../app/components/shared/StudentProfileView";
 import { buildStudentProfileViewProps } from "../../app/components/shared/studentProfileBuilder";
 import { getPublicStudentProfile } from "../../services/studentProfileService";
@@ -57,9 +57,7 @@ export default function PublicProfilePage() {
       {/* Minimal header */}
       <header className="bg-white border-b border-black/[0.06] px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Zap className="w-3.5 h-3.5 text-white" fill="white" />
-          </div>
+          <BrandLogoMark className="w-9 h-7" />
           <span className="font-bold text-slate-900" style={{ fontSize: "0.95rem" }}>
             Skill<span style={{ color: "#2563EB" }}>Bridge</span>
           </span>

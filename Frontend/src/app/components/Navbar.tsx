@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Menu, X, Zap } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 
 const navLinks = [
   { label: "Home", href: "#home" },
@@ -36,9 +37,7 @@ export function Navbar({ getStartedPath, loginPath }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <a href="#home" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-md group-hover:shadow-blue-200 transition-shadow duration-300">
-              <Zap className="w-4 h-4 text-white" fill="white" />
-            </div>
+            <BrandLogoMark className="w-10 h-8 transition-shadow duration-300 group-hover:shadow-blue-100" />
             <span
               className="font-bold text-slate-900 tracking-tight"
               style={{ fontSize: "1.1rem" }}

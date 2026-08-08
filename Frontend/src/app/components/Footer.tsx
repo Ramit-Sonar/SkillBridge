@@ -1,5 +1,6 @@
-import { Zap, Twitter, Linkedin, Github, Mail, MapPin } from "lucide-react";
+import { Twitter, Linkedin, Github, Mail, MapPin } from "lucide-react";
 import { usePlatformSettings } from "../data/platformSettingsStore";
+import { BrandLogoMark } from "./shared/BrandLogoMark";
 
 const footerLinks = {
   Product: ["Features", "How It Works", "Pricing", "Roadmap"],
@@ -18,9 +19,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <a href="#home" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" fill="white" />
-              </div>
+              <BrandLogoMark className="w-10 h-8 border-white/10" />
               <span className="font-bold text-white tracking-tight" style={{ fontSize: "1.1rem" }}>
                 Skill<span style={{ color: "#60A5FA" }}>Bridge</span>
               </span>

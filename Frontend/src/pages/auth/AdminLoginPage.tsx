@@ -2,10 +2,11 @@
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
 import { motion } from "motion/react";
-import { Zap, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getCurrentUser, loginUser } from "@/services/authService.js";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
 import { usePlatformSettings } from "@/app/data/platformSettingsStore";
+import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -83,9 +84,7 @@ export default function AdminLoginPage() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
-            <Zap className="w-6 h-6 text-white" fill="white" />
-          </div>
+          <BrandLogoMark className="w-16 h-12 rounded-2xl shadow-lg" />
           <div className="text-center">
             <p className="text-slate-900 font-bold" style={{ fontSize: "1.1rem" }}>
               Skill<span className="text-blue-600">Bridge</span>

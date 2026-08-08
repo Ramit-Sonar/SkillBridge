@@ -19,12 +19,12 @@ import {
   User,
   Users,
   X,
-  Zap,
 } from "lucide-react";
 import { getCurrentUser, logoutUser, type AuthUser } from "@/services/authService";
 import { getAdminDashboardSummary } from "@/services/adminService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
 import { usePlatformSettings } from "@/app/data/platformSettingsStore";
+import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const ADMIN_VERIFICATIONS_UPDATED_EVENT = "skillbridge:verification-updated";
@@ -332,9 +332,7 @@ function Sidebar({
       style={{ minWidth: 68 }}
     >
       <div className="flex items-center h-16 border-b border-black/[0.05] shrink-0 px-[18px] overflow-hidden">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm shrink-0">
-          <Zap className="w-4 h-4 text-white" fill="white" />
-        </div>
+        <BrandLogoMark className="w-9 h-8" />
         <AnimatePresence>
           {expanded && (
             <motion.span
@@ -713,9 +711,7 @@ function MobileDrawer({
           >
             <div className="flex items-center justify-between px-5 h-16 border-b border-black/[0.05]">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-                  <Zap className="w-3.5 h-3.5 text-white" fill="white" />
-                </div>
+                <BrandLogoMark className="w-9 h-7" />
                 <span className="font-bold text-slate-900" style={{ fontSize: "0.95rem" }}>
                   Skill<span style={{ color: "#2563EB" }}>Bridge</span>
                 </span>

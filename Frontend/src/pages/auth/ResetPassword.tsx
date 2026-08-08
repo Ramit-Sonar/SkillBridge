@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { motion } from "motion/react";
-import { ArrowRight, Lock, Zap } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 
 import { resetPassword } from "@/services/authService";
 import { Notification, type NotificationMessage } from "@/app/components/shared/ui";
+import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -67,9 +68,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <button onClick={() => navigate("/")} className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
-              <Zap className="w-4 h-4 text-white" fill="white" />
-            </div>
+            <BrandLogoMark className="w-10 h-8" />
             <span className="font-bold text-slate-900" style={{ fontSize: "1.1rem" }}>
               Skill<span style={{ color: "#2563EB" }}>Bridge</span>
             </span>
