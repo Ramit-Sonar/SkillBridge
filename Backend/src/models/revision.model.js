@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { attachmentSchema } from "../schemas/attachment.schema.js";
 
-/**
+/*
  * Stores client feedback requests tied to a specific deliverable version.
  */
 const revisionSchema = new mongoose.Schema(

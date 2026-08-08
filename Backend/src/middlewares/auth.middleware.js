@@ -3,7 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 
-/**
+/*
  * Requires a valid access token and attaches the sanitized user to req.user.
  */
 export const verifyJWT = asyncHandler(async (req, res, next) => {

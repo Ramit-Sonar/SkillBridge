@@ -1,4 +1,4 @@
-/**
+/*
  * Wraps async route handlers so thrown errors reach the global error middleware.
  */
 const asyncHandler = (requestHandler) => {

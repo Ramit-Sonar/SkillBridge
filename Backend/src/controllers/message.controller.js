@@ -7,7 +7,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-/**
+/*
  * Handles project message listing, creation, and read status updates.
  */
 const getMessagesByProject = asyncHandler(async (req, res) => {

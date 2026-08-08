@@ -7,7 +7,7 @@ const sanitizeAttachmentName = (fileName = "") =>
     .replace(/\s+/g, " ")
     .trim();
 
-/**
+/*
  * Normalizes existing attachment metadata and newly uploaded Cloudinary files.
  */
 export const normalizeSubmittedAttachments = (files) => {

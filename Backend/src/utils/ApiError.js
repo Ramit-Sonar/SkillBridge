@@ -1,4 +1,4 @@
-/**
+/*
  * Standard API error shape used by controllers and middleware.
  */
 class ApiError extends Error {

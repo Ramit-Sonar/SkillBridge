@@ -1,6 +1,6 @@
 import { ApiError } from "../utils/ApiError.js";
 
-/**
+/*
  * Blocks marketplace write actions for suspended authenticated accounts.
  */
 export const ensureActiveAccount = (req, res, next) => {

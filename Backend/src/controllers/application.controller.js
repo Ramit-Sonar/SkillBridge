@@ -21,7 +21,7 @@ import {
 } from "../services/project.service.js";
 import { getStudentReviewProfileMap } from "../services/review.service.js";
 
-/**
+/*
  * Handles student applications and client review actions for job applicants.
  * Acceptance is transactional because it also closes the job and creates a project.
  */

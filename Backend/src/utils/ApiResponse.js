@@ -1,4 +1,4 @@
-/**
+/*
  * Standard success response envelope returned by API controllers.
  */
 class ApiResponse {

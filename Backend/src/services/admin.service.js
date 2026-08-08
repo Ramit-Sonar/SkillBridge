@@ -32,7 +32,7 @@ const DEFAULT_PLATFORM_DESCRIPTION =
 const getDefaultMaintenanceMessage = (platformName = DEFAULT_PLATFORM_NAME) =>
   `${platformName} is currently under maintenance.`;
 
-/**
+/*
  * Ensures the configured admin account exists when the server starts.
  */
 const createAdmin = async () => {

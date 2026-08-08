@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-/**
+/*
  * Handles client profile reads and upserts for the authenticated client.
  */
 const getClientProfile = asyncHandler(async (req, res) => {

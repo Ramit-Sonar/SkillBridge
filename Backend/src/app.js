@@ -20,7 +20,7 @@ import {
 } from "./middlewares/security.middleware.js";
 import { ApiError } from "./utils/ApiError.js";
 
-/**
+/*
  * Configures shared Express middleware and mounts all API route groups.
  */
 const app = express();

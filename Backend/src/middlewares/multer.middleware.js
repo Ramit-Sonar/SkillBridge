@@ -2,7 +2,7 @@ import multer from "multer";
 import path from "path"; // 1. You must import path here
 import { ApiError } from "../utils/ApiError.js";
 
-/**
+/*
  * Configures multer storage and file validation for avatars and attachments.
  */
 const allowedImageTypes = [

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { attachmentSchema } from "../schemas/attachment.schema.js";
 
-/**
+/*
  * Stores client job posts and their public lifecycle state.
  */
 const jobSchema = new mongoose.Schema(

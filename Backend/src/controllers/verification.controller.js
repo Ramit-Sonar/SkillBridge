@@ -1,4 +1,4 @@
-/**
+/*
  * Handles student/client verification submissions and admin review actions.
  * Verification.status is the source of truth for account trust state.
  */

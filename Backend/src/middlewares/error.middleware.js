@@ -1,4 +1,4 @@
-/**
+/*
  * Sends a consistent JSON error response for controller and middleware failures.
  */
 const globalErrorHandler = (err, req, res, next) => {

@@ -34,7 +34,7 @@ import {
 } from "../services/projectResponse.service.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
-/**
+/*
  * Handles project workspaces, deliverable submissions, approvals, and revisions.
  * State changes are written with timeline events for both student and client views.
  */

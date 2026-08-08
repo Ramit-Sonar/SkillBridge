@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { attachmentSchema } from "../schemas/attachment.schema.js";
 
-/**
+/*
  * Stores versioned project submissions from students.
  */
 const deliverableSchema = new mongoose.Schema(

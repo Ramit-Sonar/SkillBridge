@@ -5,7 +5,7 @@ import crypto from "crypto";
 
 const PASSWORD_RESET_EXPIRY_MS = 15 * 60 * 1000;
 
-/**
+/*
  * Stores platform users and pending email-verified registrations.
  */
 const userSchema = new mongoose.Schema(

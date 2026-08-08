@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
-/**
+/*
  * Restricts protected routes to the roles passed by the route definition.
  */
 export const authorizeRoles = (...allowedRoles) => {

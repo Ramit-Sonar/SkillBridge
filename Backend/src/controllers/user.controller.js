@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 
-/**
+/*
  * Handles account authentication, email verification, and password recovery.
  * Controllers return sanitized user data and keep token rotation server-side.
  */

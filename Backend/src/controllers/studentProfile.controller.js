@@ -11,7 +11,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
-/**
+/*
  * Handles private profile updates and public student profile aggregation.
  */
 const getStudentProfile = asyncHandler(async (req, res) => {

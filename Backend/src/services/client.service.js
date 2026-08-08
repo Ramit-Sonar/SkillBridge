@@ -3,7 +3,7 @@ import { Job } from "../models/job.model.js";
 import { User } from "../models/user.model.js";
 import { Verification } from "../models/verification.model.js";
 
-/**
+/*
  * Builds the public client summary shown in job detail cards.
  */
 const buildClientSummary = async (userId) => {

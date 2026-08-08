@@ -1,6 +1,6 @@
 import { buildProfileSkillList } from "./project.service.js";
 
-/**
+/*
  * Shapes application records for list cards and detail views.
  */
 export const buildApplicationSummary = (application) => ({

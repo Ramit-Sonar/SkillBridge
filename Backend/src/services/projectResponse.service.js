@@ -3,7 +3,7 @@ import { getInitials } from "../utils/text.js";
 
 const SUBMITTABLE_PROJECT_STATUSES = ["active", "revision_requested"];
 
-/**
+/*
  * Builds project API response shapes consumed by workspace and project list views.
  */
 const formatCardDate = (date) => {

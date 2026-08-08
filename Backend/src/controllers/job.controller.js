@@ -13,7 +13,7 @@ import { buildClientSummary } from "../services/client.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
-/**
+/*
  * Handles job posting, browsing, updates, and cancellation.
  * Public job responses expose only safe client details.
  */

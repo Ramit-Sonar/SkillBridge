@@ -15,7 +15,7 @@ import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
-/**
+/*
  * Handles user report submissions and admin report review actions.
  * Report.status is updated only by admins after investigation.
  */

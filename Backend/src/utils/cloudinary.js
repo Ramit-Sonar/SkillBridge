@@ -7,7 +7,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/**
+/*
  * Uploads a temporary file to Cloudinary and removes the local copy afterward.
  */
 const uploadOnCloudinary = async (localFilePath) => {

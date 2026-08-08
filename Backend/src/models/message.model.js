@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-/**
+/*
  * Stores simple project chat messages between the assigned client and student.
  */
 const messageSchema = new mongoose.Schema(

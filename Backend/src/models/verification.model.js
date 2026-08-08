@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-/**
+/*
  * Stores the single KYC verification request for each student or client user.
  */
 const verificationSchema = new mongoose.Schema(

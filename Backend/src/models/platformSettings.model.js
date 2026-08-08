@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-/**
+/*
  * Stores singleton platform-wide settings controlled by administrators.
  */
 const platformSettingsSchema = new mongoose.Schema(

@@ -17,7 +17,7 @@ const buildEmptyRatingSummary = () => ({
   ratingDistribution: { ...emptyRatingDistribution },
 });
 
-/**
+/*
  * Validates whether a client may leave the single review allowed for a project.
  */
 const canReviewProject = async (projectId, clientId) => {

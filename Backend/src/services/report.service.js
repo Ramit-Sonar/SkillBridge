@@ -1,7 +1,7 @@
 import { getAdminUserDetailsData } from "./admin.service.js";
 import { getInitials } from "../utils/text.js";
 
-/**
+/*
  * Shapes report records for report investigation screens.
  */
 const buildReportUserSummary = (user) => {
