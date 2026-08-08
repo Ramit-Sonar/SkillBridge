@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 mb-8">
-          <BrandLogoMark className="w-16 h-12 rounded-2xl shadow-lg" />
+          <BrandLogoMark className="w-20 h-14 rounded-2xl shadow-lg" />
           <div className="text-center">
             <p className="text-slate-900 font-bold" style={{ fontSize: "1.1rem" }}>
               Skill<span className="text-blue-600">Bridge</span>

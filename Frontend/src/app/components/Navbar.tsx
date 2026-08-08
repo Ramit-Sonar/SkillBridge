@@ -36,11 +36,11 @@ export function Navbar({ getStartedPath, loginPath }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="#home" className="flex items-center gap-2 group">
-            <BrandLogoMark className="w-10 h-8 transition-shadow duration-300 group-hover:shadow-blue-100" />
+          <a href="#home" className="flex items-center gap-3 group">
+            <BrandLogoMark className="w-14 h-10 transition-shadow duration-300 group-hover:shadow-blue-100" />
             <span
               className="font-bold text-slate-900 tracking-tight"
-              style={{ fontSize: "1.1rem" }}
+              style={{ fontSize: "1.25rem" }}
             >
               Skill<span style={{ color: "#2563EB" }}>Bridge</span>
             </span>

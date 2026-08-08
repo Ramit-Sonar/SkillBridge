@@ -19,7 +19,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
             <a href="#home" className="flex items-center gap-2 mb-4">
-              <BrandLogoMark className="w-10 h-8 border-white/10" />
+              <BrandLogoMark className="w-12 h-9 border-white/10" />
               <span className="font-bold text-white tracking-tight" style={{ fontSize: "1.1rem" }}>
                 Skill<span style={{ color: "#60A5FA" }}>Bridge</span>
               </span>

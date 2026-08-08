@@ -332,7 +332,7 @@ function Sidebar({
       style={{ minWidth: 68 }}
     >
       <div className="flex items-center h-16 border-b border-black/[0.05] shrink-0 px-[18px] overflow-hidden">
-        <BrandLogoMark className="w-9 h-8" />
+        <BrandLogoMark className="w-10 h-8" />
         <AnimatePresence>
           {expanded && (
             <motion.span
@@ -711,7 +711,7 @@ function MobileDrawer({
           >
             <div className="flex items-center justify-between px-5 h-16 border-b border-black/[0.05]">
               <div className="flex items-center gap-2.5">
-                <BrandLogoMark className="w-9 h-7" />
+                <BrandLogoMark className="w-11 h-8" />
                 <span className="font-bold text-slate-900" style={{ fontSize: "0.95rem" }}>
                   Skill<span style={{ color: "#2563EB" }}>Bridge</span>
                 </span>

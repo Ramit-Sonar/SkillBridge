@@ -57,7 +57,7 @@ export default function PublicProfilePage() {
       {/* Minimal header */}
       <header className="bg-white border-b border-black/[0.06] px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <BrandLogoMark className="w-9 h-7" />
+          <BrandLogoMark className="w-11 h-8" />
           <span className="font-bold text-slate-900" style={{ fontSize: "0.95rem" }}>
             Skill<span style={{ color: "#2563EB" }}>Bridge</span>
           </span>
