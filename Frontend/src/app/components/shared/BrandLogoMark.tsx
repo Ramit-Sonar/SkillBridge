@@ -4,7 +4,7 @@ type BrandLogoMarkProps = {
 
 const LOGO_SRC = "/temp/logo.png";
 
-export function BrandLogoMark({ className = "w-12 h-9" }: BrandLogoMarkProps) {
+export function BrandLogoMark({ className = "w-14 h-10" }: BrandLogoMarkProps) {
   return (
     <span
       className={`inline-flex items-center justify-center overflow-hidden rounded-lg bg-white border border-black/[0.06] shadow-sm shrink-0 ${className}`}

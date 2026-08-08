@@ -56,9 +56,9 @@ export default function PublicProfilePage() {
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Minimal header */}
       <header className="bg-white border-b border-black/[0.06] px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <BrandLogoMark className="w-11 h-8" />
-          <span className="font-bold text-slate-900" style={{ fontSize: "0.95rem" }}>
+        <Link to="/" className="flex items-center gap-3">
+          <BrandLogoMark className="w-14 h-10" />
+          <span className="font-bold text-slate-900" style={{ fontSize: "1.25rem" }}>
             Skill<span style={{ color: "#2563EB" }}>Bridge</span>
           </span>
         </Link>

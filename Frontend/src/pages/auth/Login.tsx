@@ -95,9 +95,9 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Link to="/" className="flex items-center gap-2">
-            <BrandLogoMark className="w-12 h-9" />
-            <span className="font-bold text-slate-900" style={{ fontSize: "1.1rem" }}>
+          <Link to="/" className="flex items-center gap-3">
+            <BrandLogoMark className="w-14 h-10" />
+            <span className="font-bold text-slate-900" style={{ fontSize: "1.25rem" }}>
               Skill<span style={{ color: "#2563EB" }}>Bridge</span>
             </span>
           </Link>

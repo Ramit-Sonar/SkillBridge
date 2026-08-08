@@ -18,9 +18,12 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
-            <a href="#home" className="flex items-center gap-2 mb-4">
-              <BrandLogoMark className="w-12 h-9 border-white/10" />
-              <span className="font-bold text-white tracking-tight" style={{ fontSize: "1.1rem" }}>
+            <a href="#home" className="flex items-center gap-3 mb-4">
+              <BrandLogoMark className="w-14 h-10 border-white/10" />
+              <span
+                className="font-bold text-white tracking-tight"
+                style={{ fontSize: "1.25rem" }}
+              >
                 Skill<span style={{ color: "#60A5FA" }}>Bridge</span>
               </span>
             </a>

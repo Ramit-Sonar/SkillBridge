@@ -331,8 +331,8 @@ function Sidebar({
       className="hidden lg:flex flex-col h-screen bg-white border-r border-black/[0.06] shrink-0 z-20 relative"
       style={{ minWidth: 68 }}
     >
-      <div className="flex items-center h-16 border-b border-black/[0.05] shrink-0 px-[18px] overflow-hidden">
-        <BrandLogoMark className="w-10 h-8" />
+      <div className="flex items-center h-16 border-b border-black/[0.05] shrink-0 px-1.5 overflow-hidden">
+        <BrandLogoMark className="w-14 h-10" />
         <AnimatePresence>
           {expanded && (
             <motion.span
@@ -345,7 +345,7 @@ function Sidebar({
                 delay: 0.06,
               }}
               className="ml-3 font-bold text-slate-900 whitespace-nowrap"
-              style={{ fontSize: "1rem" }}
+              style={{ fontSize: "1.25rem" }}
             >
               Skill<span style={{ color: "#2563EB" }}>Bridge</span>
             </motion.span>
@@ -710,9 +710,9 @@ function MobileDrawer({
             className="fixed top-0 left-0 bottom-0 w-64 bg-white z-40 flex flex-col shadow-2xl lg:hidden"
           >
             <div className="flex items-center justify-between px-5 h-16 border-b border-black/[0.05]">
-              <div className="flex items-center gap-2.5">
-                <BrandLogoMark className="w-11 h-8" />
-                <span className="font-bold text-slate-900" style={{ fontSize: "0.95rem" }}>
+              <div className="flex items-center gap-3">
+                <BrandLogoMark className="w-14 h-10" />
+                <span className="font-bold text-slate-900" style={{ fontSize: "1.25rem" }}>
                   Skill<span style={{ color: "#2563EB" }}>Bridge</span>
                 </span>
               </div>
