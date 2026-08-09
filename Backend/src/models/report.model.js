@@ -28,9 +28,9 @@ const reportSchema = new Schema(
     },
     reason: {
       type: String,
-      enum: REPORT_REASONS,
       required: true,
       trim: true,
+      maxlength: 80,
     },
     description: {
       type: String,

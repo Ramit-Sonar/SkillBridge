@@ -59,7 +59,7 @@ export type SubmitReportPayload = {
   reportedUserId?: string;
   reportedUserName: string;
   reportedUserRole: ReportUserRole;
-  reason: ReportReason;
+  reason: string;
   description: string;
   files?: File[];
 };

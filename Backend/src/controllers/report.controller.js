@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import {
   Report,
-  REPORT_REASONS,
   REPORT_STATUSES,
 } from "../models/report.model.js";
 import { User } from "../models/user.model.js";
@@ -19,6 +18,8 @@ import { removeTempFiles } from "../utils/tempFile.js";
  * Handles user report submissions and admin report review actions.
  * Report.status is updated only by admins after investigation.
  */
+const REPORT_REASON_MAX_LENGTH = 80;
+
 const populateReportUsers = (query) =>
   query
     .populate(
@@ -60,8 +61,14 @@ const createReport = asyncHandler(async (req, res) => {
       throw new ApiError(400, "You cannot report your own account");
     }
 
-    if (!REPORT_REASONS.includes(reason)) {
-      throw new ApiError(400, "Report reason is invalid");
+    if (typeof reason !== "string" || !reason.trim()) {
+      throw new ApiError(400, "Report reason is required");
+    }
+
+    const trimmedReason = reason.trim();
+
+    if (trimmedReason.length > REPORT_REASON_MAX_LENGTH) {
+      throw new ApiError(400, "Report reason cannot exceed 80 characters");
     }
 
     if (typeof description !== "string" || !description.trim()) {
@@ -92,7 +99,7 @@ const createReport = asyncHandler(async (req, res) => {
     const report = await Report.create({
       reporter: req.user._id,
       reportedUser: reportedUser._id,
-      reason,
+      reason: trimmedReason,
       description: trimmedDescription,
       attachments: uploadedAttachments,
     });

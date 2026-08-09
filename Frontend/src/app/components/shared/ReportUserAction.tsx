@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertCircle, Flag, X } from "lucide-react";
+import { AlertCircle, ChevronDown, Flag, X } from "lucide-react";
 import { Notification, type NotificationMessage } from "./ui";
 import { useModalScrollLock } from "./useModalScrollLock";
 import { usePlatformSettings } from "../../data/platformSettingsStore";
@@ -42,6 +42,7 @@ function ReportUserModal({
 }) {
   const { platformName } = usePlatformSettings();
   const [reason, setReason] = useState<ReportReason | "">("");
+  const [customReason, setCustomReason] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,6 +50,7 @@ function ReportUserModal({
   const reasonId = `${dialogId}-reason`;
   const descriptionId = `${dialogId}-description`;
   const canSubmit = !busy;
+  const requiresCustomReason = reason === "Other";
 
   useModalScrollLock();
 
@@ -60,10 +62,17 @@ function ReportUserModal({
       return;
     }
 
+    if (requiresCustomReason && !customReason.trim()) {
+      setError("Please enter the custom report reason.");
+      return;
+    }
+
     if (!description.trim()) {
       setError("Please describe the issue.");
       return;
     }
+
+    const reportReason = requiresCustomReason ? customReason.trim() : reason;
 
     setBusy(true);
     setError("");
@@ -73,7 +82,7 @@ function ReportUserModal({
         reportedUserId,
         reportedUserName,
         reportedUserRole,
-        reason,
+        reason: reportReason,
         description: description.trim(),
       });
       onSubmitted();
@@ -137,25 +146,51 @@ function ReportUserModal({
             >
               Reason <span className="text-red-400">*</span>
             </label>
-            <select
-              id={reasonId}
-              value={reason}
+            <div className="relative">
+              <select
+                id={reasonId}
+                value={reason}
+                onChange={(event) => {
+                  const selectedReason = event.target.value as ReportReason | "";
+
+                  setReason(selectedReason);
+
+                  if (selectedReason !== "Other") {
+                    setCustomReason("");
+                  }
+
+                  setError("");
+                }}
+                disabled={busy}
+                className="w-full appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+                style={{ fontSize: "0.875rem" }}
+              >
+                <option value="">Select reason</option>
+                {REPORT_REASONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          {requiresCustomReason && (
+            <textarea
+              value={customReason}
               onChange={(event) => {
-                setReason(event.target.value as ReportReason | "");
+                setCustomReason(event.target.value);
                 setError("");
               }}
               disabled={busy}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none transition-all focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 disabled:opacity-60"
+              rows={4}
+              maxLength={80}
+              placeholder="Enter custom report reason..."
+              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 placeholder-slate-300 outline-none resize-none transition-all focus:border-red-500 focus:ring-2 focus:ring-red-500/10 disabled:opacity-60"
               style={{ fontSize: "0.875rem" }}
-            >
-              <option value="">Select reason</option>
-              {REPORT_REASONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
+            />
+          )}
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-3">
