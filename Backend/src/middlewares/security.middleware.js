@@ -90,10 +90,16 @@ export const registerRateLimiter = createRateLimiter({
   message: "Too many registration attempts. Please try again later.",
 });
 
-export const otpRateLimiter = createRateLimiter({
+export const otpSendRateLimiter = createRateLimiter({
   windowMs: OTP_WINDOW_MS,
   max: 5,
-  message: "Too many OTP attempts. Please try again later.",
+  message: "Too many OTP send attempts. Please try again later.",
+});
+
+export const otpVerifyRateLimiter = createRateLimiter({
+  windowMs: OTP_WINDOW_MS,
+  max: 5,
+  message: "Too many OTP verification attempts. Please try again later.",
 });
 
 export const passwordResetRateLimiter = createRateLimiter({

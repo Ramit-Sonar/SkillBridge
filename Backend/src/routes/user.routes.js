@@ -18,7 +18,8 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import {
   loginRateLimiter,
-  otpRateLimiter,
+  otpSendRateLimiter,
+  otpVerifyRateLimiter,
   passwordResetRateLimiter,
   registerRateLimiter,
 } from "../middlewares/security.middleware.js";
@@ -35,9 +36,9 @@ router.route("/login").post(loginRateLimiter, loginUser);
 
 router
   .route("/send-verification-otp")
-  .post(otpRateLimiter, sendVerificationOtp);
+  .post(otpSendRateLimiter, sendVerificationOtp);
 
-router.route("/verify-email").post(otpRateLimiter, verifyEmail);
+router.route("/verify-email").post(otpVerifyRateLimiter, verifyEmail);
 
 router.route("/forgot-password").post(passwordResetRateLimiter, forgotPassword);
 
