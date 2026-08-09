@@ -41,6 +41,7 @@ const toAdminClientVerification = (verification) => {
     initials: getInitials(fullName),
     email: user.email || "",
     role: "Client",
+    avatar: user.avatar || "",
     status: verification.status,
     legalName: verification.legalName || "",
     phone: verification.phone || "",

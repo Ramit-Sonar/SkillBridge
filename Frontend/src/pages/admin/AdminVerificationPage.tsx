@@ -448,10 +448,18 @@ function ClientDetailModal({
           {/* Client info */}
           <div className="flex items-center gap-4">
             <div
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-600 to-amber-500 flex items-center justify-center text-white font-bold"
+              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-600 to-amber-500 flex items-center justify-center text-white font-bold overflow-hidden"
               style={{ fontSize: "1rem" }}
             >
-              {request.initials}
+              {request.avatar ? (
+                <img
+                  src={request.avatar}
+                  alt={`${request.name} avatar`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                request.initials
+              )}
             </div>
             <div>
               <p className="text-slate-900 font-bold" style={{ fontSize: "1rem" }}>

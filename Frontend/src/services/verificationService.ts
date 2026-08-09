@@ -55,6 +55,7 @@ export type AdminClientVerification = {
   initials: string;
   email: string;
   role: "Client";
+  avatar?: string;
   status: VerificationStatus;
   legalName: string;
   phone: string;
