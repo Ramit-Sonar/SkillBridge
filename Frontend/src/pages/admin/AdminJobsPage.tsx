@@ -640,7 +640,7 @@ export default function AdminJobsPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <div
-                          className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0"
+                          className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0"
                           style={{ fontSize: "0.42rem" }}
                         >
                           {job.clientAvatar ? (
