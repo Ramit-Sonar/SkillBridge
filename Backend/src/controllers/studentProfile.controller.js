@@ -18,7 +18,9 @@ const getStudentProfile = asyncHandler(async (req, res) => {
   const profile = await StudentProfile.findOne({ user: req.user._id });
 
   if (!profile) {
-    throw new ApiError(404, "Student profile not found");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Student profile is empty."));
   }
 
   return res

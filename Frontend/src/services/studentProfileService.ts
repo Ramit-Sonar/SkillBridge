@@ -58,6 +58,15 @@ export const getStudentProfile = async (): Promise<ApiResponse<StudentProfileDat
 
   const data = await response.json();
 
+  if (response.status === 404 && data.message === "Student profile not found") {
+    return {
+      statusCode: 200,
+      data: null,
+      message: "Student profile is empty.",
+      success: true,
+    };
+  }
+
   if (!response.ok) {
     throw new Error(data.message);
   }
