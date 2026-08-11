@@ -263,4 +263,26 @@ describe("Message Service", () => {
       { new: true, runValidators: true }
     );
   });
+
+  test("rejects marking the sender's own message as read", async () => {
+    const createdAt = new Date("2026-08-06T10:00:00.000Z");
+    const existingMessage = {
+      _id: messageId,
+      project: projectId,
+      sender: studentId,
+      message: "I uploaded the deliverable.",
+      isRead: false,
+      createdAt,
+      updatedAt: createdAt,
+    };
+
+    messageFindByIdMock.mockReturnValue(createLeanQuery(existingMessage));
+
+    await expect(markMessageAsRead(messageId, studentId)).rejects.toMatchObject({
+      statusCode: 403,
+      message: "You cannot mark your own message as read",
+    });
+    expect(projectFindByIdMock).not.toHaveBeenCalled();
+    expect(messageFindByIdAndUpdateMock).not.toHaveBeenCalled();
+  });
 });

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Clock, MessageSquare, Send } from "lucide-react";
+import { Check, CheckCheck, Clock, MessageSquare, Send } from "lucide-react";
 import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
 import {
   getProjectMessages,
+  markProjectMessageRead,
   sendProjectMessage,
   type ProjectMessage,
 } from "../../../services/messageService";
@@ -52,7 +53,13 @@ const didMessageListChange = (
   const currentLastMessage = currentMessages[currentMessages.length - 1];
   const nextLastMessage = nextMessages[nextMessages.length - 1];
 
-  return currentLastMessage?.id !== nextLastMessage?.id;
+  if (currentLastMessage?.id !== nextLastMessage?.id) return true;
+
+  return nextMessages.some((message, index) => {
+    const currentMessage = currentMessages[index];
+
+    return currentMessage.id !== message.id || currentMessage.isRead !== message.isRead;
+  });
 };
 
 export function ProjectOverview({
@@ -93,6 +100,31 @@ export function ProjectOverview({
     setMessages(nextMessages);
   };
 
+  const markUnreadReceivedMessages = async (nextMessages: ProjectMessage[]) => {
+    const unreadMessages = nextMessages.filter(
+      (message) => message.sender.role !== role && !message.isRead
+    );
+
+    if (unreadMessages.length === 0) return;
+
+    try {
+      await Promise.all(
+        unreadMessages.map((message) => markProjectMessageRead(message.id))
+      );
+
+      if (!mountedRef.current) return;
+
+      const readMessageIds = new Set(unreadMessages.map((message) => message.id));
+      const updatedMessages = messagesSnapshotRef.current.map((message) =>
+        readMessageIds.has(message.id) ? { ...message, isRead: true } : message
+      );
+
+      setDiscussionMessages(updatedMessages);
+    } catch {
+      // Read receipts are retried on the next message refresh.
+    }
+  };
+
   const loadMessages = async (showLoading = true) => {
     if (showLoading) setMessagesLoading(true);
     setMessagesError("");
@@ -103,6 +135,7 @@ export function ProjectOverview({
       if (!mountedRef.current) return;
 
       setDiscussionMessages(response.data.messages);
+      markUnreadReceivedMessages(response.data.messages);
       scrollMessagesToBottom();
     } catch (error) {
       if (!mountedRef.current) return;
@@ -127,6 +160,7 @@ export function ProjectOverview({
         if (!mountedRef.current) return;
 
         setDiscussionMessages(response.data.messages);
+        markUnreadReceivedMessages(response.data.messages);
         scrollMessagesToBottom();
       } catch (error) {
         if (!mountedRef.current) return;
@@ -151,6 +185,7 @@ export function ProjectOverview({
 
         setMessagesError("");
         setDiscussionMessages(nextMessages);
+        markUnreadReceivedMessages(nextMessages);
         scrollMessagesToBottom();
       } catch (error) {
         if (!mountedRef.current || messagesSnapshotRef.current.length > 0) return;
@@ -246,27 +281,35 @@ export function ProjectOverview({
                         : "bg-white text-slate-700 border-black/[0.06]"
                     }`}
                   >
-                    <div
-                      className={`flex items-center gap-3 mb-1 ${
-                        isCurrentViewer ? "justify-end" : "justify-between"
-                      }`}
-                    >
-                      {!isCurrentViewer && (
+                    {!isCurrentViewer && (
+                      <div className="flex items-center justify-between gap-3 mb-1">
                         <span
                           className="text-slate-500"
                           style={{ fontSize: "0.62rem", fontWeight: 700 }}
                         >
                           {senderName}
                         </span>
-                      )}
                       <span
-                        className={isCurrentViewer ? "text-blue-100" : "text-slate-400"}
+                        className="text-slate-400"
                         style={{ fontSize: "0.6rem" }}
                       >
                         {formatMessageTime(message.createdAt)}
                       </span>
-                    </div>
+                      </div>
+                    )}
                     <p style={{ fontSize: "0.72rem", lineHeight: 1.45 }}>{message.message}</p>
+                    {isCurrentViewer && (
+                      <div className="flex items-center justify-end gap-1 mt-1 text-blue-100">
+                        <span style={{ fontSize: "0.6rem" }}>
+                          {formatMessageTime(message.createdAt)}
+                        </span>
+                        {message.isRead ? (
+                          <CheckCheck className="w-3 h-3" aria-label="Message read" />
+                        ) : (
+                          <Check className="w-3 h-3" aria-label="Message sent" />
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

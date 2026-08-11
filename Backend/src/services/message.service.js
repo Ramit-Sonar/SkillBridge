@@ -120,6 +120,10 @@ export const markMessageAsRead = async (messageId, userId) => {
     throw new ApiError(404, "Message not found");
   }
 
+  if (message.sender?.toString() === userId.toString()) {
+    throw new ApiError(403, "You cannot mark your own message as read");
+  }
+
   await ensureProjectMessageAccess(message.project, userId);
 
   const updatedMessage = await Message.findByIdAndUpdate(
