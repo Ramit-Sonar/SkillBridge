@@ -10,6 +10,9 @@ import { BrandLogoMark } from "@/app/components/shared/BrandLogoMark";
 
 // Input field component
 
+const NAME_ALLOWED_CHARACTERS = /[^A-Za-z\s]/g;
+const NAME_PATTERN = /^[A-Za-z]+(?:\s[A-Za-z]+)*$/;
+
 interface InputFieldProps {
   label: string;
   type: string;
@@ -74,9 +77,17 @@ export default function Register() {
   const set = (field: string) => (value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const setName = (value: string) => {
+    const nameOnly = value.replace(NAME_ALLOWED_CHARACTERS, "").replace(/\s{2,}/g, " ");
+    setForm((prev) => ({ ...prev, name: nameOnly }));
+  };
+
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = "Full name is required.";
+    const fullName = form.name.trim();
+
+    if (!fullName) e.name = "Full name is required.";
+    else if (!NAME_PATTERN.test(fullName)) e.name = "Full name can contain only letters and spaces.";
     if (!form.email.includes("@")) e.email = "Enter a valid email address.";
     if (form.password.length < 8) e.password = "Password must be at least 8 characters.";
     if (form.password !== form.confirm) e.confirm = "Passwords do not match.";
@@ -101,7 +112,7 @@ export default function Register() {
     try {
       // The backend stores this as a pending registration until OTP verification.
       await sendVerificationOtp({
-        fullName: form.name,
+        fullName: form.name.trim(),
         email: form.email,
         password: form.password,
         confirmPassword: form.confirm,
@@ -195,7 +206,7 @@ export default function Register() {
               type="text"
               placeholder="Your full name"
               value={form.name}
-              onChange={set("name")}
+              onChange={setName}
               icon={<User className="w-4 h-4" />}
               error={errors.name}
             />
