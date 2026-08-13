@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Clock, Paperclip, MessageSquare, Send, X } from "lucide-react";
+import {
+  Check,
+  CheckCheck,
+  Clock,
+  Download,
+  Paperclip,
+  MessageSquare,
+  Send,
+  X,
+} from "lucide-react";
 import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
 import {
@@ -10,10 +19,12 @@ import {
 } from "../../../services/messageService";
 import { joinProjectMessageSocket } from "../../../services/messageSocketService";
 import {
+  downloadAttachment,
   formatFileSize,
   getFileIcon,
   isValidAttachmentUrl,
   truncateFileName,
+  type FileAttachment,
 } from "../../../utils/fileUtils";
 import type { NotificationMessage } from "./ui";
 
@@ -60,6 +71,12 @@ type MessageAttachmentDraft = {
   size: number;
   type: string;
 };
+
+const isImageAttachment = (attachment: FileAttachment) =>
+  attachment.mimeType?.toLowerCase().startsWith("image/");
+
+const isPdfAttachment = (attachment: FileAttachment) =>
+  attachment.mimeType?.toLowerCase() === "application/pdf";
 
 export function ProjectOverview({
   projectId,
@@ -283,6 +300,17 @@ export function ProjectOverview({
     );
   };
 
+  const handleDownloadMessageAttachment = async (attachment: FileAttachment) => {
+    try {
+      await downloadAttachment(attachment);
+    } catch (error) {
+      onNotify?.({
+        type: "error",
+        text: error instanceof Error ? error.message : "Attachment could not be downloaded.",
+      });
+    }
+  };
+
   return (
     <div className="grid lg:grid-cols-3 gap-4 items-start">
       <section
@@ -357,18 +385,120 @@ export function ProjectOverview({
                           const fileDisplay = getFileIcon(attachment.mimeType);
                           const Icon = fileDisplay.icon;
                           const hasValidUrl = isValidAttachmentUrl(attachment.url);
+                          const isImage = isImageAttachment(attachment);
+                          const isPdf = isPdfAttachment(attachment);
+                          const previewUrl = attachment.url || "";
+
+                          if (hasValidUrl && isImage) {
+                            return (
+                              <div
+                                key={`${message.id}-${attachment.originalName}-${attachment.url}`}
+                                className={`w-52 max-w-full overflow-hidden rounded-xl border ${
+                                  isCurrentViewer
+                                    ? "border-white/20 bg-white/10"
+                                    : "border-slate-200 bg-white"
+                                }`}
+                              >
+                                <a
+                                  href={previewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block"
+                                  title={attachment.originalName || "Image attachment"}
+                                >
+                                  <img
+                                    src={previewUrl}
+                                    alt={attachment.originalName || "Image attachment"}
+                                    loading="lazy"
+                                    className="h-28 w-full object-cover"
+                                  />
+                                </a>
+                                <div
+                                  className={`flex items-center justify-between gap-2 px-2 py-1.5 ${
+                                    isCurrentViewer ? "text-blue-100" : "text-slate-500"
+                                  }`}
+                                >
+                                  <span style={{ fontSize: "0.58rem" }}>
+                                    {formatFileSize(attachment.size)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadMessageAttachment(attachment)}
+                                    className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                                      isCurrentViewer
+                                        ? "text-white hover:bg-white/15"
+                                        : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                                    }`}
+                                    aria-label={`Download ${attachment.originalName || "attachment"}`}
+                                    title="Download attachment"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (hasValidUrl && isPdf) {
+                            return (
+                              <div
+                                key={`${message.id}-${attachment.originalName}-${attachment.url}`}
+                                className={`w-52 max-w-full overflow-hidden rounded-xl border ${
+                                  isCurrentViewer
+                                    ? "border-white/20 bg-white/10"
+                                    : "border-slate-200 bg-white"
+                                }`}
+                              >
+                                <div className="relative h-28 w-full overflow-hidden bg-white">
+                                  <iframe
+                                    src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                                    title={attachment.originalName || "PDF attachment"}
+                                    className="h-full w-full pointer-events-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      window.open(previewUrl, "_blank", "noopener,noreferrer")
+                                    }
+                                    className="absolute inset-0"
+                                    aria-label={`Open ${attachment.originalName || "PDF attachment"}`}
+                                    title={attachment.originalName || "PDF attachment"}
+                                  />
+                                </div>
+                                <div
+                                  className={`flex items-center justify-between gap-2 px-2 py-1.5 ${
+                                    isCurrentViewer ? "text-blue-100" : "text-slate-500"
+                                  }`}
+                                >
+                                  <span className="font-semibold" style={{ fontSize: "0.58rem" }}>
+                                    PDF - {formatFileSize(attachment.size)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadMessageAttachment(attachment)}
+                                    className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                                      isCurrentViewer
+                                        ? "text-white hover:bg-white/15"
+                                        : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                                    }`}
+                                    aria-label={`Download ${attachment.originalName || "attachment"}`}
+                                    title="Download attachment"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          }
 
                           return (
-                            <a
+                            <div
                               key={`${message.id}-${attachment.originalName}-${attachment.url}`}
-                              href={hasValidUrl ? attachment.url : undefined}
-                              target="_blank"
-                              rel="noreferrer"
                               className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
                                 isCurrentViewer
                                   ? "border-white/20 bg-white/10 text-white"
                                   : "border-slate-200 bg-slate-50 text-slate-700"
-                              } ${hasValidUrl ? "hover:opacity-85" : "pointer-events-none opacity-70"}`}
+                              } ${hasValidUrl ? "" : "opacity-70"}`}
                             >
                               <Icon
                                 className="h-3.5 w-3.5 shrink-0"
@@ -387,7 +517,21 @@ export function ProjectOverview({
                               >
                                 {formatFileSize(attachment.size)}
                               </span>
-                            </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadMessageAttachment(attachment)}
+                                disabled={!hasValidUrl}
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                  isCurrentViewer
+                                    ? "text-white hover:bg-white/15"
+                                    : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                                }`}
+                                aria-label={`Download ${attachment.originalName || "attachment"}`}
+                                title="Download attachment"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
