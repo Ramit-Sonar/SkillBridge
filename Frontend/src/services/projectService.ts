@@ -2,7 +2,7 @@ import type { ApiResponse } from "./applicationService";
 import type { StudentCertificate } from "./studentProfileService";
 import type { JobAttachment } from "./jobService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
-import { getApiBaseUrl } from "./apiConfig";
+import { fetchWithTimeout, getApiBaseUrl } from "./apiConfig";
 
 const API_URL = getApiBaseUrl();
 
@@ -301,7 +301,7 @@ const parseProjectResponse = async <T>(
 };
 
 export const getMyProjects = async (): Promise<ApiResponse<MyProjectsResponse>> => {
-  const response = await fetch(`${API_URL}/projects/my-projects`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/my-projects`, {
     method: "GET",
     credentials: "include",
   });
@@ -310,7 +310,7 @@ export const getMyProjects = async (): Promise<ApiResponse<MyProjectsResponse>> 
 };
 
 export const getProjectById = async (projectId: string): Promise<ApiResponse<ProjectWorkspace>> => {
-  const response = await fetch(`${API_URL}/projects/${projectId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -321,7 +321,7 @@ export const getProjectById = async (projectId: string): Promise<ApiResponse<Pro
 export const getProjectDeliverables = async (
   projectId: string
 ): Promise<ApiResponse<ProjectDeliverablesResponse>> => {
-  const response = await fetch(`${API_URL}/projects/${projectId}/deliverables`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/deliverables`, {
     method: "GET",
     credentials: "include",
   });
@@ -335,7 +335,7 @@ export const getProjectDeliverables = async (
 export const getProjectTimeline = async (
   projectId: string
 ): Promise<ApiResponse<ProjectTimelineResponse>> => {
-  const response = await fetch(`${API_URL}/projects/${projectId}/timeline`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/timeline`, {
     method: "GET",
     credentials: "include",
   });
@@ -362,7 +362,7 @@ export const submitDeliverable = async (
     formData.append("attachments", file);
   });
 
-  const response = await fetch(`${API_URL}/projects/${projectId}/deliverables`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/deliverables`, {
     method: "POST",
     credentials: "include",
     body: formData,
@@ -388,11 +388,14 @@ export const requestRevision = async (
     formData.append("attachments", file);
   });
 
-  const response = await fetch(`${API_URL}/projects/${projectId}/deliverables/request-revision`, {
-    method: "POST",
-    credentials: "include",
-    body: formData,
-  });
+  const response = await fetchWithTimeout(
+    `${API_URL}/projects/${projectId}/deliverables/request-revision`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }
+  );
 
   return parseProjectResponse<RequestRevisionResponse>(response, "Failed to request revision.");
 };
@@ -400,7 +403,7 @@ export const requestRevision = async (
 export const approveDeliverable = async (
   projectId: string
 ): Promise<ApiResponse<ApproveDeliverableResponse>> => {
-  const response = await fetch(`${API_URL}/projects/${projectId}/deliverables/approve`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/deliverables/approve`, {
     method: "PATCH",
     credentials: "include",
   });

@@ -2,7 +2,7 @@ import type { ClientSummary, JobAttachment } from "./jobService";
 import type { ProjectProfileCompletedProject } from "./projectService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
 import type { StudentCertificate } from "./studentProfileService";
-import { getApiBaseUrl } from "./apiConfig";
+import { fetchWithTimeout, getApiBaseUrl } from "./apiConfig";
 
 const API_URL = getApiBaseUrl();
 
@@ -163,6 +163,12 @@ export type ApiResponse<T> = {
   data: T;
   message: string;
   success: boolean;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 const parseApplicationResponse = async <T>(
@@ -194,7 +200,7 @@ export const submitApplication = async (
     formData.append("attachments", file);
   });
 
-  const response = await fetch(`${API_URL}/applications/${jobId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/${jobId}`, {
     method: "POST",
     credentials: "include",
     body: formData,
@@ -207,7 +213,7 @@ export const submitApplication = async (
 };
 
 export const getMyApplications = async (): Promise<ApiResponse<MyApplicationsResponse>> => {
-  const response = await fetch(`${API_URL}/applications/my-applications`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/my-applications`, {
     method: "GET",
     credentials: "include",
   });
@@ -221,7 +227,7 @@ export const getMyApplications = async (): Promise<ApiResponse<MyApplicationsRes
 export const getApplicationById = async (
   applicationId: string
 ): Promise<ApiResponse<ApplicationDetails>> => {
-  const response = await fetch(`${API_URL}/applications/${applicationId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/${applicationId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -232,7 +238,7 @@ export const getApplicationById = async (
 export const getJobApplications = async (
   jobId: string
 ): Promise<ApiResponse<JobApplicationsResponse>> => {
-  const response = await fetch(`${API_URL}/applications/job/${jobId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/job/${jobId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -246,7 +252,7 @@ export const getJobApplications = async (
 export const withdrawApplication = async (
   applicationId: string
 ): Promise<ApiResponse<WithdrawApplicationResponse>> => {
-  const response = await fetch(`${API_URL}/applications/${applicationId}/withdraw`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/${applicationId}/withdraw`, {
     method: "PATCH",
     credentials: "include",
   });
@@ -260,7 +266,7 @@ export const withdrawApplication = async (
 export const acceptApplication = async (
   applicationId: string
 ): Promise<ApiResponse<AcceptApplicationResponse>> => {
-  const response = await fetch(`${API_URL}/applications/${applicationId}/accept`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/${applicationId}/accept`, {
     method: "PATCH",
     credentials: "include",
   });
@@ -274,7 +280,7 @@ export const acceptApplication = async (
 export const rejectApplication = async (
   applicationId: string
 ): Promise<ApiResponse<RejectApplicationResponse>> => {
-  const response = await fetch(`${API_URL}/applications/${applicationId}/reject`, {
+  const response = await fetchWithTimeout(`${API_URL}/applications/${applicationId}/reject`, {
     method: "PATCH",
     credentials: "include",
   });

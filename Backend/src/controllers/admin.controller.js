@@ -14,6 +14,7 @@ import {
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { buildPagination, getPaginationParams } from "../utils/pagination.js";
 
 /**
  * Handles admin-only user management actions.
@@ -27,16 +28,18 @@ const VALID_ADMIN_JOB_STATUSES = [
 ];
 
 const getAdminUsers = asyncHandler(async (req, res) => {
-  const users = await getAdminUsersData();
+  const paginationParams = getPaginationParams(req.query);
+  const { users, totalUsers } = await getAdminUsersData(paginationParams);
 
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        totalUsers: users.length,
+        totalUsers,
         users,
       },
-      "Users fetched successfully"
+      "Users fetched successfully",
+      buildPagination({ ...paginationParams, total: totalUsers })
     )
   );
 });
@@ -166,24 +169,27 @@ const updateMaintenanceSettings = asyncHandler(async (req, res) => {
 const getAdminJobs = asyncHandler(async (req, res) => {
   const status =
     typeof req.query.status === "string" ? req.query.status : "all";
+  const paginationParams = getPaginationParams(req.query);
 
   if (!VALID_ADMIN_JOB_STATUSES.includes(status.toLowerCase())) {
     throw new ApiError(400, "Job status filter is invalid");
   }
 
-  const jobs = await getAdminJobsData({
+  const { jobs, totalJobs } = await getAdminJobsData({
     search: typeof req.query.search === "string" ? req.query.search : "",
     status,
+    ...paginationParams,
   });
 
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        totalJobs: jobs.length,
+        totalJobs,
         jobs,
       },
-      "Jobs fetched successfully"
+      "Jobs fetched successfully",
+      buildPagination({ ...paginationParams, total: totalJobs })
     )
   );
 });

@@ -1,5 +1,5 @@
 import type { ApiResponse } from "./applicationService";
-import { getApiBaseUrl } from "./apiConfig";
+import { fetchWithTimeout, getApiBaseUrl } from "./apiConfig";
 import type { FileAttachment } from "../utils/fileUtils";
 
 const API_URL = getApiBaseUrl();
@@ -56,12 +56,17 @@ const getFileNameFromContentDisposition = (header: string | null) => {
 };
 
 export const getProjectMessages = async (
-  projectId: string
+  projectId: string,
+  page = 1,
+  limit = 30
 ): Promise<ApiResponse<ProjectMessagesResponse>> => {
-  const response = await fetch(`${API_URL}/projects/${projectId}/messages`, {
-    method: "GET",
-    credentials: "include",
-  });
+  const response = await fetchWithTimeout(
+    `${API_URL}/projects/${projectId}/messages?page=${page}&limit=${limit}`,
+    {
+      method: "GET",
+      credentials: "include",
+    }
+  );
 
   return parseMessageResponse<ProjectMessagesResponse>(
     response,
@@ -83,7 +88,7 @@ export const sendProjectMessage = async (
     attachments.forEach((attachment) => body.append("attachments", attachment));
   }
 
-  const response = await fetch(`${API_URL}/projects/${projectId}/messages`, {
+  const response = await fetchWithTimeout(`${API_URL}/projects/${projectId}/messages`, {
     method: "POST",
     credentials: "include",
     headers,
@@ -96,7 +101,7 @@ export const sendProjectMessage = async (
 export const markProjectMessageRead = async (
   messageId: string
 ): Promise<ApiResponse<ProjectMessage>> => {
-  const response = await fetch(`${API_URL}/messages/${messageId}/read`, {
+  const response = await fetchWithTimeout(`${API_URL}/messages/${messageId}/read`, {
     method: "PATCH",
     credentials: "include",
   });
@@ -109,7 +114,7 @@ export const downloadProjectMessageAttachment = async (
   attachmentIndex: number,
   fallbackFileName = "attachment"
 ) => {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${API_URL}/messages/${messageId}/attachments/${attachmentIndex}/download`,
     {
       method: "GET",

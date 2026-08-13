@@ -11,6 +11,7 @@ import {
 } from "../utils/attachment.js";
 import { buildClientSummary } from "../services/client.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { buildPagination, getPaginationParams } from "../utils/pagination.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
 /*
@@ -232,17 +233,24 @@ const getClientJobs = asyncHandler(async (req, res) => {
     throw new ApiError(403, "Only clients can view their jobs");
   }
 
-  const jobs = await Job.find({
-    client: req.user._id,
-  })
-    .sort({ createdAt: -1 })
-    .lean();
+  const paginationParams = getPaginationParams(req.query);
+  const filter = { client: req.user._id };
+  const [jobs, totalJobs] = await Promise.all([
+    Job.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit)
+      .lean(),
+    Job.countDocuments(filter),
+  ]);
+
+  const jobIds = jobs.map((job) => job._id);
 
   // Counts are aggregated separately so the job list stays compact.
   const applicationCounts = await Application.aggregate([
     {
       $match: {
-        job: { $in: jobs.map((job) => job._id) },
+        job: { $in: jobIds },
       },
     },
     {
@@ -255,7 +263,7 @@ const getClientJobs = asyncHandler(async (req, res) => {
   const pendingApplicationCounts = await Application.aggregate([
     {
       $match: {
-        job: { $in: jobs.map((job) => job._id) },
+        job: { $in: jobIds },
         status: "pending",
       },
     },
@@ -287,21 +295,27 @@ const getClientJobs = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         jobsWithApplicationCount,
-        "Client jobs fetched successfully"
+        "Client jobs fetched successfully",
+        buildPagination({ ...paginationParams, total: totalJobs })
       )
     );
 });
 
 const getAllOpenJobs = asyncHandler(async (req, res) => {
-  const jobs = await Job.find({
-    status: "open",
-  })
-    .select(
-      "client title category description budget duration deadline skills complexity status createdAt"
-    )
-    .populate("client", "fullName avatar")
-    .sort({ createdAt: -1 })
-    .lean();
+  const paginationParams = getPaginationParams(req.query);
+  const filter = { status: "open" };
+  const [jobs, totalJobs] = await Promise.all([
+    Job.find(filter)
+      .select(
+        "client title category description budget duration deadline skills complexity status createdAt"
+      )
+      .populate("client", "fullName avatar")
+      .sort({ createdAt: -1 })
+      .skip(paginationParams.skip)
+      .limit(paginationParams.limit)
+      .lean(),
+    Job.countDocuments(filter),
+  ]);
 
   const verificationMap = await getClientVerificationMap(
     jobs.map((job) => job.client?._id)
@@ -328,7 +342,14 @@ const getAllOpenJobs = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, publicJobs, "Open jobs fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        publicJobs,
+        "Open jobs fetched successfully",
+        buildPagination({ ...paginationParams, total: totalJobs })
+      )
+    );
 });
 
 const getJobById = asyncHandler(async (req, res) => {

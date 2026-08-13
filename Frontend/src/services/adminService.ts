@@ -2,7 +2,7 @@ import type { ProjectProfileCompletedProject } from "./projectService";
 import type { StudentRatingSummary, StudentReviewSummary } from "./reviewService";
 import type { StudentCertificate } from "./studentProfileService";
 import type { ApiResponse } from "./reportService";
-import { getApiBaseUrl } from "./apiConfig";
+import { fetchWithTimeout, getApiBaseUrl } from "./apiConfig";
 
 const API_URL = getApiBaseUrl();
 
@@ -91,12 +91,7 @@ export type PlatformSettings = {
 export type AdminJobStatus = "open" | "closed" | "cancelled" | "suspended";
 
 export type JobModerationReason =
-  | "Spam"
-  | "Fake Job"
-  | "Duplicate Listing"
-  | "Policy Violation"
-  | "Copyright Issue"
-  | "Other";
+  "Spam" | "Fake Job" | "Duplicate Listing" | "Policy Violation" | "Copyright Issue" | "Other";
 
 export type AdminJobClient = {
   id: string;
@@ -220,7 +215,7 @@ const parseAdminResponse = async <T>(
 };
 
 export const getAdminDashboardSummary = async (): Promise<ApiResponse<AdminDashboardSummary>> => {
-  const response = await fetch(`${API_URL}/admin/dashboard`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/dashboard`, {
     method: "GET",
     credentials: "include",
   });
@@ -229,7 +224,7 @@ export const getAdminDashboardSummary = async (): Promise<ApiResponse<AdminDashb
 };
 
 export const getAdminSettings = async (): Promise<ApiResponse<PlatformSettings>> => {
-  const response = await fetch(`${API_URL}/admin/settings`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/settings`, {
     method: "GET",
     credentials: "include",
   });
@@ -238,7 +233,7 @@ export const getAdminSettings = async (): Promise<ApiResponse<PlatformSettings>>
 };
 
 export const getPublicPlatformSettings = async (): Promise<ApiResponse<PlatformSettings>> => {
-  const response = await fetch(`${API_URL}/admin/settings/public`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/settings/public`, {
     method: "GET",
     credentials: "include",
   });
@@ -251,7 +246,7 @@ export const updateGeneralSettings = async (payload: {
   supportEmail: string;
   platformDescription: string;
 }): Promise<ApiResponse<PlatformSettings>> => {
-  const response = await fetch(`${API_URL}/admin/settings/general`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/settings/general`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -267,7 +262,7 @@ export const updateMaintenanceSettings = async (payload: {
   maintenanceMode: boolean;
   maintenanceMessage: string;
 }): Promise<ApiResponse<PlatformSettings>> => {
-  const response = await fetch(`${API_URL}/admin/settings/maintenance`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/settings/maintenance`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -280,7 +275,7 @@ export const updateMaintenanceSettings = async (payload: {
 };
 
 export const getUsers = async (): Promise<ApiResponse<UsersResponse>> => {
-  const response = await fetch(`${API_URL}/admin/users`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/users?limit=50`, {
     method: "GET",
     credentials: "include",
   });
@@ -302,10 +297,12 @@ export const getAdminJobs = async (params?: {
     searchParams.set("status", params.status.toLowerCase());
   }
 
+  searchParams.set("limit", "50");
+
   const queryString = searchParams.toString();
   const url = queryString ? `${API_URL}/admin/jobs?${queryString}` : `${API_URL}/admin/jobs`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "GET",
     credentials: "include",
   });
@@ -314,7 +311,7 @@ export const getAdminJobs = async (params?: {
 };
 
 export const getAdminJobDetails = async (jobId: string): Promise<ApiResponse<AdminJob>> => {
-  const response = await fetch(`${API_URL}/admin/jobs/${jobId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/jobs/${jobId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -329,7 +326,7 @@ export const suspendAdminJob = async (
     customModerationReason?: string;
   }
 ): Promise<ApiResponse<AdminJob>> => {
-  const response = await fetch(`${API_URL}/admin/jobs/${jobId}/suspend`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/jobs/${jobId}/suspend`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -342,7 +339,7 @@ export const suspendAdminJob = async (
 };
 
 export const getUserDetails = async (userId: string): Promise<ApiResponse<PlatformUser>> => {
-  const response = await fetch(`${API_URL}/admin/users/${userId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/users/${userId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -354,7 +351,7 @@ export const suspendUser = async (
   userId: string,
   suspensionReason = ""
 ): Promise<ApiResponse<PlatformUser>> => {
-  const response = await fetch(`${API_URL}/admin/users/${userId}/suspend`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/users/${userId}/suspend`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -367,7 +364,7 @@ export const suspendUser = async (
 };
 
 export const activateUser = async (userId: string): Promise<ApiResponse<PlatformUser>> => {
-  const response = await fetch(`${API_URL}/admin/users/${userId}/activate`, {
+  const response = await fetchWithTimeout(`${API_URL}/admin/users/${userId}/activate`, {
     method: "PATCH",
     credentials: "include",
   });

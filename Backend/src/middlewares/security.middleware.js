@@ -8,6 +8,8 @@ const REGISTER_WINDOW_MS = 60 * MINUTE_MS;
 const OTP_WINDOW_MS = 10 * MINUTE_MS;
 const PASSWORD_RESET_WINDOW_MS = 15 * MINUTE_MS;
 const VERIFICATION_WINDOW_MS = 60 * MINUTE_MS;
+const MESSAGE_WINDOW_MS = MINUTE_MS;
+const REPORT_WINDOW_MS = 60 * MINUTE_MS;
 
 const createRateLimiter = ({ windowMs, max, message }) =>
   rateLimit({
@@ -112,4 +114,16 @@ export const verificationRateLimiter = createRateLimiter({
   windowMs: VERIFICATION_WINDOW_MS,
   max: 10,
   message: "Too many verification attempts. Please try again later.",
+});
+
+export const messageCreateRateLimiter = createRateLimiter({
+  windowMs: MESSAGE_WINDOW_MS,
+  max: 60,
+  message: "Too many messages sent. Please slow down and try again shortly.",
+});
+
+export const reportCreateRateLimiter = createRateLimiter({
+  windowMs: REPORT_WINDOW_MS,
+  max: 5,
+  message: "Too many reports submitted. Please try again later.",
 });

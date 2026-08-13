@@ -5,7 +5,9 @@ const globalErrorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const isProduction = process.env.NODE_ENV === "production";
   const message =
-    isProduction && statusCode >= 500 ? "Internal Server Error" : err.message;
+    isProduction && statusCode >= 500
+      ? "Something went wrong. Please try again."
+      : err.message;
 
   if (!isProduction && statusCode >= 500) {
     console.error(err);

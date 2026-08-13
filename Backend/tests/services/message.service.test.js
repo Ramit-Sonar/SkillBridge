@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 
 const messageCreateMock = jest.fn();
+const messageCountDocumentsMock = jest.fn();
 const messageFindMock = jest.fn();
 const messageFindByIdMock = jest.fn();
 const messageFindByIdAndUpdateMock = jest.fn();
@@ -8,6 +9,7 @@ const projectFindByIdMock = jest.fn();
 
 jest.unstable_mockModule("../../src/models/message.model.js", () => ({
   Message: {
+    countDocuments: messageCountDocumentsMock,
     create: messageCreateMock,
     find: messageFindMock,
     findById: messageFindByIdMock,
@@ -49,6 +51,8 @@ const createMessageListQuery = (value) => ({
   select: jest.fn().mockReturnThis(),
   populate: jest.fn().mockReturnThis(),
   sort: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
   lean: jest.fn().mockResolvedValue(value),
 });
 
@@ -88,26 +92,37 @@ describe("Message Service", () => {
 
     projectFindByIdMock.mockReturnValue(createLeanQuery(project));
     messageFindMock.mockReturnValue(messageListQuery);
+    messageCountDocumentsMock.mockResolvedValue(1);
 
-    await expect(getProjectMessages(projectId, clientId)).resolves.toEqual([
-      {
-        id: messageId,
-        project: projectId,
-        sender: {
-          id: clientId,
-          fullName: "Ramit Sonar",
-          avatar: "https://example.com/avatar.png",
-          role: "client",
+    await expect(getProjectMessages(projectId, clientId)).resolves.toEqual({
+      messages: [
+        {
+          id: messageId,
+          project: projectId,
+          sender: {
+            id: clientId,
+            fullName: "Ramit Sonar",
+            avatar: "https://example.com/avatar.png",
+            role: "client",
+          },
+          message: "Please review the latest update.",
+          attachments: [],
+          isRead: false,
+          createdAt,
+          updatedAt,
         },
-        message: "Please review the latest update.",
-        attachments: [],
-        isRead: false,
-        createdAt,
-        updatedAt,
+      ],
+      pagination: {
+        page: 1,
+        limit: 30,
+        total: 1,
+        totalPages: 1,
       },
-    ]);
+    });
     expect(messageFindMock).toHaveBeenCalledWith({ project: projectId });
-    expect(messageListQuery.sort).toHaveBeenCalledWith({ createdAt: 1 });
+    expect(messageListQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
+    expect(messageListQuery.skip).toHaveBeenCalledWith(0);
+    expect(messageListQuery.limit).toHaveBeenCalledWith(30);
   });
 
   test("rejects message access when the user is not assigned to the project", async () => {
@@ -193,6 +208,22 @@ describe("Message Service", () => {
     ).rejects.toMatchObject({
       statusCode: 400,
       message: "Message is required",
+    });
+    expect(messageCreateMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects messages longer than 2000 characters", async () => {
+    projectFindByIdMock.mockReturnValue(createLeanQuery(project));
+
+    await expect(
+      createProjectMessage({
+        projectId,
+        senderId: studentId,
+        message: "a".repeat(2001),
+      })
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Message cannot exceed 2000 characters",
     });
     expect(messageCreateMock).not.toHaveBeenCalled();
   });

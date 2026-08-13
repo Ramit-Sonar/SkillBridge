@@ -361,16 +361,25 @@ const buildAdminUserSummaries = async (users) => {
   });
 };
 
-const getAdminUsersData = async () => {
-  const users = await User.find({ role: { $in: ["student", "client"] } })
-    .select(
-      "_id fullName email role avatar profileCompleted accountStatus suspendedAt suspendedBy suspensionReason createdAt"
-    )
-    .populate("suspendedBy", "fullName email role")
-    .sort({ createdAt: -1 })
-    .lean();
+const getAdminUsersData = async ({ skip = 0, limit = 20 } = {}) => {
+  const filter = { role: { $in: ["student", "client"] } };
+  const [users, totalUsers] = await Promise.all([
+    User.find(filter)
+      .select(
+        "_id fullName email role avatar profileCompleted accountStatus suspendedAt suspendedBy suspensionReason createdAt"
+      )
+      .populate("suspendedBy", "fullName email role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
 
-  return buildAdminUserSummaries(users);
+  return {
+    users: await buildAdminUserSummaries(users),
+    totalUsers,
+  };
 };
 
 const getAdminUserDetailsData = async (userId) => {
@@ -593,7 +602,12 @@ const buildAdminJobDetails = (job, applications, clientDetails) => {
   };
 };
 
-const getAdminJobsData = async ({ search = "", status = "all" } = {}) => {
+const getAdminJobsData = async ({
+  search = "",
+  status = "all",
+  skip = 0,
+  limit = 20,
+} = {}) => {
   const query = {};
   const normalizedStatus = status.toLowerCase();
 
@@ -625,17 +639,25 @@ const getAdminJobsData = async ({ search = "", status = "all" } = {}) => {
     }
   }
 
-  const jobs = await Job.find(query)
-    .populate("client", "fullName avatar")
-    .populate("moderatedBy", "fullName email role")
-    .sort({ createdAt: -1 })
-    .lean();
+  const [jobs, totalJobs] = await Promise.all([
+    Job.find(query)
+      .populate("client", "fullName avatar")
+      .populate("moderatedBy", "fullName email role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Job.countDocuments(query),
+  ]);
 
   const applicationCountMap = await getApplicationCountMapByJob(
     jobs.map((job) => job._id)
   );
 
-  return jobs.map((job) => buildAdminJobSummary(job, applicationCountMap));
+  return {
+    jobs: jobs.map((job) => buildAdminJobSummary(job, applicationCountMap)),
+    totalJobs,
+  };
 };
 
 const getAdminJobDetailsData = async (jobId) => {

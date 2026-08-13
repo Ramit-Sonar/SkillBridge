@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
-import {
-  Report,
-  REPORT_STATUSES,
-} from "../models/report.model.js";
+import { Report, REPORT_STATUSES } from "../models/report.model.js";
 import { User } from "../models/user.model.js";
 import {
   buildReportSummary,
@@ -12,6 +9,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { buildPagination, getPaginationParams } from "../utils/pagination.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
 /*
@@ -134,6 +132,7 @@ const createReport = asyncHandler(async (req, res) => {
 
 const getReports = asyncHandler(async (req, res) => {
   const { status, search } = req.query || {};
+  const paginationParams = getPaginationParams(req.query);
   const filter = {};
 
   if (status && status !== "all") {
@@ -167,9 +166,15 @@ const getReports = asyncHandler(async (req, res) => {
   }
 
   // Admin report list keeps populated users small for fast investigation cards.
-  const reports = await populateReportUsers(
-    Report.find(filter).sort({ createdAt: -1 })
-  ).lean();
+  const [reports, totalReports] = await Promise.all([
+    populateReportUsers(
+      Report.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(paginationParams.skip)
+        .limit(paginationParams.limit)
+    ).lean(),
+    Report.countDocuments(filter),
+  ]);
 
   const reportSummaries = reports.map((report) => buildReportSummary(report));
 
@@ -177,10 +182,11 @@ const getReports = asyncHandler(async (req, res) => {
     new ApiResponse(
       200,
       {
-        totalReports: reportSummaries.length,
+        totalReports,
         reports: reportSummaries,
       },
-      "Reports fetched successfully"
+      "Reports fetched successfully",
+      buildPagination({ ...paginationParams, total: totalReports })
     )
   );
 });

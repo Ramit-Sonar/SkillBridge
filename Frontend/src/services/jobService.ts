@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "./apiConfig";
+import { fetchWithTimeout, getApiBaseUrl } from "./apiConfig";
 
 const API_URL = getApiBaseUrl();
 
@@ -96,7 +96,7 @@ export const createJob = async (jobData: JobPayload): Promise<ApiResponse<JobDat
     formData.append("attachments", file);
   });
 
-  const response = await fetch(`${API_URL}/jobs`, {
+  const response = await fetchWithTimeout(`${API_URL}/jobs`, {
     method: "POST",
     credentials: "include",
     body: formData,
@@ -112,7 +112,7 @@ export const createJob = async (jobData: JobPayload): Promise<ApiResponse<JobDat
 };
 
 export const getClientJobs = async (): Promise<ApiResponse<JobData[]>> => {
-  const response = await fetch(`${API_URL}/jobs/my-jobs`, {
+  const response = await fetchWithTimeout(`${API_URL}/jobs/my-jobs?limit=50`, {
     method: "GET",
     credentials: "include",
   });
@@ -127,7 +127,7 @@ export const getClientJobs = async (): Promise<ApiResponse<JobData[]>> => {
 };
 
 export const getAllOpenJobs = async (): Promise<ApiResponse<JobData[]>> => {
-  const response = await fetch(`${API_URL}/jobs`, {
+  const response = await fetchWithTimeout(`${API_URL}/jobs?limit=50`, {
     method: "GET",
     credentials: "include",
   });
@@ -142,7 +142,7 @@ export const getAllOpenJobs = async (): Promise<ApiResponse<JobData[]>> => {
 };
 
 export const getJobById = async (jobId: string): Promise<ApiResponse<JobData>> => {
-  const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/jobs/${jobId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -177,7 +177,7 @@ export const updateJob = async (
     formData.append("attachments", file);
   });
 
-  const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/jobs/${jobId}`, {
     method: "PATCH",
     credentials: "include",
     body: formData,
@@ -193,7 +193,7 @@ export const updateJob = async (
 };
 
 export const cancelJob = async (jobId: string): Promise<ApiResponse<JobData>> => {
-  const response = await fetch(`${API_URL}/jobs/${jobId}/cancel`, {
+  const response = await fetchWithTimeout(`${API_URL}/jobs/${jobId}/cancel`, {
     method: "PATCH",
     credentials: "include",
   });

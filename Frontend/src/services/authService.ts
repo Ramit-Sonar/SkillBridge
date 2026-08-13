@@ -1,6 +1,7 @@
 import { refreshToken } from "./refreshToken";
 import {
   getApiBaseUrl,
+  fetchWithTimeout,
   isMaintenanceResponseData,
   MaintenanceModeError,
   redirectToMaintenance,
@@ -43,7 +44,7 @@ export const registerUser = async (userData: {
   confirmPassword: string;
   role: string;
 }): Promise<ApiResponse<AuthUser>> => {
-  const response = await fetch(`${API_URL}/users/register`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -69,7 +70,7 @@ export const sendVerificationOtp = async (userData: {
   confirmPassword: string;
   role: string;
 }): Promise<ApiResponse<{}>> => {
-  const response = await fetch(`${API_URL}/users/send-verification-otp`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/send-verification-otp`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -87,7 +88,7 @@ export const sendVerificationOtp = async (userData: {
 };
 
 export const verifyEmail = async (email: string, otp: string): Promise<ApiResponse<AuthUser>> => {
-  const response = await fetch(`${API_URL}/users/verify-email`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/verify-email`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -113,7 +114,7 @@ export const loginUser = async (userData: {
     user: AuthUser;
   }>
 > => {
-  const response = await fetch(`${API_URL}/users/login`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -133,7 +134,7 @@ export const loginUser = async (userData: {
 
 //this two forgotPassword and resetPassword for forgot passwod logic
 export const forgotPassword = async (email: string): Promise<ApiResponse<{}>> => {
-  const response = await fetch(`${API_URL}/users/forgot-password`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/forgot-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -155,7 +156,7 @@ export const resetPassword = async (
   password: string,
   confirmPassword: string
 ): Promise<ApiResponse<{}>> => {
-  const response = await fetch(`${API_URL}/users/reset-password/${token}`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/reset-password/${token}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -176,7 +177,7 @@ export const changePassword = async (passwordData: {
   oldPassword: string;
   newPassword: string;
 }): Promise<ApiResponse<{}>> => {
-  const response = await fetch(`${API_URL}/users/change-password`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -198,7 +199,7 @@ export const updateAccountDetails = async (accountData: {
   fullName: string;
   email: string;
 }): Promise<ApiResponse<AuthUser>> => {
-  const response = await fetch(`${API_URL}/users/update-account`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/update-account`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -220,7 +221,7 @@ export const uploadAvatar = async (avatar: File): Promise<ApiResponse<AuthUser>>
   const formData = new FormData();
   formData.append("avatar", avatar);
 
-  const response = await fetch(`${API_URL}/users/avatar`, {
+  const response = await fetchWithTimeout(`${API_URL}/users/avatar`, {
     method: "PATCH",
     credentials: "include",
     body: formData,
@@ -237,7 +238,7 @@ export const uploadAvatar = async (avatar: File): Promise<ApiResponse<AuthUser>>
 
 export const logoutUser = async () => {
   const requestLogout = () =>
-    fetch(`${API_URL}/users/logout`, {
+    fetchWithTimeout(`${API_URL}/users/logout`, {
       method: "POST",
       credentials: "include",
     });
@@ -264,7 +265,7 @@ export const logoutUser = async () => {
 
 const requestCurrentUser = async (): Promise<ApiResponse<AuthUser>> => {
   const fetchCurrentUser = () =>
-    fetch(`${API_URL}/users/current-user`, {
+    fetchWithTimeout(`${API_URL}/users/current-user`, {
       method: "GET",
       credentials: "include",
     });

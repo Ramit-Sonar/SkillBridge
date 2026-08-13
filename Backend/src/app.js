@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
 import { globalErrorHandler } from "./middlewares/error.middleware.js";
 import userRouter from "./routes/user.routes.js";
 import jobRouter from "./routes/job.routes.js";
@@ -67,6 +68,19 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(sanitizeNoSqlInput);
 app.use(express.static("public"));
 app.use(cookieParser());
+
+app.get("/api/health", (req, res) => {
+  const database =
+    mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+
+  return res.status(200).json({
+    statusCode: 200,
+    success: true,
+    message: "SkillBridge API is running",
+    database,
+  });
+});
+
 app.use(maintenanceModeMiddleware);
 
 app.use("/api/v1/users", userRouter);

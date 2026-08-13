@@ -13,6 +13,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 import { getCloudinaryDownloadUrls } from "../utils/cloudinary.js";
+import { getPaginationParams } from "../utils/pagination.js";
 
 const sanitizeDownloadFileName = (fileName = "attachment") =>
   fileName.replace(/[\\/:*?"<>|]/g, "_").trim() || "attachment";
@@ -41,7 +42,15 @@ const getMessagesByProject = asyncHandler(async (req, res) => {
     throw new ApiError(401, "User not authenticated");
   }
 
-  const messages = await getProjectMessages(req.params.projectId, req.user._id);
+  const paginationParams = getPaginationParams({
+    ...req.query,
+    limit: req.query?.limit || "30",
+  });
+  const { messages, pagination } = await getProjectMessages(
+    req.params.projectId,
+    req.user._id,
+    paginationParams
+  );
 
   return res
     .status(200)
@@ -49,7 +58,8 @@ const getMessagesByProject = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { messages },
-        "Project messages fetched successfully"
+        "Project messages fetched successfully",
+        pagination
       )
     );
 });

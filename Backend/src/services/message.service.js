@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import { Message } from "../models/message.model.js";
 import { Project } from "../models/project.model.js";
 import { ApiError } from "../utils/ApiError.js";
+import { buildPagination } from "../utils/pagination.js";
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 const isProjectParticipant = (project, userId) => {
   const currentUserId = userId?.toString();
@@ -61,19 +64,34 @@ export const buildMessageSummary = (message) => ({
   updatedAt: message.updatedAt,
 });
 
-export const getProjectMessages = async (projectId, userId) => {
+export const getProjectMessages = async (
+  projectId,
+  userId,
+  { page = 1, limit = 30, skip = 0 } = {}
+) => {
   const project = await ensureProjectMessageAccess(projectId, userId);
 
-  const messages = await Message.find({ project: project._id })
-    .select("_id project sender message attachments isRead createdAt updatedAt")
-    .populate({
-      path: "sender",
-      select: "_id fullName avatar role",
-    })
-    .sort({ createdAt: 1 })
-    .lean();
+  const filter = { project: project._id };
+  const [messages, totalMessages] = await Promise.all([
+    Message.find(filter)
+      .select(
+        "_id project sender message attachments isRead createdAt updatedAt"
+      )
+      .populate({
+        path: "sender",
+        select: "_id fullName avatar role",
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Message.countDocuments(filter),
+  ]);
 
-  return messages.map(buildMessageSummary);
+  return {
+    messages: messages.reverse().map(buildMessageSummary),
+    pagination: buildPagination({ page, limit, total: totalMessages }),
+  };
 };
 
 export const getMessageAttachmentForDownload = async ({
@@ -126,6 +144,10 @@ export const createProjectMessage = async ({
 
   if (!messageText && messageAttachments.length === 0) {
     throw new ApiError(400, "Message is required");
+  }
+
+  if (messageText.length > MAX_MESSAGE_LENGTH) {
+    throw new ApiError(400, "Message cannot exceed 2000 characters");
   }
 
   const createdMessage = await Message.create({

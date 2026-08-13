@@ -9,11 +9,22 @@ const connectDB = async () => {
     const connectionInstance = await mongoose.connect(
       `${process.env.MONGODB_URI}/${DB_NAME}`
     );
+
+    if (process.env.NODE_ENV === "production") {
+      console.log("MongoDB connected.");
+      return;
+    }
+
     console.log(
-      `\n MongoDB connected !! DB HOST: ${connectionInstance.connection.host}`
+      `MongoDB connected. Host: ${connectionInstance.connection.host}`
     );
   } catch (error) {
-    console.error("mongodb connection ERROR: ", error);
+    if (process.env.NODE_ENV === "production") {
+      console.error("Database connection failed.");
+    } else {
+      console.error("mongodb connection ERROR: ", error);
+    }
+
     process.exit(1);
   }
 };

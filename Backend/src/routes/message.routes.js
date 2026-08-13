@@ -9,6 +9,7 @@ import { ensureActiveAccount } from "../middlewares/accountStatus.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
+import { messageCreateRateLimiter } from "../middlewares/security.middleware.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
 const router = Router();
@@ -33,6 +34,7 @@ router
     verifyJWT,
     projectMessageRoles,
     ensureActiveAccount,
+    messageCreateRateLimiter,
     messageAttachmentUpload,
     createMessage
   );

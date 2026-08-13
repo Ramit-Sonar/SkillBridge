@@ -1,5 +1,5 @@
 import type { PlatformUser } from "./adminService";
-import { getApiBaseUrl } from "./apiConfig";
+import { fetchWithTimeout, getApiBaseUrl } from "./apiConfig";
 
 const API_URL = getApiBaseUrl();
 
@@ -74,6 +74,12 @@ export type ApiResponse<T> = {
   data: T;
   message: string;
   success: boolean;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 };
 
 const parseReportResponse = async <T>(
@@ -121,7 +127,7 @@ export const submitReport = async (
     formData.append("attachments", file);
   });
 
-  const response = await fetch(`${API_URL}/reports`, {
+  const response = await fetchWithTimeout(`${API_URL}/reports`, {
     method: "POST",
     credentials: "include",
     body: formData,
@@ -144,8 +150,10 @@ export const getReports = async (params?: {
     searchParams.set("search", params.search.trim());
   }
 
+  searchParams.set("limit", "50");
+
   const query = searchParams.toString();
-  const response = await fetch(`${API_URL}/reports${query ? `?${query}` : ""}`, {
+  const response = await fetchWithTimeout(`${API_URL}/reports${query ? `?${query}` : ""}`, {
     method: "GET",
     credentials: "include",
   });
@@ -154,7 +162,7 @@ export const getReports = async (params?: {
 };
 
 export const getReportById = async (reportId: string): Promise<ApiResponse<UserReport>> => {
-  const response = await fetch(`${API_URL}/reports/${reportId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/reports/${reportId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -165,7 +173,7 @@ export const getReportById = async (reportId: string): Promise<ApiResponse<UserR
 export const getReportedUserDetails = async (
   userId: string
 ): Promise<ApiResponse<PlatformUser>> => {
-  const response = await fetch(`${API_URL}/reports/users/${userId}`, {
+  const response = await fetchWithTimeout(`${API_URL}/reports/users/${userId}`, {
     method: "GET",
     credentials: "include",
   });
@@ -174,7 +182,7 @@ export const getReportedUserDetails = async (
 };
 
 export const resolveReport = async (reportId: string): Promise<ApiResponse<UserReport>> => {
-  const response = await fetch(`${API_URL}/reports/${reportId}/resolve`, {
+  const response = await fetchWithTimeout(`${API_URL}/reports/${reportId}/resolve`, {
     method: "PATCH",
     credentials: "include",
   });
@@ -183,7 +191,7 @@ export const resolveReport = async (reportId: string): Promise<ApiResponse<UserR
 };
 
 export const dismissReport = async (reportId: string): Promise<ApiResponse<UserReport>> => {
-  const response = await fetch(`${API_URL}/reports/${reportId}/dismiss`, {
+  const response = await fetchWithTimeout(`${API_URL}/reports/${reportId}/dismiss`, {
     method: "PATCH",
     credentials: "include",
   });

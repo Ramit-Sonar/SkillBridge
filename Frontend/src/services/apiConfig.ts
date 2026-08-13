@@ -43,10 +43,40 @@ export const getApiBaseUrl = () => {
   const apiPath = normalizeApiPath(url.pathname);
 
   if (typeof window !== "undefined") {
+    if (configuredUrl !== DEFAULT_USERS_API_URL) {
+      return `${url.origin}${apiPath}`;
+    }
+
     return apiPath;
   }
 
   return `${url.origin}${apiPath}`;
+};
+
+export const REQUEST_TIMEOUT_MESSAGE = "Request timed out. Please try again.";
+
+export const fetchWithTimeout = async (
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 15000
+) => {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(REQUEST_TIMEOUT_MESSAGE);
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 };
 
 export const getSocketBaseUrl = () => {

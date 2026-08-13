@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 import { runController } from "../setup/testHelpers.js";
 
 const applicationAggregateMock = jest.fn();
+const jobCountDocumentsMock = jest.fn();
 const jobCreateMock = jest.fn();
 const jobFindMock = jest.fn();
 const verificationFindMock = jest.fn();
@@ -16,6 +17,7 @@ jest.unstable_mockModule("../../src/models/application.model.js", () => ({
 
 jest.unstable_mockModule("../../src/models/job.model.js", () => ({
   Job: {
+    countDocuments: jobCountDocumentsMock,
     create: jobCreateMock,
     find: jobFindMock,
   },
@@ -59,6 +61,8 @@ const createVerificationQuery = (verifications) => ({
 
 const createJobFindQuery = (jobs) => ({
   sort: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  limit: jest.fn().mockReturnThis(),
   lean: jest.fn().mockResolvedValue(jobs),
 });
 
@@ -173,6 +177,7 @@ describe("Job Controller", () => {
     ];
 
     jobFindMock.mockReturnValue(createJobFindQuery(jobs));
+    jobCountDocumentsMock.mockResolvedValue(1);
     applicationAggregateMock
       .mockResolvedValueOnce([
         {
@@ -192,6 +197,9 @@ describe("Job Controller", () => {
     });
 
     expect(jobFindMock).toHaveBeenCalledWith({ client: clientUser._id });
+    expect(jobCountDocumentsMock).toHaveBeenCalledWith({
+      client: clientUser._id,
+    });
     expect(applicationAggregateMock).toHaveBeenCalledTimes(2);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
@@ -204,6 +212,12 @@ describe("Job Controller", () => {
           }),
         ],
         message: "Client jobs fetched successfully",
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
       })
     );
     expect(next).not.toHaveBeenCalled();

@@ -10,6 +10,7 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { jobAttachmentUpload } from "../middlewares/multer.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
+import { reportCreateRateLimiter } from "../middlewares/security.middleware.js";
 import { removeTempFiles } from "../utils/tempFile.js";
 
 const router = Router();
@@ -31,7 +32,13 @@ const reportAttachmentUpload = (req, res, next) => {
 // Report routes for user submissions and admin review.
 router
   .route("/")
-  .post(verifyJWT, reportSubmitterRoles, reportAttachmentUpload, createReport)
+  .post(
+    verifyJWT,
+    reportSubmitterRoles,
+    reportCreateRateLimiter,
+    reportAttachmentUpload,
+    createReport
+  )
   .get(verifyJWT, adminRoles, getReports);
 
 router
