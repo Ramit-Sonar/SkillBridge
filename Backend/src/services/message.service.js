@@ -55,6 +55,7 @@ export const buildMessageSummary = (message) => ({
     role: message.sender?.role || "",
   },
   message: message.message,
+  attachments: message.attachments || [],
   isRead: Boolean(message.isRead),
   createdAt: message.createdAt,
   updatedAt: message.updatedAt,
@@ -64,7 +65,7 @@ export const getProjectMessages = async (projectId, userId) => {
   const project = await ensureProjectMessageAccess(projectId, userId);
 
   const messages = await Message.find({ project: project._id })
-    .select("_id project sender message isRead createdAt updatedAt")
+    .select("_id project sender message attachments isRead createdAt updatedAt")
     .populate({
       path: "sender",
       select: "_id fullName avatar role",
@@ -79,21 +80,25 @@ export const createProjectMessage = async ({
   projectId,
   senderId,
   message,
+  attachments = [],
 }) => {
   const project = await ensureProjectMessageAccess(projectId, senderId);
+  const messageText = typeof message === "string" ? message.trim() : "";
+  const messageAttachments = Array.isArray(attachments) ? attachments : [];
 
-  if (typeof message !== "string" || !message.trim()) {
+  if (!messageText && messageAttachments.length === 0) {
     throw new ApiError(400, "Message is required");
   }
 
   const createdMessage = await Message.create({
     project: project._id,
     sender: senderId,
-    message: message.trim(),
+    message: messageText,
+    attachments: messageAttachments,
   });
 
   const populatedMessage = await Message.findById(createdMessage._id)
-    .select("_id project sender message isRead createdAt updatedAt")
+    .select("_id project sender message attachments isRead createdAt updatedAt")
     .populate({
       path: "sender",
       select: "_id fullName avatar role",
@@ -113,7 +118,7 @@ export const markMessageAsRead = async (messageId, userId) => {
   }
 
   const message = await Message.findById(messageId)
-    .select("_id project sender message isRead createdAt updatedAt")
+    .select("_id project sender message attachments isRead createdAt updatedAt")
     .lean();
 
   if (!message) {
@@ -131,7 +136,7 @@ export const markMessageAsRead = async (messageId, userId) => {
     { isRead: true },
     { new: true, runValidators: true }
   )
-    .select("_id project sender message isRead createdAt updatedAt")
+    .select("_id project sender message attachments isRead createdAt updatedAt")
     .populate({
       path: "sender",
       select: "_id fullName avatar role",

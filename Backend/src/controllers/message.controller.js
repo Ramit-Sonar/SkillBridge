@@ -3,9 +3,14 @@ import {
   getProjectMessages,
   markMessageAsRead,
 } from "../services/message.service.js";
+import {
+  emitProjectMessageCreated,
+  emitProjectMessageRead,
+} from "../socket/projectMessage.socket.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { deleteAttachments, uploadAttachments } from "../utils/attachment.js";
 
 /*
  * Handles project message listing, creation, and read status updates.
@@ -33,15 +38,27 @@ const createMessage = asyncHandler(async (req, res) => {
     throw new ApiError(401, "User not authenticated");
   }
 
-  const message = await createProjectMessage({
-    projectId: req.params.projectId,
-    senderId: req.user._id,
-    message: req.body?.message,
-  });
+  let attachments = [];
 
-  return res
-    .status(201)
-    .json(new ApiResponse(201, message, "Message created successfully"));
+  try {
+    attachments = await uploadAttachments(req.files);
+
+    const message = await createProjectMessage({
+      projectId: req.params.projectId,
+      senderId: req.user._id,
+      message: req.body?.message,
+      attachments,
+    });
+
+    emitProjectMessageCreated(message);
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, message, "Message created successfully"));
+  } catch (error) {
+    await deleteAttachments(attachments);
+    throw error;
+  }
 });
 
 const markMessageRead = asyncHandler(async (req, res) => {
@@ -50,6 +67,8 @@ const markMessageRead = asyncHandler(async (req, res) => {
   }
 
   const message = await markMessageAsRead(req.params.messageId, req.user._id);
+
+  emitProjectMessageRead(message);
 
   return res
     .status(200)

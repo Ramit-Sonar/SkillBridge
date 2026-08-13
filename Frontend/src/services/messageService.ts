@@ -1,5 +1,6 @@
 import type { ApiResponse } from "./applicationService";
 import { getApiBaseUrl } from "./apiConfig";
+import type { FileAttachment } from "../utils/fileUtils";
 
 const API_URL = getApiBaseUrl();
 
@@ -15,6 +16,7 @@ export type ProjectMessage = {
   project: string;
   sender: ProjectMessageSender;
   message: string;
+  attachments: FileAttachment[];
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
@@ -53,15 +55,23 @@ export const getProjectMessages = async (
 
 export const sendProjectMessage = async (
   projectId: string,
-  message: string
+  message: string,
+  attachments: File[] = []
 ): Promise<ApiResponse<ProjectMessage>> => {
+  const hasAttachments = attachments.length > 0;
+  const body = hasAttachments ? new FormData() : JSON.stringify({ message });
+  const headers = hasAttachments ? undefined : { "Content-Type": "application/json" };
+
+  if (hasAttachments && body instanceof FormData) {
+    body.append("message", message);
+    attachments.forEach((attachment) => body.append("attachments", attachment));
+  }
+
   const response = await fetch(`${API_URL}/projects/${projectId}/messages`, {
     method: "POST",
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ message }),
+    headers,
+    body,
   });
 
   return parseMessageResponse<ProjectMessage>(response, "Failed to send project message.");

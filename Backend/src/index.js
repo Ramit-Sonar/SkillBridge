@@ -3,14 +3,18 @@ dotenv.config({
   path: "./.env",
 });
 
+import http from "http";
 import connectDB from "./db/index.js";
-import { app } from "./app.js";
+import { allowedOrigins, app } from "./app.js";
 import createAdmin from "./services/admin.service.js";
+import { initializeSocketServer } from "./socket/projectMessage.socket.js";
 import { validateEnv } from "./utils/validateEnv.js";
 
 const port = process.env.PORT || 3000;
+const server = http.createServer(app);
 
 validateEnv();
+initializeSocketServer(server, allowedOrigins);
 
 connectDB()
   .then(async () => {
@@ -21,7 +25,7 @@ connectDB()
       console.log("EXPRESS SERVER ERROR:", error);
     });
 
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`Server is running at port: ${port}`);
     });
   })

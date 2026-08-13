@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Clock, MessageSquare, Send } from "lucide-react";
+import { Check, CheckCheck, Clock, Paperclip, MessageSquare, Send, X } from "lucide-react";
 import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
 import {
@@ -8,6 +8,13 @@ import {
   sendProjectMessage,
   type ProjectMessage,
 } from "../../../services/messageService";
+import { joinProjectMessageSocket } from "../../../services/messageSocketService";
+import {
+  formatFileSize,
+  getFileIcon,
+  isValidAttachmentUrl,
+  truncateFileName,
+} from "../../../utils/fileUtils";
 import type { NotificationMessage } from "./ui";
 
 type ProjectOverviewPerson = {
@@ -42,24 +49,16 @@ const formatMessageTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
-const DISCUSSION_POLL_INTERVAL_MS = 5000;
+const MESSAGE_ATTACHMENT_LIMIT = 3;
+const MESSAGE_ATTACHMENT_SIZE_LIMIT = 20 * 1024 * 1024;
+const MESSAGE_ATTACHMENT_ACCEPT =
+  ".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.zip,.doc,.docx,.ppt,.pptx,.xls,.xlsx";
 
-const didMessageListChange = (
-  currentMessages: ProjectMessage[],
-  nextMessages: ProjectMessage[]
-) => {
-  if (currentMessages.length !== nextMessages.length) return true;
-
-  const currentLastMessage = currentMessages[currentMessages.length - 1];
-  const nextLastMessage = nextMessages[nextMessages.length - 1];
-
-  if (currentLastMessage?.id !== nextLastMessage?.id) return true;
-
-  return nextMessages.some((message, index) => {
-    const currentMessage = currentMessages[index];
-
-    return currentMessage.id !== message.id || currentMessage.isRead !== message.isRead;
-  });
+type MessageAttachmentDraft = {
+  file: File;
+  name: string;
+  size: number;
+  type: string;
 };
 
 export function ProjectOverview({
@@ -77,10 +76,13 @@ export function ProjectOverview({
   const partnerRole = role === "student" ? "Client" : "Student";
   const lastActivity = formatProjectRelativeDate(lastUpdated);
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const mountedRef = useRef(false);
   const messagesSnapshotRef = useRef<ProjectMessage[]>([]);
+  const socketErrorNotifiedRef = useRef(false);
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [messageAttachments, setMessageAttachments] = useState<MessageAttachmentDraft[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(true);
   const [messageSending, setMessageSending] = useState(false);
   const [messagesError, setMessagesError] = useState("");
@@ -100,6 +102,19 @@ export function ProjectOverview({
     setMessages(nextMessages);
   };
 
+  const upsertDiscussionMessage = (nextMessage: ProjectMessage) => {
+    if (nextMessage.project !== projectId) return messagesSnapshotRef.current;
+
+    const currentMessages = messagesSnapshotRef.current;
+    const existingMessage = currentMessages.find((message) => message.id === nextMessage.id);
+    const nextMessages = existingMessage
+      ? currentMessages.map((message) => (message.id === nextMessage.id ? nextMessage : message))
+      : [...currentMessages, nextMessage];
+
+    setDiscussionMessages(nextMessages);
+    return nextMessages;
+  };
+
   const markUnreadReceivedMessages = async (nextMessages: ProjectMessage[]) => {
     const unreadMessages = nextMessages.filter(
       (message) => message.sender.role !== role && !message.isRead
@@ -108,9 +123,7 @@ export function ProjectOverview({
     if (unreadMessages.length === 0) return;
 
     try {
-      await Promise.all(
-        unreadMessages.map((message) => markProjectMessageRead(message.id))
-      );
+      await Promise.all(unreadMessages.map((message) => markProjectMessageRead(message.id)));
 
       if (!mountedRef.current) return;
 
@@ -149,6 +162,7 @@ export function ProjectOverview({
 
   useEffect(() => {
     mountedRef.current = true;
+    socketErrorNotifiedRef.current = false;
 
     const fetchMessages = async () => {
       setMessagesLoading(true);
@@ -173,47 +187,50 @@ export function ProjectOverview({
       }
     };
 
-    const pollMessages = async () => {
-      try {
-        const response = await getProjectMessages(projectId);
-
-        if (!mountedRef.current) return;
-
-        const nextMessages = response.data.messages;
-
-        if (!didMessageListChange(messagesSnapshotRef.current, nextMessages)) return;
+    fetchMessages();
+    const cleanupSocket = joinProjectMessageSocket(projectId, {
+      onMessageCreated(message) {
+        if (!mountedRef.current || message.project !== projectId) return;
 
         setMessagesError("");
-        setDiscussionMessages(nextMessages);
+        const nextMessages = upsertDiscussionMessage(message);
         markUnreadReceivedMessages(nextMessages);
         scrollMessagesToBottom();
-      } catch (error) {
-        if (!mountedRef.current || messagesSnapshotRef.current.length > 0) return;
+      },
+      onMessageRead(message) {
+        if (!mountedRef.current || message.project !== projectId) return;
 
-        const message =
-          error instanceof Error ? error.message : "Failed to fetch project messages.";
-        setMessagesError(message);
-      }
-    };
+        upsertDiscussionMessage(message);
+      },
+      onConnectionError(message) {
+        if (socketErrorNotifiedRef.current) return;
 
-    fetchMessages();
-    const pollingIntervalId = window.setInterval(pollMessages, DISCUSSION_POLL_INTERVAL_MS);
+        socketErrorNotifiedRef.current = true;
+        onNotify?.({
+          type: "error",
+          text: message || "Live message connection failed.",
+        });
+      },
+    });
 
     return () => {
       mountedRef.current = false;
-      window.clearInterval(pollingIntervalId);
+      cleanupSocket();
     };
-  }, [projectId]);
+  }, [projectId, onNotify]);
 
   const handleSendMessage = async () => {
     const messageText = messageDraft.trim();
-    if (!messageText || messageSending) return;
+    const attachments = messageAttachments.map((attachment) => attachment.file);
+    if ((!messageText && attachments.length === 0) || messageSending) return;
 
     setMessageSending(true);
 
     try {
-      await sendProjectMessage(projectId, messageText);
+      const response = await sendProjectMessage(projectId, messageText, attachments);
       setMessageDraft("");
+      setMessageAttachments([]);
+      upsertDiscussionMessage(response.data);
       await loadMessages(false);
       scrollMessagesToBottom();
     } catch (error) {
@@ -227,6 +244,43 @@ export function ProjectOverview({
     } finally {
       if (mountedRef.current) setMessageSending(false);
     }
+  };
+
+  const handleAddMessageFiles = (files: FileList | null) => {
+    if (!files || messageSending) return;
+
+    const nextAttachments = [...messageAttachments];
+
+    Array.from(files).forEach((file) => {
+      if (nextAttachments.length >= MESSAGE_ATTACHMENT_LIMIT) return;
+
+      const isDuplicate = nextAttachments.some((attachment) => attachment.name === file.name);
+
+      if (isDuplicate) return;
+
+      if (file.size > MESSAGE_ATTACHMENT_SIZE_LIMIT) {
+        onNotify?.({
+          type: "error",
+          text: `${file.name} is larger than 20 MB.`,
+        });
+        return;
+      }
+
+      nextAttachments.push({
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/octet-stream",
+      });
+    });
+
+    setMessageAttachments(nextAttachments);
+  };
+
+  const removeMessageAttachment = (fileName: string) => {
+    setMessageAttachments((currentAttachments) =>
+      currentAttachments.filter((attachment) => attachment.name !== fileName)
+    );
   };
 
   return (
@@ -289,15 +343,55 @@ export function ProjectOverview({
                         >
                           {senderName}
                         </span>
-                      <span
-                        className="text-slate-400"
-                        style={{ fontSize: "0.6rem" }}
-                      >
-                        {formatMessageTime(message.createdAt)}
-                      </span>
+                        <span className="text-slate-400" style={{ fontSize: "0.6rem" }}>
+                          {formatMessageTime(message.createdAt)}
+                        </span>
                       </div>
                     )}
-                    <p style={{ fontSize: "0.72rem", lineHeight: 1.45 }}>{message.message}</p>
+                    {message.message && (
+                      <p style={{ fontSize: "0.72rem", lineHeight: 1.45 }}>{message.message}</p>
+                    )}
+                    {(message.attachments ?? []).length > 0 && (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        {(message.attachments ?? []).map((attachment) => {
+                          const fileDisplay = getFileIcon(attachment.mimeType);
+                          const Icon = fileDisplay.icon;
+                          const hasValidUrl = isValidAttachmentUrl(attachment.url);
+
+                          return (
+                            <a
+                              key={`${message.id}-${attachment.originalName}-${attachment.url}`}
+                              href={hasValidUrl ? attachment.url : undefined}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                                isCurrentViewer
+                                  ? "border-white/20 bg-white/10 text-white"
+                                  : "border-slate-200 bg-slate-50 text-slate-700"
+                              } ${hasValidUrl ? "hover:opacity-85" : "pointer-events-none opacity-70"}`}
+                            >
+                              <Icon
+                                className="h-3.5 w-3.5 shrink-0"
+                                style={{ color: isCurrentViewer ? "#DBEAFE" : fileDisplay.color }}
+                              />
+                              <span
+                                className="min-w-0 flex-1 truncate font-semibold"
+                                title={attachment.originalName}
+                                style={{ fontSize: "0.66rem" }}
+                              >
+                                {truncateFileName(attachment.originalName, 26)}
+                              </span>
+                              <span
+                                className={isCurrentViewer ? "text-blue-100" : "text-slate-400"}
+                                style={{ fontSize: "0.58rem" }}
+                              >
+                                {formatFileSize(attachment.size)}
+                              </span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                     {isCurrentViewer && (
                       <div className="flex items-center justify-end gap-1 mt-1 text-blue-100">
                         <span style={{ fontSize: "0.6rem" }}>
@@ -322,7 +416,62 @@ export function ProjectOverview({
             </div>
           )}
         </div>
+        {messageAttachments.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {messageAttachments.map((attachment) => {
+              const fileDisplay = getFileIcon(attachment.type);
+              const Icon = fileDisplay.icon;
+
+              return (
+                <span
+                  key={attachment.name}
+                  className="flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-slate-600"
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: fileDisplay.color }} />
+                  <span
+                    className="truncate font-semibold"
+                    title={attachment.name}
+                    style={{ fontSize: "0.66rem" }}
+                  >
+                    {truncateFileName(attachment.name, 24)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeMessageAttachment(attachment.name)}
+                    disabled={messageSending}
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`Remove ${attachment.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
         <div className="flex items-center gap-2 bg-slate-50 rounded-xl border border-black/[0.06] px-3 py-2 focus-within:border-blue-200 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            multiple
+            accept={MESSAGE_ATTACHMENT_ACCEPT}
+            className="hidden"
+            disabled={messageSending || messageAttachments.length >= MESSAGE_ATTACHMENT_LIMIT}
+            onChange={(event) => {
+              handleAddMessageFiles(event.target.files);
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => attachmentInputRef.current?.click()}
+            disabled={messageSending || messageAttachments.length >= MESSAGE_ATTACHMENT_LIMIT}
+            className="w-8 h-8 rounded-xl text-slate-500 flex items-center justify-center shrink-0 hover:bg-white hover:text-blue-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+            aria-label="Attach files"
+            title="Attach files"
+          >
+            <Paperclip className="w-3.5 h-3.5" />
+          </button>
           <input
             type="text"
             value={messageDraft}
@@ -340,7 +489,7 @@ export function ProjectOverview({
           <button
             type="button"
             onClick={handleSendMessage}
-            disabled={!messageDraft.trim() || messageSending}
+            disabled={(!messageDraft.trim() && messageAttachments.length === 0) || messageSending}
             className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
             aria-label="Send message"
           >

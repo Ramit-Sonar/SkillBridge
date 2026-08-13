@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { attachmentSchema } from "../schemas/attachment.schema.js";
 
 /*
  * Stores simple project chat messages between the assigned client and student.
@@ -19,8 +20,13 @@ const messageSchema = new mongoose.Schema(
 
     message: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
+    },
+
+    attachments: {
+      type: [attachmentSchema],
+      default: [],
     },
 
     isRead: {

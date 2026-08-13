@@ -1,4 +1,7 @@
 const DEFAULT_USERS_API_URL = "http://localhost:3000/api/v1/users";
+const DEFAULT_SOCKET_URL = "http://localhost:3000";
+
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const normalizeApiPath = (path: string) => {
   const normalizedPath = path.replace(/\/+$/, "");
@@ -44,6 +47,37 @@ export const getApiBaseUrl = () => {
   }
 
   return `${url.origin}${apiPath}`;
+};
+
+export const getSocketBaseUrl = () => {
+  const configuredSocketUrl = (import.meta.env.VITE_SOCKET_URL || "").trim();
+
+  if (configuredSocketUrl) {
+    return trimTrailingSlash(configuredSocketUrl);
+  }
+
+  const configuredApiUrl = (import.meta.env.VITE_API_URL || "").trim();
+
+  if (configuredApiUrl && !configuredApiUrl.startsWith("/")) {
+    try {
+      return new URL(configuredApiUrl).origin;
+    } catch {
+      return trimTrailingSlash(configuredApiUrl);
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    const isLocalhost =
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+
+    if (isLocalhost) {
+      return DEFAULT_SOCKET_URL;
+    }
+
+    return window.location.origin;
+  }
+
+  return DEFAULT_SOCKET_URL;
 };
 
 export const MAINTENANCE_MODE_CODE = "MAINTENANCE_MODE";

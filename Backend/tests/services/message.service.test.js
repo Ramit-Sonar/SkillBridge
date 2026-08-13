@@ -73,6 +73,7 @@ describe("Message Service", () => {
           role: "client",
         },
         message: "Please review the latest update.",
+        attachments: [],
         isRead: false,
         createdAt,
         updatedAt,
@@ -95,6 +96,7 @@ describe("Message Service", () => {
           role: "client",
         },
         message: "Please review the latest update.",
+        attachments: [],
         isRead: false,
         createdAt,
         updatedAt,
@@ -179,6 +181,7 @@ describe("Message Service", () => {
         role: "student",
       },
       message: "Hello client",
+      attachments: [],
       isRead: false,
       createdAt,
       updatedAt: createdAt,
@@ -200,6 +203,7 @@ describe("Message Service", () => {
       id: messageId,
       project: projectId,
       message: "Hello client",
+      attachments: [],
       isRead: false,
       sender: {
         id: studentId,
@@ -210,6 +214,67 @@ describe("Message Service", () => {
       project: projectId,
       sender: studentId,
       message: "Hello client",
+      attachments: [],
+    });
+  });
+
+  test("creates an attachment-only message for an assigned student", async () => {
+    const createdAt = new Date("2026-08-06T10:00:00.000Z");
+    const attachment = {
+      url: "https://example.com/file.pdf",
+      publicId: "messages/file",
+      originalName: "file.pdf",
+      mimeType: "application/pdf",
+      size: 1024,
+    };
+    const createdMessage = {
+      _id: messageId,
+    };
+    const populatedMessage = {
+      _id: messageId,
+      project: projectId,
+      sender: {
+        _id: studentId,
+        fullName: "Student User",
+        avatar: "",
+        role: "student",
+      },
+      message: "",
+      attachments: [attachment],
+      isRead: false,
+      createdAt,
+      updatedAt: createdAt,
+    };
+
+    projectFindByIdMock.mockReturnValue(createLeanQuery(project));
+    messageCreateMock.mockResolvedValue(createdMessage);
+    messageFindByIdMock.mockReturnValue(
+      createPopulatedMessageQuery(populatedMessage)
+    );
+
+    await expect(
+      createProjectMessage({
+        projectId,
+        senderId: studentId,
+        message: "   ",
+        attachments: [attachment],
+      })
+    ).resolves.toMatchObject({
+      id: messageId,
+      project: projectId,
+      message: "",
+      attachments: [attachment],
+      isRead: false,
+      sender: {
+        id: studentId,
+        role: "student",
+      },
+    });
+    expect(messageCreateMock).toHaveBeenCalledWith({
+      project: projectId,
+      sender: studentId,
+      message: "",
+      attachments: [attachment],
     });
   });
 
@@ -221,6 +286,7 @@ describe("Message Service", () => {
       project: projectId,
       sender: studentId,
       message: "I uploaded the deliverable.",
+      attachments: [],
       isRead: false,
       createdAt,
       updatedAt: createdAt,
@@ -253,6 +319,7 @@ describe("Message Service", () => {
         role: "student",
       },
       message: "I uploaded the deliverable.",
+      attachments: [],
       isRead: true,
       createdAt,
       updatedAt,
@@ -271,6 +338,7 @@ describe("Message Service", () => {
       project: projectId,
       sender: studentId,
       message: "I uploaded the deliverable.",
+      attachments: [],
       isRead: false,
       createdAt,
       updatedAt: createdAt,
@@ -278,10 +346,12 @@ describe("Message Service", () => {
 
     messageFindByIdMock.mockReturnValue(createLeanQuery(existingMessage));
 
-    await expect(markMessageAsRead(messageId, studentId)).rejects.toMatchObject({
-      statusCode: 403,
-      message: "You cannot mark your own message as read",
-    });
+    await expect(markMessageAsRead(messageId, studentId)).rejects.toMatchObject(
+      {
+        statusCode: 403,
+        message: "You cannot mark your own message as read",
+      }
+    );
     expect(projectFindByIdMock).not.toHaveBeenCalled();
     expect(messageFindByIdAndUpdateMock).not.toHaveBeenCalled();
   });

@@ -87,4 +87,4 @@ app.use("/api", (req, res, next) => {
 
 app.use(globalErrorHandler);
 
-export { app };
+export { allowedOrigins, app };

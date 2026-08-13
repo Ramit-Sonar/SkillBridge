@@ -492,24 +492,46 @@ Message Response
 Frontend
 ```
 
-The current implementation uses **REST API polling** for near-real-time message updates.
+The current implementation uses **Socket.IO** for real-time message updates.
 
-### Polling Flow
+### Socket.IO Flow
 
 ```text
 Project Discussion Opens
         ↓
 Fetch Messages
         ↓
-Wait for Polling Interval
+Connect Socket.IO
         ↓
-Fetch Latest Messages
+Join Project Message Room
         ↓
-Check for Updates
+Send Message / Attachment through REST API
         ↓
-Update UI
+Save in MongoDB
         ↓
-Repeat While Component Is Active
+Emit Socket.IO Event to Project Room
+        ↓
+Student and Client UIs Update
+        ↓
+Read Receipt Emits When Message Is Marked Read
+```
+
+Message attachments are uploaded with the existing multipart upload pipeline and saved as attachment metadata on the message document.
+
+### Local and Production Socket Setup
+
+```text
+Local frontend
+        ↓
+http://localhost:3000 Socket.IO server
+```
+
+```text
+Production frontend
+        ↓
+VITE_SOCKET_URL, or same-origin /socket.io rewrite
+        ↓
+Production backend Socket.IO server
 ```
 
 ---
