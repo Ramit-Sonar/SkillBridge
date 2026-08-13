@@ -350,6 +350,14 @@ export function ProjectOverview({
               const senderName =
                 message.sender.fullName ||
                 (message.sender.role === "client" ? "Client" : "Student");
+              const attachments = message.attachments ?? [];
+              const isImageOnlyMessage =
+                !message.message &&
+                attachments.length > 0 &&
+                attachments.every(
+                  (attachment) =>
+                    isValidAttachmentUrl(attachment.url) && isImageAttachment(attachment)
+                );
 
               return (
                 <div
@@ -357,14 +365,22 @@ export function ProjectOverview({
                   className={`flex ${isCurrentViewer ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[86%] rounded-2xl px-3 py-2 border ${
-                      isCurrentViewer
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-slate-700 border-black/[0.06]"
-                    }`}
+                    className={
+                      isImageOnlyMessage
+                        ? "max-w-[78%]"
+                        : `max-w-[86%] rounded-2xl px-3 py-2 border ${
+                            isCurrentViewer
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-slate-700 border-black/[0.06]"
+                          }`
+                    }
                   >
                     {!isCurrentViewer && (
-                      <div className="flex items-center justify-between gap-3 mb-1">
+                      <div
+                        className={`flex items-center justify-between gap-3 ${
+                          isImageOnlyMessage ? "mb-1 px-1" : "mb-1"
+                        }`}
+                      >
                         <span
                           className="text-slate-500"
                           style={{ fontSize: "0.62rem", fontWeight: 700 }}
@@ -379,9 +395,9 @@ export function ProjectOverview({
                     {message.message && (
                       <p style={{ fontSize: "0.72rem", lineHeight: 1.45 }}>{message.message}</p>
                     )}
-                    {(message.attachments ?? []).length > 0 && (
-                      <div className="mt-2 flex flex-col gap-1.5">
-                        {(message.attachments ?? []).map((attachment) => {
+                    {attachments.length > 0 && (
+                      <div className={`${message.message ? "mt-2" : ""} flex flex-col gap-1.5`}>
+                        {attachments.map((attachment) => {
                           const fileDisplay = getFileIcon(attachment.mimeType);
                           const Icon = fileDisplay.icon;
                           const hasValidUrl = isValidAttachmentUrl(attachment.url);
@@ -393,11 +409,7 @@ export function ProjectOverview({
                             return (
                               <div
                                 key={`${message.id}-${attachment.originalName}-${attachment.url}`}
-                                className={`w-52 max-w-full overflow-hidden rounded-xl border ${
-                                  isCurrentViewer
-                                    ? "border-white/20 bg-white/10"
-                                    : "border-slate-200 bg-white"
-                                }`}
+                                className="relative w-64 max-w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm"
                               >
                                 <a
                                   href={previewUrl}
@@ -410,30 +422,39 @@ export function ProjectOverview({
                                     src={previewUrl}
                                     alt={attachment.originalName || "Image attachment"}
                                     loading="lazy"
-                                    className="h-28 w-full object-cover"
+                                    className="max-h-60 min-h-32 w-full object-cover"
                                   />
                                 </a>
-                                <div
-                                  className={`flex items-center justify-between gap-2 px-2 py-1.5 ${
-                                    isCurrentViewer ? "text-blue-100" : "text-slate-500"
-                                  }`}
-                                >
-                                  <span style={{ fontSize: "0.58rem" }}>
+                                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 via-black/35 to-transparent px-2.5 pb-2 pt-5 text-white">
+                                  <span style={{ fontSize: "0.62rem" }}>
                                     {formatFileSize(attachment.size)}
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDownloadMessageAttachment(attachment)}
-                                    className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
-                                      isCurrentViewer
-                                        ? "text-white hover:bg-white/15"
-                                        : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                                    }`}
-                                    aria-label={`Download ${attachment.originalName || "attachment"}`}
-                                    title="Download attachment"
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDownloadMessageAttachment(attachment)}
+                                      className="flex h-6 w-6 items-center justify-center rounded-md text-white transition-colors hover:bg-white/15"
+                                      aria-label={`Download ${attachment.originalName || "attachment"}`}
+                                      title="Download attachment"
+                                    >
+                                      <Download className="h-3.5 w-3.5" />
+                                    </button>
+                                    {isImageOnlyMessage && isCurrentViewer && (
+                                      <>
+                                        <span style={{ fontSize: "0.6rem" }}>
+                                          {formatMessageTime(message.createdAt)}
+                                        </span>
+                                        {message.isRead ? (
+                                          <CheckCheck
+                                            className="h-3 w-3"
+                                            aria-label="Message read"
+                                          />
+                                        ) : (
+                                          <Check className="h-3 w-3" aria-label="Message sent" />
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -536,7 +557,7 @@ export function ProjectOverview({
                         })}
                       </div>
                     )}
-                    {isCurrentViewer && (
+                    {isCurrentViewer && !isImageOnlyMessage && (
                       <div className="flex items-center justify-end gap-1 mt-1 text-blue-100">
                         <span style={{ fontSize: "0.6rem" }}>
                           {formatMessageTime(message.createdAt)}
