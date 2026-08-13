@@ -27,6 +27,8 @@ const VALID_JOB_CATEGORIES = [
 ];
 
 const VALID_JOB_DURATIONS = ["1d", "3d", "5d", "7d", "14d"];
+const MIN_JOB_BUDGET = 500;
+const MAX_JOB_BUDGET = 100000;
 
 const parseSkills = (skills) => {
   if (skills === undefined) return undefined;
@@ -131,8 +133,15 @@ const createJob = asyncHandler(async (req, res) => {
 
     const numericBudget = Number(budget);
 
-    if (Number.isNaN(numericBudget) || numericBudget < 0) {
+    if (Number.isNaN(numericBudget)) {
       throw new ApiError(400, "Budget must be a valid amount");
+    }
+
+    if (numericBudget < MIN_JOB_BUDGET || numericBudget > MAX_JOB_BUDGET) {
+      throw new ApiError(
+        400,
+        `Budget must be between Rs. ${MIN_JOB_BUDGET} and Rs. ${MAX_JOB_BUDGET}`
+      );
     }
 
     if (!duration?.trim()) {
@@ -524,8 +533,15 @@ const updateJob = asyncHandler(async (req, res) => {
 
       const numericBudget = Number(budget);
 
-      if (Number.isNaN(numericBudget) || numericBudget < 0) {
+      if (Number.isNaN(numericBudget)) {
         throw new ApiError(400, "Budget must be a valid amount");
+      }
+
+      if (numericBudget < MIN_JOB_BUDGET || numericBudget > MAX_JOB_BUDGET) {
+        throw new ApiError(
+          400,
+          `Budget must be between Rs. ${MIN_JOB_BUDGET} and Rs. ${MAX_JOB_BUDGET}`
+        );
       }
 
       job.budget = numericBudget;

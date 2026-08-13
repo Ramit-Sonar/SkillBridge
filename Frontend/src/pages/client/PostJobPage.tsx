@@ -64,6 +64,8 @@ const SKILL_GROUPS = [
 ];
 
 const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.skills);
+const MIN_JOB_BUDGET = 500;
+const MAX_JOB_BUDGET = 100000;
 
 const CHIP_COLORS = [
   { bg: "#EFF6FF", color: "#2563EB", border: "#BFDBFE" },
@@ -121,6 +123,7 @@ function SelectField({
   options,
   placeholder,
   required,
+  error,
 }: {
   label: string;
   value: string;
@@ -128,6 +131,7 @@ function SelectField({
   options: { value: string; label: string }[];
   placeholder: string;
   required?: boolean;
+  error?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -136,7 +140,9 @@ function SelectField({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 pr-10 ${value === "" ? "text-slate-300" : "text-slate-900"}`}
+          className={`w-full appearance-none bg-slate-50 border rounded-xl px-4 py-3 outline-none transition-all duration-200 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/10 pr-10 ${
+            error ? "border-red-300" : "border-slate-200"
+          } ${value === "" ? "text-slate-300" : "text-slate-900"}`}
           style={{ fontSize: "0.875rem" }}
         >
           <option value="" disabled hidden>
@@ -167,6 +173,11 @@ function SelectField({
           />
         </div>
       </div>
+      {error && (
+        <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -534,7 +545,14 @@ export default function PostJobPage() {
   // Validate Project Settings section
   const validateProjectSettings = () => {
     const e: Record<string, string> = {};
+    const budgetAmount = Number(form.budget);
+
     if (!form.budget.trim()) e.budget = "Budget is required.";
+    else if (Number.isNaN(budgetAmount)) e.budget = "Budget must be a valid amount.";
+    else if (budgetAmount < MIN_JOB_BUDGET)
+      e.budget = `Budget must be at least Rs. ${MIN_JOB_BUDGET.toLocaleString("en-IN")}.`;
+    else if (budgetAmount > MAX_JOB_BUDGET)
+      e.budget = `Budget cannot be more than Rs. ${MAX_JOB_BUDGET.toLocaleString("en-IN")}.`;
     if (!form.duration) e.duration = "Please select a duration.";
     if (!form.deadline) e.deadline = "Deadline is required.";
     if (!form.complexity) e.complexity = "Please select a complexity level.";
@@ -846,81 +864,78 @@ export default function PostJobPage() {
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-5">
-              {/* Budget */}
-              <div className="flex flex-col gap-1.5">
-                <Label text="Budget" required />
-                <div className="relative">
-                  <span
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold select-none"
-                    style={{ fontSize: "0.875rem" }}
-                  >
-                    Rs.
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    className={`${inputClass} pl-12 ${errors.budget ? "border-red-300" : ""}`}
-                    placeholder="Enter amount"
-                    value={form.budget}
-                    onChange={(e) => set("budget")(e.target.value)}
-                    style={{ fontSize: "0.875rem" }}
-                  />
+            <div className="grid sm:grid-cols-2 gap-5 items-start">
+              <div className="flex flex-col gap-5">
+                {/* Budget */}
+                <div className="flex flex-col gap-1.5">
+                  <Label text="Budget" required />
+                  <div className="relative">
+                    <span
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold select-none"
+                      style={{ fontSize: "0.875rem" }}
+                    >
+                      Rs.
+                    </span>
+                    <input
+                      type="number"
+                      min={MIN_JOB_BUDGET}
+                      max={MAX_JOB_BUDGET}
+                      className={`${inputClass} pl-12 ${errors.budget ? "border-red-300" : ""}`}
+                      placeholder={`${MIN_JOB_BUDGET} - ${MAX_JOB_BUDGET}`}
+                      value={form.budget}
+                      onChange={(e) => set("budget")(e.target.value)}
+                      style={{ fontSize: "0.875rem" }}
+                    />
+                  </div>
+                  {errors.budget && (
+                    <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
+                      {errors.budget}
+                    </p>
+                  )}
                 </div>
-                {errors.budget && (
-                  <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
-                    {errors.budget}
-                  </p>
-                )}
-              </div>
 
-              {/* Duration */}
-              <SelectField
-                label="Duration"
-                value={form.duration}
-                onChange={set("duration")}
-                options={DURATIONS}
-                placeholder="Select duration"
-                required
-              />
-              {errors.duration && (
-                <p className="text-red-400 -mt-3" style={{ fontSize: "0.72rem" }}>
-                  {errors.duration}
-                </p>
-              )}
-
-              {/* Deadline */}
-              <div className="flex flex-col gap-1.5">
-                <Label text="Deadline" required />
-                <input
-                  type="date"
-                  className={`${inputClass} ${errors.deadline ? "border-red-300" : ""}`}
-                  value={form.deadline}
-                  min={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => set("deadline")(e.target.value)}
-                  style={{ fontSize: "0.875rem", colorScheme: "light" }}
+                {/* Complexity */}
+                <SelectField
+                  label="Complexity"
+                  value={form.complexity}
+                  onChange={set("complexity")}
+                  options={COMPLEXITY}
+                  placeholder="Select complexity"
+                  required
+                  error={errors.complexity}
                 />
-                {errors.deadline && (
-                  <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
-                    {errors.deadline}
-                  </p>
-                )}
               </div>
 
-              {/* Complexity */}
-              <SelectField
-                label="Complexity"
-                value={form.complexity}
-                onChange={set("complexity")}
-                options={COMPLEXITY}
-                placeholder="Select complexity"
-                required
-              />
-              {errors.complexity && (
-                <p className="text-red-400 -mt-3" style={{ fontSize: "0.72rem" }}>
-                  {errors.complexity}
-                </p>
-              )}
+              <div className="flex flex-col gap-5">
+                {/* Duration */}
+                <SelectField
+                  label="Duration"
+                  value={form.duration}
+                  onChange={set("duration")}
+                  options={DURATIONS}
+                  placeholder="Select duration"
+                  required
+                  error={errors.duration}
+                />
+
+                {/* Deadline */}
+                <div className="flex flex-col gap-1.5">
+                  <Label text="Deadline" required />
+                  <input
+                    type="date"
+                    className={`${inputClass} ${errors.deadline ? "border-red-300" : ""}`}
+                    value={form.deadline}
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => set("deadline")(e.target.value)}
+                    style={{ fontSize: "0.875rem", colorScheme: "light" }}
+                  />
+                  {errors.deadline && (
+                    <p className="text-red-400" style={{ fontSize: "0.72rem" }}>
+                      {errors.deadline}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Attachments */}

@@ -46,7 +46,8 @@ const jobSchema = new mongoose.Schema(
     budget: {
       type: Number,
       required: true,
-      min: 0,
+      min: 500,
+      max: 100000,
     },
 
     duration: {
