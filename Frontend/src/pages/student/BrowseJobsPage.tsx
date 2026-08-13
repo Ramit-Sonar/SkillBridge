@@ -43,12 +43,21 @@ import {
   JOB_SKILL_COLORS,
 } from "../../constants/job.constants";
 import { getAllOpenJobs, getJobById, type JobData } from "../../services/jobService";
+import { getMyProjects, type MyProjectsResponse } from "../../services/projectService";
+import { getStudentProfile, type StudentProfileData } from "../../services/studentProfileService";
 import type { BrowseJob, JobCategoryId } from "../../types";
 import { type FileAttachment } from "../../utils/fileUtils";
 
 type JobDetailData = BrowseJob & {
   client?: ClientCardData;
   attachedFiles?: FileAttachment[];
+};
+
+type StudentRecommendationProfile = {
+  skills: string[];
+  verifiedSkills: string[];
+  hasPreviousWork: boolean;
+  recentlyJoined: boolean;
 };
 
 function formatJobDate(date?: string) {
@@ -81,6 +90,75 @@ function formatBudget(budget: string | number) {
   if (Number.isNaN(numericBudget)) return String(budget);
 
   return numericBudget.toLocaleString("en-IN");
+}
+
+function normalizeSkillName(skill: string) {
+  return skill.trim().toLowerCase();
+}
+
+function hasAllSkillMatches(jobSkills: string[], studentSkills: string[]) {
+  if (jobSkills.length === 0) return false;
+
+  const studentSkillSet = new Set(studentSkills.map(normalizeSkillName).filter(Boolean));
+
+  return jobSkills.every((skill) => studentSkillSet.has(normalizeSkillName(skill)));
+}
+
+function isRecentlyJoined(createdAt?: string) {
+  if (!createdAt) return false;
+
+  const joinedDate = new Date(createdAt);
+
+  if (Number.isNaN(joinedDate.getTime())) return false;
+
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+  return Date.now() - joinedDate.getTime() <= thirtyDays;
+}
+
+function getRecommendationScore(job: BrowseJob, profile: StudentRecommendationProfile | null) {
+  if (!profile) return 0;
+
+  const verifiedSkillMatch = hasAllSkillMatches(job.skills, profile.verifiedSkills);
+
+  if (verifiedSkillMatch) return 2;
+
+  if (profile.verifiedSkills.length > 0) return 0;
+
+  const profileSkillMatch = hasAllSkillMatches(job.skills, profile.skills);
+
+  if (!profileSkillMatch) return 0;
+
+  const beginnerStudent =
+    profile.recentlyJoined && !profile.hasPreviousWork && profile.verifiedSkills.length === 0;
+
+  if (beginnerStudent && job.complexity !== "small") return 0;
+
+  return 1;
+}
+
+function applyRecommendations(
+  jobs: BrowseJob[],
+  profile: StudentRecommendationProfile | null
+): BrowseJob[] {
+  return jobs
+    .map((job, index) => {
+      const score = getRecommendationScore(job, profile);
+
+      return {
+        job: {
+          ...job,
+          recommended: score > 0,
+        },
+        index,
+        score,
+      };
+    })
+    .sort((first, second) => {
+      if (second.score !== first.score) return second.score - first.score;
+      return first.index - second.index;
+    })
+    .map(({ job }) => job);
 }
 
 function mapJobFromApi(job: JobData): BrowseJob {
@@ -920,6 +998,8 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
   const [detailsJob, setDetailsJob] = useState<JobDetailData | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
+  const [recommendationProfile, setRecommendationProfile] =
+    useState<StudentRecommendationProfile | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -930,14 +1010,36 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
 
       try {
         const response = await getAllOpenJobs();
+        let nextProfile: StudentRecommendationProfile | null = null;
+
+        if (!isGuest) {
+          const [profileResult, projectsResult] = await Promise.allSettled([
+            getStudentProfile(),
+            getMyProjects(),
+          ]);
+
+          const profileData: StudentProfileData | null =
+            profileResult.status === "fulfilled" ? profileResult.value.data : null;
+          const projectsData: MyProjectsResponse | null =
+            projectsResult.status === "fulfilled" ? projectsResult.value.data : null;
+
+          nextProfile = {
+            skills: profileData?.skills ?? [],
+            verifiedSkills: profileData?.verifiedSkills ?? [],
+            hasPreviousWork: (projectsData?.projects ?? []).length > 0,
+            recentlyJoined: isRecentlyJoined(currentUser?.createdAt),
+          };
+        }
 
         if (mounted) {
-          setJobs(response.data.map(mapJobFromApi));
+          setRecommendationProfile(nextProfile);
+          setJobs(applyRecommendations(response.data.map(mapJobFromApi), nextProfile));
         }
       } catch (error) {
         if (mounted) {
           setError(error instanceof Error ? error.message : "Failed to load jobs.");
           setJobs([]);
+          setRecommendationProfile(null);
         }
       } finally {
         if (mounted) {
@@ -951,7 +1053,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [currentUser?.createdAt, isGuest]);
 
   useEffect(() => {
     if (!selectedJobId) {
@@ -972,7 +1074,14 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
         const response = await getJobById(selectedJobId);
 
         if (mounted) {
-          setDetailsJob(mapJobDetailsFromApi(response.data));
+          const jobDetails = mapJobDetailsFromApi(response.data);
+          const listedJob = jobs.find((job) => job.id === jobDetails.id);
+          setDetailsJob({
+            ...jobDetails,
+            recommended:
+              listedJob?.recommended ??
+              getRecommendationScore(jobDetails, recommendationProfile) > 0,
+          });
         }
       } catch (error) {
         if (mounted) {
@@ -990,7 +1099,7 @@ export function BrowseJobsCore({ isGuest = false }: { isGuest?: boolean }) {
     return () => {
       mounted = false;
     };
-  }, [selectedJobId]);
+  }, [jobs, recommendationProfile, selectedJobId]);
 
   const handleViewDetails = (jobId: string) => {
     // Keep the selected job in the URL so details can be refreshed or shared.

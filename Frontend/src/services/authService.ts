@@ -24,6 +24,7 @@ export type AuthUser = {
   avatar?: string;
   isVerified?: boolean;
   profileCompleted?: boolean;
+  createdAt?: string;
 };
 
 type ApiResponse<T> = {
