@@ -75,9 +75,6 @@ type MessageAttachmentDraft = {
 const isImageAttachment = (attachment: FileAttachment) =>
   attachment.mimeType?.toLowerCase().startsWith("image/");
 
-const isPdfAttachment = (attachment: FileAttachment) =>
-  attachment.mimeType?.toLowerCase() === "application/pdf";
-
 export function ProjectOverview({
   projectId,
   project,
@@ -402,7 +399,6 @@ export function ProjectOverview({
                           const Icon = fileDisplay.icon;
                           const hasValidUrl = isValidAttachmentUrl(attachment.url);
                           const isImage = isImageAttachment(attachment);
-                          const isPdf = isPdfAttachment(attachment);
                           const previewUrl = attachment.url || "";
 
                           if (hasValidUrl && isImage) {
@@ -460,84 +456,60 @@ export function ProjectOverview({
                             );
                           }
 
-                          if (hasValidUrl && isPdf) {
-                            return (
-                              <div
-                                key={`${message.id}-${attachment.originalName}-${attachment.url}`}
-                                className={`w-52 max-w-full overflow-hidden rounded-xl border ${
-                                  isCurrentViewer
-                                    ? "border-white/20 bg-white/10"
-                                    : "border-slate-200 bg-white"
-                                }`}
-                              >
-                                <div className="relative h-28 w-full overflow-hidden bg-white">
-                                  <iframe
-                                    src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                                    title={attachment.originalName || "PDF attachment"}
-                                    className="h-full w-full pointer-events-none"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      window.open(previewUrl, "_blank", "noopener,noreferrer")
-                                    }
-                                    className="absolute inset-0"
-                                    aria-label={`Open ${attachment.originalName || "PDF attachment"}`}
-                                    title={attachment.originalName || "PDF attachment"}
-                                  />
-                                </div>
-                                <div
-                                  className={`flex items-center justify-between gap-2 px-2 py-1.5 ${
-                                    isCurrentViewer ? "text-blue-100" : "text-slate-500"
-                                  }`}
-                                >
-                                  <span className="font-semibold" style={{ fontSize: "0.58rem" }}>
-                                    PDF - {formatFileSize(attachment.size)}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDownloadMessageAttachment(attachment)}
-                                    className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
-                                      isCurrentViewer
-                                        ? "text-white hover:bg-white/15"
-                                        : "text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                                    }`}
-                                    aria-label={`Download ${attachment.originalName || "attachment"}`}
-                                    title="Download attachment"
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          }
-
                           return (
                             <div
                               key={`${message.id}-${attachment.originalName}-${attachment.url}`}
-                              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                              className={`flex w-56 max-w-full items-center gap-2 rounded-xl border px-2.5 py-2 shadow-sm backdrop-blur-sm ${
                                 isCurrentViewer
-                                  ? "border-white/20 bg-white/10 text-white"
-                                  : "border-slate-200 bg-slate-50 text-slate-700"
+                                  ? "border-white/25 bg-white/10 text-white"
+                                  : "border-white/70 bg-white/80 text-slate-700"
                               } ${hasValidUrl ? "" : "opacity-70"}`}
                             >
-                              <Icon
-                                className="h-3.5 w-3.5 shrink-0"
-                                style={{ color: isCurrentViewer ? "#DBEAFE" : fileDisplay.color }}
-                              />
-                              <span
-                                className="min-w-0 flex-1 truncate font-semibold"
-                                title={attachment.originalName}
-                                style={{ fontSize: "0.66rem" }}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!hasValidUrl) return;
+                                  window.open(previewUrl, "_blank", "noopener,noreferrer");
+                                }}
+                                disabled={!hasValidUrl}
+                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg disabled:cursor-not-allowed ${
+                                  isCurrentViewer ? "bg-white/15" : fileDisplay.bg
+                                }`}
+                                aria-label={`Open ${attachment.originalName || "attachment"}`}
+                                title={attachment.originalName || "Open attachment"}
                               >
-                                {truncateFileName(attachment.originalName, 26)}
-                              </span>
-                              <span
-                                className={isCurrentViewer ? "text-blue-100" : "text-slate-400"}
-                                style={{ fontSize: "0.58rem" }}
+                                <Icon
+                                  className="h-4 w-4"
+                                  style={{
+                                    color: isCurrentViewer ? "#DBEAFE" : fileDisplay.color,
+                                  }}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!hasValidUrl) return;
+                                  window.open(previewUrl, "_blank", "noopener,noreferrer");
+                                }}
+                                disabled={!hasValidUrl}
+                                className="min-w-0 flex-1 text-left disabled:cursor-not-allowed"
+                                title={attachment.originalName || "Open attachment"}
                               >
-                                {formatFileSize(attachment.size)}
-                              </span>
+                                <span
+                                  className="block truncate font-semibold"
+                                  style={{ fontSize: "0.68rem" }}
+                                >
+                                  {truncateFileName(attachment.originalName, 24)}
+                                </span>
+                                <span
+                                  className={`block ${
+                                    isCurrentViewer ? "text-blue-100" : "text-slate-400"
+                                  }`}
+                                  style={{ fontSize: "0.58rem" }}
+                                >
+                                  {fileDisplay.label} - {formatFileSize(attachment.size)}
+                                </span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleDownloadMessageAttachment(attachment)}
