@@ -246,10 +246,10 @@ export function SharedJobDetailsContent({
   const hasFiles = job.attachedFiles && job.attachedFiles.length > 0;
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-5">
+    <div className="flex flex-col h-full min-h-0 min-w-0 overflow-x-hidden">
+      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-5 flex flex-col gap-5">
         {/* Category + title */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 min-w-0">
           {job.recommended && (
             <div
               className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-600 font-bold px-2 py-0.5 rounded-full w-fit"
@@ -269,7 +269,7 @@ export function SharedJobDetailsContent({
             )}
           </div>
           <h2
-            className="text-slate-900 leading-snug"
+            className="text-slate-900 leading-snug break-words"
             style={{ fontSize: "1.05rem", fontWeight: 800 }}
           >
             {job.title}
@@ -283,11 +283,11 @@ export function SharedJobDetailsContent({
 
         {/* Key details grid */}
         {detailItems.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 min-w-0">
             {detailItems.map((d) => (
               <div
                 key={d.label}
-                className="flex items-center gap-2.5 bg-slate-50 rounded-xl p-3 border border-black/[0.04]"
+                className="flex items-center gap-2.5 bg-slate-50 rounded-xl p-3 border border-black/[0.04] min-w-0"
               >
                 <div
                   className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
@@ -295,11 +295,14 @@ export function SharedJobDetailsContent({
                 >
                   <d.icon className="w-3.5 h-3.5" style={{ color: d.color }} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-slate-400" style={{ fontSize: "0.62rem", fontWeight: 600 }}>
                     {d.label}
                   </p>
-                  <p className="text-slate-900 font-semibold" style={{ fontSize: "0.75rem" }}>
+                  <p
+                    className="text-slate-900 font-semibold break-words"
+                    style={{ fontSize: "0.75rem" }}
+                  >
                     {d.value}
                   </p>
                 </div>
@@ -310,11 +313,14 @@ export function SharedJobDetailsContent({
 
         {/* Job Description */}
         {job.description && (
-          <div>
+          <div className="min-w-0">
             <p className="text-slate-900 font-bold mb-2" style={{ fontSize: "0.82rem" }}>
               Job Description
             </p>
-            <p className="text-slate-600 leading-relaxed" style={{ fontSize: "0.8rem" }}>
+            <p
+              className="text-slate-600 leading-relaxed whitespace-pre-wrap break-words"
+              style={{ fontSize: "0.8rem", overflowWrap: "anywhere" }}
+            >
               {job.description}
             </p>
           </div>
@@ -322,21 +328,22 @@ export function SharedJobDetailsContent({
 
         {/* Required Skills */}
         {job.skills.length > 0 && (
-          <div>
+          <div className="min-w-0">
             <p className="text-slate-900 font-bold mb-2.5" style={{ fontSize: "0.82rem" }}>
               Required Skills
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 min-w-0">
               {job.skills.map((skill, index) => {
                 const skillColor = JOB_SKILL_COLORS[index % JOB_SKILL_COLORS.length];
                 return (
                   <span
                     key={skill}
-                    className="px-2 py-0.5 rounded-lg font-semibold"
+                    className="px-2 py-0.5 rounded-lg font-semibold break-words"
                     style={{
                       background: skillColor.bg,
                       color: skillColor.color,
                       fontSize: "0.65rem",
+                      overflowWrap: "anywhere",
                     }}
                   >
                     {skill}
@@ -349,11 +356,14 @@ export function SharedJobDetailsContent({
 
         {/* Client Requirements */}
         {job.requirements && (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 min-w-0">
             <p className="text-slate-900 font-bold mb-1.5" style={{ fontSize: "0.82rem" }}>
               Client Requirements
             </p>
-            <p className="text-slate-500 leading-relaxed" style={{ fontSize: "0.78rem" }}>
+            <p
+              className="text-slate-500 leading-relaxed whitespace-pre-wrap break-words"
+              style={{ fontSize: "0.78rem", overflowWrap: "anywhere" }}
+            >
               {job.requirements}
             </p>
           </div>
