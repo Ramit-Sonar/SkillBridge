@@ -76,6 +76,44 @@ export const getProjectMessages = async (projectId, userId) => {
   return messages.map(buildMessageSummary);
 };
 
+export const getMessageAttachmentForDownload = async ({
+  messageId,
+  attachmentIndex,
+  userId,
+}) => {
+  if (!mongoose.isValidObjectId(messageId)) {
+    throw new ApiError(400, "Invalid message id");
+  }
+
+  if (!mongoose.isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user id");
+  }
+
+  const index = Number(attachmentIndex);
+
+  if (!Number.isInteger(index) || index < 0) {
+    throw new ApiError(400, "Invalid attachment index");
+  }
+
+  const message = await Message.findById(messageId)
+    .select("_id project attachments")
+    .lean();
+
+  if (!message) {
+    throw new ApiError(404, "Message not found");
+  }
+
+  await ensureProjectMessageAccess(message.project, userId);
+
+  const attachment = message.attachments?.[index];
+
+  if (!attachment?.url) {
+    throw new ApiError(404, "Attachment not found");
+  }
+
+  return attachment;
+};
+
 export const createProjectMessage = async ({
   projectId,
   senderId,

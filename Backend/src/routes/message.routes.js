@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createMessage,
+  downloadMessageAttachment,
   getMessagesByProject,
   markMessageRead,
 } from "../controllers/message.controller.js";
@@ -39,5 +40,9 @@ router
 router
   .route("/messages/:messageId/read")
   .patch(verifyJWT, projectMessageRoles, ensureActiveAccount, markMessageRead);
+
+router
+  .route("/messages/:messageId/attachments/:attachmentIndex/download")
+  .get(verifyJWT, projectMessageRoles, downloadMessageAttachment);
 
 export default router;

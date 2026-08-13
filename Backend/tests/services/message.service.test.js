@@ -21,8 +21,12 @@ jest.unstable_mockModule("../../src/models/project.model.js", () => ({
   },
 }));
 
-const { createProjectMessage, getProjectMessages, markMessageAsRead } =
-  await import("../../src/services/message.service.js");
+const {
+  createProjectMessage,
+  getMessageAttachmentForDownload,
+  getProjectMessages,
+  markMessageAsRead,
+} = await import("../../src/services/message.service.js");
 
 const projectId = "507f1f77bcf86cd799439011";
 const clientId = "507f1f77bcf86cd799439012";
@@ -116,6 +120,33 @@ describe("Message Service", () => {
       message: "You can access messages only for your own project",
     });
     expect(messageFindMock).not.toHaveBeenCalled();
+  });
+
+  test("returns a message attachment for download after access is verified", async () => {
+    const attachment = {
+      url: "https://example.com/file.pdf",
+      publicId: "messages/file",
+      originalName: "file.pdf",
+      mimeType: "application/pdf",
+      size: 1024,
+    };
+    const existingMessage = {
+      _id: messageId,
+      project: projectId,
+      attachments: [attachment],
+    };
+
+    messageFindByIdMock.mockReturnValue(createLeanQuery(existingMessage));
+    projectFindByIdMock.mockReturnValue(createLeanQuery(project));
+
+    await expect(
+      getMessageAttachmentForDownload({
+        messageId,
+        attachmentIndex: "0",
+        userId: clientId,
+      })
+    ).resolves.toEqual(attachment);
+    expect(projectFindByIdMock).toHaveBeenCalledWith(projectId);
   });
 
   test("rejects message creation before a project exists", async () => {

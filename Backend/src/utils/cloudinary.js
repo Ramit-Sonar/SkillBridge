@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import path from "path";
 import { removeTempFile } from "./tempFile.js";
 
 cloudinary.config({
@@ -14,8 +15,20 @@ const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
 
+    const fileExtension = path.extname(localFilePath).toLowerCase();
+    const rawFileExtensions = [
+      ".pdf",
+      ".txt",
+      ".zip",
+      ".doc",
+      ".docx",
+      ".ppt",
+      ".pptx",
+      ".xls",
+      ".xlsx",
+    ];
     const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto",
+      resource_type: rawFileExtensions.includes(fileExtension) ? "raw" : "auto",
     });
 
     removeTempFile(localFilePath);
@@ -28,6 +41,59 @@ const uploadOnCloudinary = async (localFilePath) => {
 
     return null;
   }
+};
+
+const getAttachmentFormat = (attachment) => {
+  const fileExtension = path
+    .extname(attachment?.originalName || attachment?.url || "")
+    .replace(".", "")
+    .toLowerCase();
+
+  if (fileExtension) return fileExtension;
+
+  if (attachment?.mimeType === "application/pdf") return "pdf";
+
+  return "";
+};
+
+const getCloudinaryResourceTypeFromUrl = (url = "") => {
+  if (url.includes("/raw/upload/")) return "raw";
+  if (url.includes("/image/upload/")) return "image";
+  if (url.includes("/video/upload/")) return "video";
+
+  return "";
+};
+
+const getCloudinaryDownloadUrls = (attachment) => {
+  if (!attachment?.publicId) return [];
+
+  const format = getAttachmentFormat(attachment);
+  const resourceTypes = [
+    getCloudinaryResourceTypeFromUrl(attachment.url),
+    attachment.mimeType === "application/pdf" ? "image" : "",
+    "raw",
+    "image",
+  ].filter(Boolean);
+  const uniqueResourceTypes = [...new Set(resourceTypes)];
+
+  return uniqueResourceTypes
+    .map((resourceType) => {
+      try {
+        return cloudinary.utils.private_download_url(
+          attachment.publicId,
+          format,
+          {
+            resource_type: resourceType,
+            type: "upload",
+            attachment: true,
+            expires_at: Math.floor(Date.now() / 1000) + 60,
+          }
+        );
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
 };
 
 const deleteFromCloudinary = async (publicId) => {
@@ -51,4 +117,4 @@ const deleteFromCloudinary = async (publicId) => {
   }
 };
 
-export { deleteFromCloudinary, uploadOnCloudinary };
+export { deleteFromCloudinary, getCloudinaryDownloadUrls, uploadOnCloudinary };

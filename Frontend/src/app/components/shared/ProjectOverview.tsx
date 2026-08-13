@@ -12,6 +12,7 @@ import {
 import { type ProjectStatus } from "../../data/projects";
 import { formatProjectRelativeDate, getProjectOverviewAction } from "./projectPresentation";
 import {
+  downloadProjectMessageAttachment,
   getProjectMessages,
   markProjectMessageRead,
   sendProjectMessage,
@@ -19,7 +20,6 @@ import {
 } from "../../../services/messageService";
 import { joinProjectMessageSocket } from "../../../services/messageSocketService";
 import {
-  downloadAttachment,
   formatFileSize,
   getFileIcon,
   isValidAttachmentUrl,
@@ -297,9 +297,17 @@ export function ProjectOverview({
     );
   };
 
-  const handleDownloadMessageAttachment = async (attachment: FileAttachment) => {
+  const handleDownloadMessageAttachment = async (
+    messageId: string,
+    attachmentIndex: number,
+    attachment: FileAttachment
+  ) => {
     try {
-      await downloadAttachment(attachment);
+      await downloadProjectMessageAttachment(
+        messageId,
+        attachmentIndex,
+        attachment.originalName || "attachment"
+      );
     } catch (error) {
       onNotify?.({
         type: "error",
@@ -394,7 +402,7 @@ export function ProjectOverview({
                     )}
                     {attachments.length > 0 && (
                       <div className={`${message.message ? "mt-2" : ""} flex flex-col gap-1.5`}>
-                        {attachments.map((attachment) => {
+                        {attachments.map((attachment, attachmentIndex) => {
                           const fileDisplay = getFileIcon(attachment.mimeType);
                           const Icon = fileDisplay.icon;
                           const hasValidUrl = isValidAttachmentUrl(attachment.url);
@@ -428,7 +436,13 @@ export function ProjectOverview({
                                   <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
-                                      onClick={() => handleDownloadMessageAttachment(attachment)}
+                                      onClick={() =>
+                                        handleDownloadMessageAttachment(
+                                          message.id,
+                                          attachmentIndex,
+                                          attachment
+                                        )
+                                      }
                                       className="flex h-6 w-6 items-center justify-center rounded-md text-white transition-colors hover:bg-white/15"
                                       aria-label={`Download ${attachment.originalName || "attachment"}`}
                                       title="Download attachment"
@@ -512,7 +526,13 @@ export function ProjectOverview({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDownloadMessageAttachment(attachment)}
+                                onClick={() =>
+                                  handleDownloadMessageAttachment(
+                                    message.id,
+                                    attachmentIndex,
+                                    attachment
+                                  )
+                                }
                                 disabled={!hasValidUrl}
                                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                   isCurrentViewer

@@ -39,6 +39,22 @@ const parseMessageResponse = async <T>(
   return data;
 };
 
+const getFileNameFromContentDisposition = (header: string | null) => {
+  if (!header) return "";
+
+  const encodedFileName = header.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+
+  if (encodedFileName) {
+    try {
+      return decodeURIComponent(encodedFileName);
+    } catch {
+      return encodedFileName;
+    }
+  }
+
+  return header.match(/filename="([^"]+)"/i)?.[1] || "";
+};
+
 export const getProjectMessages = async (
   projectId: string
 ): Promise<ApiResponse<ProjectMessagesResponse>> => {
@@ -86,4 +102,38 @@ export const markProjectMessageRead = async (
   });
 
   return parseMessageResponse<ProjectMessage>(response, "Failed to mark message as read.");
+};
+
+export const downloadProjectMessageAttachment = async (
+  messageId: string,
+  attachmentIndex: number,
+  fallbackFileName = "attachment"
+) => {
+  const response = await fetch(
+    `${API_URL}/messages/${messageId}/attachments/${attachmentIndex}/download`,
+    {
+      method: "GET",
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Attachment could not be downloaded.");
+  }
+
+  const blob = await response.blob();
+  const downloadUrl = URL.createObjectURL(blob);
+  const fileName =
+    getFileNameFromContentDisposition(response.headers.get("content-disposition")) ||
+    fallbackFileName.replace(/[\\/:*?"<>|]/g, "_").trim() ||
+    "attachment";
+  const link = document.createElement("a");
+
+  link.href = downloadUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
 };
