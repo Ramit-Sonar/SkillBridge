@@ -111,7 +111,7 @@ export function Hero({ getStartedPath, exploreJobsPath }: HeroProps) {
                     backgroundClip: "text",
                   }}
                 >
-                  Learn &amp; Grow
+                  Learn &amp; Earn
                 </span>{" "}
                 with Real Work
               </h1>
